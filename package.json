@@ -28,7 +28,8 @@
     "import:woocommerce": "tsx tooling/import-woocommerce/index.ts",
     "new": "node packages/create/src/index.ts --template .",
     "rename": "node packages/create/src/rename-cli.ts",
-    "template:update": "node packages/create/src/update.ts"
+    "template:update": "node packages/create/src/update.ts",
+    "sandbox": "tsx tooling/sandbox/index.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
