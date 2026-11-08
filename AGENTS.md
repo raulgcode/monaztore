@@ -88,6 +88,9 @@ description and errors with `aria-*`). Schema errors are i18n keys
 (`message("forms.emailInvalid")`) that `FieldErrors` translates; the route loads `forms`. No
 `useState` per field and no hand-written validation. Examples: `routes/sign-up.tsx`,
 `routes/app/onboarding.tsx`.
+The one exception is a form with nothing to type, on a page that must stay light: the storefront's
+"Add to cart" (hidden ids and a list) validates only in the cart's `action`, so the product page
+doesn't load zod.
 
 ### Intuitive and mobile first
 

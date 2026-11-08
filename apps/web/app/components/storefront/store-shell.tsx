@@ -62,7 +62,8 @@ export function StoreShell({
   );
   return (
     <div
-      className="flex min-h-dvh flex-col bg-background text-foreground"
+      // A page with its main action fixed at the bottom of the phone leaves room for it.
+      className="flex min-h-dvh flex-col bg-background text-foreground has-[[data-sticky-action]]:pb-24 md:has-[[data-sticky-action]]:pb-0"
       data-store-theme={theme?.id}
       style={theme?.style as React.CSSProperties | undefined}
     >

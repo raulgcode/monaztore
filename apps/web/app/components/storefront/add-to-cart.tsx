@@ -1,6 +1,4 @@
 import { getFormProps, getSelectProps, type SubmissionResult, useForm } from "@conform-to/react";
-import { parseWithZod } from "@conform-to/zod/v4";
-import { addToCartSchema } from "@monaztore/contracts";
 import { href, Link, useFetcher } from "react-router";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
@@ -36,11 +34,13 @@ export function AddToCart({
   const fetcher = useFetcher<{ added: boolean; result?: SubmissionResult<string[]> }>({
     key: `add-${productId}`,
   });
-  const [form, fields] = useForm({
+  const [form, fields] = useForm<{ productId: string; variantId?: string }>({
     id: `add-${productId}`,
     lastResult: fetcher.data?.result,
+    // Only the server validates (`addToCartSchema` in the cart's action): the form is hidden ids
+    // and a list, nothing a shopper can type wrong, and leaving zod out keeps the product page
+    // inside the JavaScript budget.
     shouldValidate: "onSubmit",
-    onValidate: ({ formData }) => parseWithZod(formData, { schema: addToCartSchema }),
   });
   const firstAvailable = variants.find((v) => v.inStock)?.id;
   const adding = fetcher.state !== "idle";
@@ -75,25 +75,32 @@ export function AddToCart({
           </select>
         </div>
       ) : null}
-      <Button type="submit" size="lg" disabled={!inStock || adding}>
-        {adding
-          ? t("storefront.adding")
-          : inStock
-            ? t("storefront.addToCart")
-            : t("storefront.soldOut")}
-      </Button>
-      <div aria-live="polite">
-        {fetcher.state === "idle" && fetcher.data?.added ? (
-          <p role="status" className="flex flex-wrap items-center gap-2 text-sm">
-            {t("storefront.addedToCart")}
-            <Link
-              to={href("/cart")}
-              className={buttonVariants({ variant: "link", className: "h-auto px-0" })}
-            >
-              {t("storefront.viewCart")}
-            </Link>
-          </p>
-        ) : null}
+      {/* The page's main action: on the phone it stays at the bottom, within the thumb's reach,
+          with what just happened above it; from 768 px it sits under the options. */}
+      <div
+        data-sticky-action
+        className="fixed inset-x-0 bottom-0 z-30 grid border-t bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgb(0_0_0/0.08)] md:static md:z-auto md:border-0 md:bg-transparent md:p-0 md:shadow-none"
+      >
+        <div aria-live="polite">
+          {fetcher.state === "idle" && fetcher.data?.added ? (
+            <p role="status" className="flex flex-wrap items-center gap-x-2 pb-2 text-sm">
+              {t("storefront.addedToCart")}
+              <Link
+                to={href("/cart")}
+                className={buttonVariants({ variant: "link", className: "h-auto px-0" })}
+              >
+                {t("storefront.viewCart")}
+              </Link>
+            </p>
+          ) : null}
+        </div>
+        <Button type="submit" size="lg" disabled={!inStock || adding}>
+          {adding
+            ? t("storefront.adding")
+            : inStock
+              ? t("storefront.addToCart")
+              : t("storefront.soldOut")}
+        </Button>
       </div>
     </fetcher.Form>
   );

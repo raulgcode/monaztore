@@ -182,7 +182,7 @@ export default function Cart({ loaderData }: Route.ComponentProps) {
               );
             })}
           </ul>
-          <div className="sticky bottom-0 grid gap-3 border-t bg-background py-4 md:rounded-md md:border md:p-4">
+          <div className="sticky bottom-0 z-20 -mx-4 grid gap-3 border-t bg-background px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:mx-0 md:rounded-md md:border md:p-4">
             <p className="flex justify-between text-lg font-semibold">
               <span>{t("storefront.subtotal")}</span>
               <span>{money(cart.subtotal)}</span>

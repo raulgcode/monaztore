@@ -214,4 +214,39 @@ test.describe("Feature: the store's design", () => {
       await expect(page.getByLabel("Sort by")).toBeVisible();
     });
   });
+
+  test("Scenario: on the phone, Add to cart waits at the bottom of the screen and says when it worked", async ({
+    page,
+    baseURL,
+    isMobile,
+    signInWithWorkspace,
+    workspaceOf,
+  }) => {
+    const store = await test.step("Given a store with a mug that has three photos", async () => {
+      await signInWithWorkspace(page);
+      const workspace = await workspaceOf(page);
+      return openStore(workspace, baseURL, await catalogWithCopiedPhoto(workspace, 3));
+    });
+
+    await test.step("When the shopper opens the mug", async () => {
+      await page.goto(`${store}/products/pura-vida-mug`);
+    });
+
+    const button = page.getByRole("button", { name: "Add to cart" });
+    await test.step("Then Add to cart is on screen without scrolling, at the bottom on the phone", async () => {
+      await expect(button).toBeInViewport();
+      const box = await button.boundingBox();
+      const height = page.viewportSize()?.height ?? 0;
+      if (isMobile) expect(height - (box?.y ?? 0) - (box?.height ?? 0)).toBeLessThan(32);
+    });
+
+    await test.step("When they add it", async () => {
+      await button.click();
+    });
+
+    await test.step("Then it says so right above the button, with the way to the cart", async () => {
+      await expect(page.getByRole("status").filter({ hasText: "Added" })).toBeInViewport();
+      await expect(page.getByRole("link", { name: "View cart" })).toBeInViewport();
+    });
+  });
 });

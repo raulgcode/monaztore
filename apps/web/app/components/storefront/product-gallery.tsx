@@ -26,6 +26,10 @@ export function ProductGallery({
   const t = useT();
   const track = useRef<HTMLUListElement>(null);
   const [active, setActive] = useState(0);
+  // The other photos load once the shopper reaches for the gallery (touch, mouse, keyboard or a
+  // swipe): lazy loading alone fetches them, since they sit right beside the first one.
+  const [primed, setPrimed] = useState(false);
+  const prime = () => setPrimed(true);
   const total = images.length;
 
   // A browser effect: follow the swipe, so the counter and the thumbnails show where it is.
@@ -35,6 +39,7 @@ export function ProductGallery({
     let frame = 0;
     const onScroll = () => {
       cancelAnimationFrame(frame);
+      setPrimed(true);
       frame = requestAnimationFrame(() => {
         const width = element.clientWidth || 1;
         setActive(Math.min(total - 1, Math.max(0, Math.round(element.scrollLeft / width))));
@@ -58,6 +63,7 @@ export function ProductGallery({
   const go = (index: number) => {
     const element = track.current;
     const next = Math.min(total - 1, Math.max(0, index));
+    setPrimed(true);
     setActive(next);
     if (!element) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -71,6 +77,9 @@ export function ProductGallery({
       aria-roledescription={t("storefront.carousel")}
       aria-label={t("storefront.photos", { name })}
       className="grid min-w-0 gap-3 md:grid-cols-[4.5rem_minmax(0,1fr)] md:gap-4"
+      onPointerEnter={prime}
+      onTouchStart={prime}
+      onFocus={prime}
     >
       <div className="relative min-w-0 self-start md:col-start-2">
         {/* The carousel's own track: it scrolls one photo at a time, with arrows, a counter and
@@ -96,19 +105,23 @@ export function ProductGallery({
               aria-hidden={index === active ? undefined : true}
               className="w-full shrink-0 snap-start snap-always"
             >
-              <img
-                src={photoSrc(image.url, 960)}
-                srcSet={photoSrcSet(image.url, [480, 640, 960])}
-                sizes={mainSizes}
-                alt={image.alt}
-                width={800}
-                height={800}
-                // The first photo is the page's largest paint: no lazy loading for it.
-                loading={index === 0 ? "eager" : "lazy"}
-                fetchPriority={index === 0 ? "high" : undefined}
-                decoding="async"
-                className="aspect-square w-full object-cover"
-              />
+              {index === 0 || primed ? (
+                <img
+                  src={photoSrc(image.url, 960)}
+                  srcSet={photoSrcSet(image.url, [480, 640, 960])}
+                  sizes={mainSizes}
+                  alt={image.alt}
+                  width={800}
+                  height={800}
+                  // The first photo is the page's largest paint: no lazy loading for it.
+                  loading={index === 0 ? "eager" : "lazy"}
+                  fetchPriority={index === 0 ? "high" : undefined}
+                  decoding="async"
+                  className="aspect-square w-full object-cover"
+                />
+              ) : (
+                <div className="aspect-square w-full" />
+              )}
             </li>
           ))}
         </ul>

@@ -210,9 +210,12 @@ export default function Checkout({ loaderData, actionData }: Route.ComponentProp
               <FieldErrors id={fields.paymentMethod.errorId} errors={fields.paymentMethod.errors} />
             </fieldset>
             <FieldErrors id={form.errorId} errors={form.errors} />
-            <Button type="submit" size="lg" disabled={placing}>
-              {placing ? t("storefront.placingOrder") : t("storefront.placeOrder")}
-            </Button>
+            {/* On the phone it stays at the bottom while the form scrolls, within the thumb's reach. */}
+            <div className="sticky bottom-0 z-20 -mx-4 grid border-t bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:static md:mx-0 md:border-0 md:p-0">
+              <Button type="submit" size="lg" disabled={placing}>
+                {placing ? t("storefront.placingOrder") : t("storefront.placeOrder")}
+              </Button>
+            </div>
           </Form>
         )}
         <section
