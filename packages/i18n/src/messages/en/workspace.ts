@@ -7,6 +7,8 @@ export const workspace = {
   create: "Continue",
   creating: "Creating…",
   navHome: "Home",
+  navOrders: "Orders",
+  navStore: "Store",
   navSettings: "Settings",
   navLabel: "Main menu",
   homeTitle: "Home",

@@ -1,11 +1,11 @@
 import { expect, ownerTest, test } from "../support/fixtures";
-import { openStore } from "../support/storefront";
+import { openStore, placeSampleOrder } from "../support/storefront";
 
 const schemes = ["light", "dark"] as const;
 // Public pages, before signing in.
 const publicPages = ["/", "/login", "/login?with=link", "/sign-up", "/forgot-password"];
 // Sections inside the workspace, after /app/:workspace. A new section goes here.
-const workspaceSections = ["", "/settings"];
+const workspaceSections = ["", "/orders", "/store", "/settings"];
 // Storefront pages, on a store's own domain. A new storefront page goes here.
 const storePages = [
   "/",
@@ -49,7 +49,8 @@ test.describe("Feature: accessibility (axe, WCAG 2.2 AA)", () => {
       ownerTest(
         "Scenario: the workspace sections have no violations",
         async ({ page, workspace, expectAccessible }) => {
-          for (const section of workspaceSections) {
+          const order = await placeSampleOrder(workspace, { name: "Ana Mora", reference: "1" });
+          for (const section of [...workspaceSections, `/orders/${order}`]) {
             await page.goto(`/app/${workspace.slug}${section}`);
             await expectAccessible(page);
           }

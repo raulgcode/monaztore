@@ -29,4 +29,9 @@ export const forms = {
   textTooLong: "Es demasiado largo",
   paymentMethodRequired: "Elige cómo vas a pagar",
   referenceRequired: "Escribe el número de referencia del pago",
+  holderRequired: "Escribe a nombre de quién está la cuenta",
+  bankRequired: "Escribe el banco",
+  ibanInvalid: "Escribe un IBAN válido, como CR05015202001026284066",
+  domainRequired: "Escribe el dominio",
+  domainInvalid: "Escribe solo el dominio, como mitienda.com",
 } as const satisfies Translation<typeof en>["forms"];

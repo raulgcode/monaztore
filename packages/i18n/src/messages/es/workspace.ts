@@ -11,6 +11,8 @@ export const workspace = {
   create: "Continuar",
   creating: "Creando…",
   navHome: "Inicio",
+  navOrders: "Pedidos",
+  navStore: "Tienda",
   navSettings: "Ajustes",
   navLabel: "Menú principal",
   homeTitle: "Inicio",

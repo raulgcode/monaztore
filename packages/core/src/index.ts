@@ -29,6 +29,19 @@ export {
 } from "./rate-limits";
 export { slugify, uniqueSlug } from "./slug";
 export {
+  ADMIN_ORDERS_PAGE_SIZE,
+  cancelOrder,
+  countOrdersToReview,
+  getOrder,
+  getStorePayments,
+  listOrders,
+  listStoreDomains,
+  markOrderPaid,
+  type OrderRow,
+  removeStoreDomain,
+  setPrimaryDomain,
+} from "./store-admin";
+export {
   cleanHtml,
   findRedirect,
   getStoreCollection,

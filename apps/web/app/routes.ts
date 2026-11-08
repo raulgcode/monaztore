@@ -37,6 +37,9 @@ export default [
       // Workspace slugs always end in a random suffix, so they never match the paths above.
       route(":workspace", "routes/app/workspace-layout.tsx", [
         index("routes/app/home.tsx"),
+        route("orders", "routes/app/orders.tsx"),
+        route("orders/:number", "routes/app/order.tsx"),
+        route("store", "routes/app/store.tsx"),
         route("settings", "routes/app/settings.tsx"),
       ]),
     ]),

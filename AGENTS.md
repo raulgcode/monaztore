@@ -212,6 +212,12 @@ lowers the stock it counts and keeps only the SHA-256 of the order link's token
 (`/orders/:token`, a secret path). Manual payments (SINPE Móvil, transfer) live in
 `store_settings.payments`; the shopper sends the reference and the store confirms it.
 
+The store in the workspace (`core/src/store-admin.ts`): Orders (`/app/:workspace/orders`, filter
+by state in `?status=`) confirms a payment (`markOrderPaid`, which adds to the customer's orders
+and spend) or cancels an unpaid order (`cancelOrder`, which puts counted stock back); Store
+(`/app/:workspace/store`) connects domains (one main domain: a new main one takes over) and sets
+the manual payments, owners only.
+
 Every `core` use case takes a `TenantContext` and filters by `organizationId`.
 - The workspace goes in the URL (`/app/:workspace/…`) and `requireTenant` resolves it with
   `resolveTenant`, which checks the membership; never take the workspace from the session or from

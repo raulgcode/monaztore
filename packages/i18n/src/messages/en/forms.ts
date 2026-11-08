@@ -22,4 +22,9 @@ export const forms = {
   textTooLong: "This is too long",
   paymentMethodRequired: "Choose how you'll pay",
   referenceRequired: "Enter the payment's reference number",
+  holderRequired: "Enter whose name the account is in",
+  bankRequired: "Enter the bank",
+  ibanInvalid: "Enter a valid IBAN, like CR05015202001026284066",
+  domainRequired: "Enter the domain",
+  domainInvalid: "Write only the domain, like mitienda.com",
 } as const;

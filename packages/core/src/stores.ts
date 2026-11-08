@@ -50,7 +50,10 @@ export async function resolveStoreByHost(
   return undefined;
 }
 
-/** Connects a domain to the tenant's store. A hostname already taken by any store is refused. */
+/**
+ * Connects a domain to the tenant's store. A hostname already taken by any store is refused; a
+ * new main domain (`primary`) takes over from the old one.
+ */
 export async function addStoreDomain(
   ctx: TenantContext,
   host: string,
@@ -59,13 +62,24 @@ export async function addStoreDomain(
   if (ctx.role !== "owner") throw new DomainError("forbidden", "Only owners manage domains");
   const hostname = normalizeHostname(host);
   if (!hostname?.includes(".")) throw new DomainError("invalid_hostname", `Not a domain: ${host}`);
-  const [inserted] = await ctx.db
-    .insert(schema.storeDomain)
-    .values({ organizationId: ctx.organizationId, hostname, primary })
-    .onConflictDoNothing()
-    .returning({ hostname: schema.storeDomain.hostname });
-  if (!inserted) throw new DomainError("hostname_taken", `${hostname} already belongs to a store`);
-  return inserted;
+  return ctx.db.transaction(async (tx) => {
+    // A store has one main domain: a new one takes over.
+    if (primary) {
+      await tx
+        .update(schema.storeDomain)
+        .set({ primary: false })
+        .where(eq(schema.storeDomain.organizationId, ctx.organizationId));
+    }
+    const [inserted] = await tx
+      .insert(schema.storeDomain)
+      .values({ organizationId: ctx.organizationId, hostname, primary })
+      .onConflictDoNothing()
+      .returning({ hostname: schema.storeDomain.hostname });
+    if (!inserted) {
+      throw new DomainError("hostname_taken", `${hostname} already belongs to a store`);
+    }
+    return inserted;
+  });
 }
 
 /**
