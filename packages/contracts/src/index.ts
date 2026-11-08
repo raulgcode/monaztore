@@ -6,6 +6,7 @@ export * from "./color";
 export * from "./einvoicing";
 export * from "./message";
 export * from "./pages";
+export * from "./platform-admin";
 export * from "./store-settings";
 export * from "./store-theme";
 export * from "./workspace";

@@ -72,6 +72,19 @@ export const filesEnvSchema = z.object({
 });
 
 /** The value in `.env.example`: fine on a laptop, never on a public server. */
+/** The platform's operators, comma-separated: `pnpm admin:seed` gives them /admin. */
+export const superAdminEnvSchema = z.object({
+  SUPER_ADMIN_EMAILS: z
+    .string()
+    .optional()
+    .transform((value) =>
+      (value ?? "")
+        .split(",")
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+});
+
 export const EXAMPLE_AUTH_SECRET = "change-me-to-a-long-random-string-of-32-chars";
 
 export const serverEnvSchema = z

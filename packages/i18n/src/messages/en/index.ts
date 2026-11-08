@@ -1,3 +1,4 @@
+import { admin } from "./admin";
 import { auth } from "./auth";
 import { common } from "./common";
 import { design } from "./design";
@@ -14,6 +15,7 @@ import { workspace } from "./workspace";
 
 /** The source language. A new namespace is added here and in `es/index.ts`. */
 export const en = {
+  admin,
   auth,
   common,
   design,

@@ -125,6 +125,7 @@ export const reservedPageSlugs = [
   "theme",
   "locale",
   "api",
+  "admin",
   "app",
   "dev",
 ];

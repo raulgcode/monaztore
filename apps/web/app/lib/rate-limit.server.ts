@@ -24,6 +24,11 @@ export const rateLimits = {
   haciendaLookup: { limit: 60, windowMs: 15 * MINUTE },
   /** Payment references sent from one IP. */
   paymentReferenceIp: { limit: 20, windowMs: 15 * MINUTE },
+  /**
+   * Second-step tries (the 6 digits or a passkey) by one person: a million possible codes and a
+   * handful of tries per quarter hour keep a guesser out.
+   */
+  mfaCode: { limit: 10, windowMs: 15 * MINUTE },
 } satisfies Record<string, RateLimitRule>;
 
 export type RateLimitName = keyof typeof rateLimits;

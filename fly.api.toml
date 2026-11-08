@@ -12,7 +12,7 @@ kill_timeout = "30s"
 [deploy]
   # Before the new version starts. If it fails, nothing is deployed and the old version keeps
   # running.
-  release_command = "sh -c 'cd /app && pnpm db:migrate'"
+  release_command = "sh -c 'cd /app && pnpm db:migrate && pnpm admin:seed'"
 
 [env]
   NODE_ENV = "production"

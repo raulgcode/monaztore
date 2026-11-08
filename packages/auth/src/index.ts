@@ -7,6 +7,8 @@ export {
   type CreateAuthOptions,
   createAuth,
   defaultOrganizationId,
+  disabledAdminPaths,
   disabledOrganizationPaths,
   type RateLimitStorage,
+  SUPER_ADMIN_ROLE,
 } from "./auth";

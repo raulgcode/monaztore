@@ -285,6 +285,25 @@ retried from the order once fixed. `HACIENDA_PROVIDER_ID` is the provider ID on 
 same key as its page. e2e can't reach Hacienda, so scenarios save the credentials through core
 with a login check that says yes and `testCertificate` (`@monaztore/hacienda/testing`).
 
+The platform's panel (`/admin`, `core/src/platform-admin.ts`): the only place that reads across
+stores. It takes a `PlatformAdminContext`, which only `platformAdminContext` gives, for
+`user.role = "admin"` read from the database (Better Auth's `admin` plugin; its endpoints are off
+over HTTP, `disabledAdminPaths`). Super admins come from `SUPER_ADMIN_EMAILS` with
+`pnpm admin:seed` (every deploy runs it). Anyone else, or a support session inside a store, gets a
+404. The email link or password isn't enough: `requireSuperAdmin` also asks for the second step
+every 12 hours (`ADMIN_MFA_TTL_MS`) at `/admin/mfa`: an authenticator app (`core/src/mfa.ts`,
+TOTP with the secret sealed under `deriveSecret(…, "mfa")`, 8 hashed one-time recovery codes, a
+code never works twice) or a passkey (`core/src/passkeys.ts`, `@simplewebauthn`, only on
+APP_URL's host, a 5-minute challenge used once, a counter that can't go back), added in
+`/admin/security`. Both tables are per person (`user_totp`, `passkey`), so the stores' teams use
+the same second step. A lost phone: `pnpm admin:reset-2fa <email>`. `/admin` lists and searches
+every store (`listStores`), shows one with its team and whether each has the second step
+(`getStore`), and sets the commission on **card** sales in basis points: the platform's
+(`platform_settings`) and a store's own (`store_agreement`), read with `cardCommissionBpsFor`;
+SINPE Móvil and transfers never pay one. Every change and security event goes to
+`platform_audit_log` (`recordAudit`), which stores never see; `notifySupportAccess` (off at
+first) decides whether a store is told when support enters its account.
+
 Every `core` use case takes a `TenantContext` and filters by `organizationId`.
 - The workspace goes in the URL (`/app/:workspace/…`) and `requireTenant` resolves it with
   `resolveTenant`, which checks the membership; never take the workspace from the session or from
@@ -359,6 +378,8 @@ pnpm test:e2e            # Playwright locally
 pnpm e2e:remote [branch] # Playwright on GitHub Actions
 pnpm typecheck && pnpm lint
 pnpm db:generate && pnpm db:migrate   # after changing the schema
+pnpm admin:seed          # SUPER_ADMIN_EMAILS become super admins (/admin)
+pnpm admin:reset-2fa <email>  # someone lost their authenticator app and recovery codes
 pnpm release [patch|minor|major|x.y.z]  # publishes main to production (tag → Fly.io)
 pnpm fly:secrets [--check]  # sends .env.production to Fly's secrets
 pnpm --filter @monaztore/web lighthouse

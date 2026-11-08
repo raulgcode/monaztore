@@ -33,6 +33,18 @@ export default [
   ...(process.env.NODE_ENV === "production"
     ? []
     : [route("dev/sign-in", "routes/dev/sign-in.tsx")]),
+  // The platform's own panel: super admins only, after their second step (authenticator app or
+  // passkey). Anyone else gets a 404, as if it did not exist.
+  ...prefix("admin", [
+    route("mfa", "routes/admin/mfa.tsx"),
+    layout("routes/admin/layout.tsx", [
+      index("routes/admin/stores.tsx"),
+      route("stores/:storeId", "routes/admin/store.tsx"),
+      route("commission", "routes/admin/commission.tsx"),
+      route("log", "routes/admin/log.tsx"),
+      route("security", "routes/admin/security.tsx"),
+    ]),
+  ]),
   ...prefix("app", [
     layout("routes/app/layout.tsx", [
       index("routes/app/open-workspace.ts"),

@@ -62,4 +62,13 @@ export const forms = {
   pinRequired: "Escribe el PIN de la llave",
   pinInvalid: "El PIN tiene 4 dígitos",
   numberInvalid: "Escribe un número entero",
+  mfaCodeRequired: "Escribe el código de 6 números",
+  mfaCodeInvalid:
+    "Ese código no sirvió. Escribe el que muestra tu app ahora, o un código de respaldo.",
+  passkeyNameRequired: 'Ponle un nombre, como "iPhone"',
+  passkeyNameTooLong: "Usa 60 caracteres o menos",
+  commissionRequired: "Escribe el porcentaje",
+  commissionInvalid: "Escribe un porcentaje como 2.5",
+  commissionTooHigh: "La comisión no puede pasar de 20 %",
+  noteTooLong: "Usa 280 caracteres o menos",
 } as const satisfies Translation<typeof en>["forms"];
