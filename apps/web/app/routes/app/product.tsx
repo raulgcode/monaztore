@@ -525,7 +525,7 @@ export default function ProductEditor({ loaderData, params }: Route.ComponentPro
           </Section>
         </div>
 
-        <div className="grid min-w-0 gap-6 lg:sticky lg:top-4">
+        <div className="grid min-w-0 gap-6">
           <Section title={t("products.visibilityHeading")}>
             <p className="text-sm">
               {status === "active"
@@ -534,6 +534,36 @@ export default function ProductEditor({ loaderData, params }: Route.ComponentPro
                   ? t("products.visibilityArchived")
                   : t("products.visibilityDraft")}
             </p>
+            {product ? (
+              <div className="flex flex-wrap gap-2 border-t pt-3">
+                <Button
+                  type="submit"
+                  form={PRODUCT_ACTIONS}
+                  name="intent"
+                  value="duplicate"
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <CopyIcon aria-hidden className="size-4" />
+                  {t("products.duplicate")}
+                </Button>
+                <Button
+                  type="submit"
+                  form={PRODUCT_ACTIONS}
+                  name="intent"
+                  value="delete"
+                  variant="ghost"
+                  className="flex-1 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={(event) => {
+                    if (!window.confirm(t("products.deleteOneConfirm", { name: product.name })))
+                      event.preventDefault();
+                  }}
+                >
+                  <Trash2Icon aria-hidden className="size-4" />
+                  {t("products.deleteProduct")}
+                </Button>
+              </div>
+            ) : null}
           </Section>
           <CollectionsPicker
             categories={categories}
@@ -564,8 +594,13 @@ export default function ProductEditor({ loaderData, params }: Route.ComponentPro
           </Section>
         </div>
 
-        <div className="sticky bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-10 -mx-4 grid gap-2 border-t bg-background px-4 py-3 md:bottom-0 md:mx-0 md:px-0 lg:col-span-2">
-          <p role="status" className="text-center text-sm text-muted-foreground lg:text-left">
+        {/* The save bar: on the phone above the menu bar, in reach of the thumb; from 768 px a
+            floating bar under the editor, with what changed on the left and the buttons on the right. */}
+        <div className="sticky bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-10 -mx-4 flex items-center gap-3 border-t bg-background px-4 py-3 shadow-[0_-4px_16px_rgb(0_0_0/0.08)] md:bottom-4 md:mx-0 md:rounded-lg md:border lg:col-span-2">
+          <p
+            role="status"
+            className="sr-only text-sm text-muted-foreground sm:not-sr-only sm:min-w-0 sm:flex-1 sm:truncate"
+          >
             {saving
               ? t("products.saving")
               : saved && !dirty
@@ -574,7 +609,7 @@ export default function ProductEditor({ loaderData, params }: Route.ComponentPro
                   ? t("products.unsaved")
                   : ""}
           </p>
-          <div className="grid grid-cols-2 gap-2 lg:flex lg:justify-end">
+          <div className="flex flex-1 gap-2 sm:flex-none">
             <Button
               type="submit"
               name={fields.status.name}
@@ -582,6 +617,7 @@ export default function ProductEditor({ loaderData, params }: Route.ComponentPro
               variant="outline"
               disabled={saving}
               onClick={() => setDirty(false)}
+              className="flex-1 sm:flex-none"
             >
               {status === "active"
                 ? t("products.unpublish")
@@ -595,6 +631,7 @@ export default function ProductEditor({ loaderData, params }: Route.ComponentPro
               value="active"
               disabled={saving}
               onClick={() => setDirty(false)}
+              className="flex-1 sm:flex-none"
             >
               {status === "active" ? t("products.saveChanges") : t("products.publish")}
             </Button>
@@ -603,27 +640,8 @@ export default function ProductEditor({ loaderData, params }: Route.ComponentPro
       </save.Form>
       <NewCollectionForm />
 
-      {product ? (
-        <Form method="post" className="mt-8 flex flex-wrap gap-2 border-t pt-6">
-          <Button type="submit" name="intent" value="duplicate" variant="outline">
-            <CopyIcon aria-hidden className="size-4" />
-            {t("products.duplicate")}
-          </Button>
-          <Button
-            type="submit"
-            name="intent"
-            value="delete"
-            variant="destructive"
-            onClick={(event) => {
-              if (!window.confirm(t("products.deleteOneConfirm", { name: product.name })))
-                event.preventDefault();
-            }}
-          >
-            <Trash2Icon aria-hidden className="size-4" />
-            {t("products.deleteProduct")}
-          </Button>
-        </Form>
-      ) : null}
+      {/* Duplicate and delete live in "Who sees it", outside the editor's form. */}
+      {product ? <Form method="post" id={PRODUCT_ACTIONS} hidden /> : null}
     </>
   );
 }
@@ -650,6 +668,9 @@ function Section({
     </section>
   );
 }
+
+/** The form for Duplicate and Delete, whose buttons sit inside the editor. */
+const PRODUCT_ACTIONS = "product-actions";
 
 const NEW_COLLECTION = "new-collection";
 
