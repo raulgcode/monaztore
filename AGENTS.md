@@ -226,7 +226,9 @@ pages answer 404). Its use cases take a `StorefrontContext` and only read what a
 (`status = "active"`; descriptions cleaned with `cleanHtml`). Every page has its canonical on the
 store's primary domain (`storeOrigin`), Open Graph and, for a product, JSON-LD; `sitemap.xml` and
 `robots.txt` are per store, and the `*` route sends a migrated shop's old addresses (`redirect`)
-with a 301. e2e opens a store on its own `*.localhost` domain (`support/storefront.ts`; requests
+with a 301. The header's search box (`StoreSearch`) is an ARIA combobox: as the shopper
+types it asks `/search?q=` (a fetcher, after a pause) for `suggestStoreProducts`, a few products
+with a 160 px photo, and works as a plain form to `/products?q=` without JavaScript. e2e opens a store on its own `*.localhost` domain (`support/storefront.ts`; requests
 without a browser go through `requestStore`, since Node doesn't resolve `*.localhost`).
 
 Buying (`core/src/orders.ts`): the cart is a signed, host-only cookie with ids and quantities,

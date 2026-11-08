@@ -82,8 +82,8 @@ test.describe("Feature: the store's design", () => {
       await expect(page.getByText("Easy size exchanges")).toBeVisible();
     });
 
-    await test.step("And its buttons wear Sand's rust color", async () => {
-      await expect(page.getByRole("button", { name: "Search" })).toHaveCSS(
+    await test.step("And its announcement wears Sand's rust color", async () => {
+      await expect(page.getByText("Free delivery over ₡25 000")).toHaveCSS(
         "background-color",
         "rgb(154, 52, 18)",
       );
