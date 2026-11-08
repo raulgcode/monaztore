@@ -305,6 +305,7 @@ Every new variable goes in `.env.example` with a comment saying what it is, and 
 corepack enable && pnpm install
 pnpm run setup           # .env, secrets, sign-in methods, hooks, Chromium, Docker, migrations
 pnpm dev                 # web :5173, api :3001 · /dev/sign-in to sign in as anyone
+pnpm sandbox [--reset]   # a store to try things on, at sandbox.localhost (local database only)
 pnpm test                # Vitest: unit + integration + browser
 pnpm test:e2e            # Playwright locally
 pnpm e2e:remote [branch] # Playwright on GitHub Actions

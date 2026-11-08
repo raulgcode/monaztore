@@ -19,7 +19,10 @@ export default defineConfig({
         test: {
           name: "integration",
           environment: "node",
-          include: ["{apps,packages}/*/{src,test}/**/*.integration.test.ts"],
+          include: [
+            "{apps,packages}/*/{src,test}/**/*.integration.test.ts",
+            "tooling/**/*.integration.test.ts",
+          ],
           globalSetup: ["./tooling/vitest/integration-setup.ts"],
           setupFiles: ["./tooling/vitest/load-env.ts"],
           testTimeout: 15_000,
