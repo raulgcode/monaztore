@@ -196,6 +196,14 @@ workspace in the URL; the public storefront finds its store from the request's H
 `resolveStoreByHost` (`store_domain`), the one public entry point that picks a store. Operator
 tools run from a terminal (`pnpm import:woocommerce`) use `ownerContextForStore`.
 
+The storefront (`routes/store/*`, `core/src/storefront.ts`): `storeMiddleware` puts the store of
+the Host in `storeContext` (null on the platform's host, where `/` is the landing and store-only
+pages answer 404). Its use cases take a `StorefrontContext` and only read what a shopper may see
+(`status = "active"`; descriptions cleaned with `cleanHtml`). Every page has its canonical on the
+store's primary domain (`storeOrigin`), Open Graph and, for a product, JSON-LD; `sitemap.xml` and
+`robots.txt` are per store, and the `*` route sends a migrated shop's old addresses (`redirect`)
+with a 301. e2e opens a store on its own `*.localhost` domain (`support/storefront.ts`).
+
 Every `core` use case takes a `TenantContext` and filters by `organizationId`.
 - The workspace goes in the URL (`/app/:workspace/…`) and `requireTenant` resolves it with
   `resolveTenant`, which checks the membership; never take the workspace from the session or from

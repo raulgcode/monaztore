@@ -103,6 +103,42 @@
 
 /* <NavigationProgress />: shows after 150 ms, then creeps to 90% while the page loads. */
 @layer components {
+  /* A store's own HTML (product and collection descriptions), already cleaned by `cleanHtml`. */
+  .store-prose {
+    display: grid;
+    gap: 0.75rem;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+  .store-prose :where(h2, h3, h4) {
+    font-weight: 600;
+    margin-top: 0.5rem;
+  }
+  .store-prose :where(ul) {
+    list-style: disc;
+    padding-left: 1.25rem;
+  }
+  .store-prose :where(ol) {
+    list-style: decimal;
+    padding-left: 1.25rem;
+  }
+  .store-prose :where(a) {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  .store-prose :where(blockquote) {
+    border-left: 3px solid var(--border);
+    padding-left: 1rem;
+  }
+  .store-prose :where(table) {
+    display: block;
+    overflow-x: auto;
+  }
+  .store-prose :where(th, td) {
+    border: 1px solid var(--border);
+    padding: 0.25rem 0.5rem;
+  }
+
   .navigation-progress-bar {
     width: 90%;
     transform-origin: left;

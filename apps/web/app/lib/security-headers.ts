@@ -27,7 +27,9 @@ export function contentSecurityPolicy(nonce: string, { https = true } = {}): str
     `script-src 'self' 'nonce-${nonce}'`,
     // React sets `style` attributes; no inline <style> of ours.
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    // Product photos live where each store keeps them (its CDN, or the shop it migrated from,
+    // like wp-content/uploads) until they are copied to our storage: any HTTPS image.
+    "img-src 'self' data: blob: https:",
     "font-src 'self'",
     "connect-src 'self'",
     "manifest-src 'self'",

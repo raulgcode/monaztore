@@ -6,6 +6,7 @@ import { email } from "./email";
 import { forms } from "./forms";
 import { home } from "./home";
 import { settings } from "./settings";
+import { storefront } from "./storefront";
 import { workspace } from "./workspace";
 
 export const es = {
@@ -15,5 +16,6 @@ export const es = {
   forms,
   home,
   settings,
+  storefront,
   workspace,
 } as const satisfies Translation<typeof en>;

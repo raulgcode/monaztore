@@ -16,6 +16,26 @@ export {
 } from "./rate-limits";
 export { slugify, uniqueSlug } from "./slug";
 export {
+  cleanHtml,
+  findRedirect,
+  getStoreCollection,
+  getStoreInfo,
+  getStoreProduct,
+  listStoreProducts,
+  listTopCollections,
+  type ProductCard,
+  type ProductPage,
+  type ProductQuery,
+  plainText,
+  type SitemapEntry,
+  STOREFRONT_PAGE_SIZE,
+  type StoreCollection,
+  type StorefrontContext,
+  type StoreInfo,
+  type StoreProduct,
+  sitemapEntries,
+} from "./storefront";
+export {
   addStoreDomain,
   normalizeHostname,
   ownerContextForStore,

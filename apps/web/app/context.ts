@@ -1,5 +1,5 @@
 import type { AuthSession } from "@monaztore/auth";
-import type { TenantContext } from "@monaztore/core";
+import type { StorefrontContext, TenantContext } from "@monaztore/core";
 import { defaultLocale, type Locale } from "@monaztore/i18n";
 import { createContext } from "react-router";
 
@@ -14,3 +14,9 @@ export const localeContext = createContext<Locale>(defaultLocale);
 
 /** Set by `securityMiddleware`: the nonce of this page's inline scripts (see entry.server.tsx). */
 export const nonceContext = createContext<string>("");
+
+/**
+ * Set by `storeMiddleware` when the request's Host is a store's domain: what the public storefront
+ * reads. Null on the platform's own host (the landing, sign-in, the workspace).
+ */
+export const storeContext = createContext<StorefrontContext | null>(null);

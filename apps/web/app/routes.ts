@@ -1,7 +1,19 @@
 import { index, layout, prefix, type RouteConfig, route } from "@react-router/dev/routes";
 
 export default [
-  index("routes/home.tsx"),
+  // Public pages. On a store's domain (`storeMiddleware`) they are the storefront; on the
+  // platform's host, the landing, and the store-only pages answer 404.
+  layout("routes/store/layout.tsx", [
+    index("routes/home.tsx"),
+    route("products", "routes/store/products.tsx"),
+    route("products/:slug", "routes/store/product.tsx"),
+    route("collections", "routes/store/collections.tsx"),
+    route("collections/:slug", "routes/store/collection.tsx"),
+    route("sitemap.xml", "routes/store/sitemap.ts"),
+    route("robots.txt", "routes/store/robots.ts"),
+    // Last: old addresses of a migrated shop (301) and every other 404.
+    route("*", "routes/store/fallback.tsx"),
+  ]),
   route("login", "routes/login.tsx"),
   // Email and password: only answer when AUTH_METHODS has "password" (404 otherwise).
   route("sign-up", "routes/sign-up.tsx"),
