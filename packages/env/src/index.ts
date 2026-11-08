@@ -96,6 +96,9 @@ export const serverEnvSchema = z
     STORE_MODE: z.enum(["multi", "single"]).default("multi"),
     GOOGLE_CLIENT_ID: optionalString,
     GOOGLE_CLIENT_SECRET: optionalString,
+    // Costa Rica's electronic invoicing: the ID of whoever runs this instance, registered with
+    // Hacienda as the software provider. Empty, each store is its own provider.
+    HACIENDA_PROVIDER_ID: optionalString,
     ...databaseEnvSchema.shape,
     ...emailEnvSchema.shape,
     ...filesEnvSchema.shape,

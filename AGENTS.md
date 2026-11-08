@@ -21,6 +21,7 @@ following these rules. If a rule doesn't apply, change it here first and then th
 | `packages/env`                  | Environment variable validation with Zod                                          |
 | `packages/importer-woocommerce` | Reads a WooCommerce shop (REST v3 or Store API) into Monaztore's shape            |
 | `packages/storage`              | Store files (product photos): Cloudflare R2 or a folder on disk; WebP re-encoding |
+| `packages/hacienda`             | Costa Rica's electronic invoices: v4.4 XML, signing with the .p12, Hacienda's API |
 | `packages/create`               | `create-monaztore`: a new project from this template, `rename`, template updates  |
 | `tooling/*`                     | Repo scripts: setup, release, Fly secrets, remote e2e                             |
 
@@ -257,6 +258,32 @@ Slugs that are the storefront's own routes are refused (`reservedPageSlugs`); ch
 published page's address leaves a 301 from the old one. `pnpm import:woocommerce` brings the
 shop's WordPress pages (`wp/v2/pages`, `wordPressPageBlocks`: Flatsome accordions become
 questions; forms are left out and noted) with a 301 from their old address.
+
+Electronic invoicing (`core/src/einvoicing.ts`, `core/src/einvoice-delivery.ts`,
+`@monaztore/hacienda`, `contracts/src/einvoicing.ts`): only for stores in Costa Rica
+(`store_settings.country = "CR"`, `EINVOICING_COUNTRY`); anywhere else its page answers 404, the
+checkout doesn't ask and nothing is queued. The owner sets it up in `/app/:workspace/invoicing`
+(linked from Store and from each order, not a bar item: the phone bar is full) in three steps:
+their details as in Hacienda (the cédula lookup fills name and activity, `findTaxpayer`), the
+CABYS code of what they sell (searched with `searchCabys`; one code for the whole store, 13 % VAT
+only for now) and the ATV API user plus the .p12 and its PIN, checked against Hacienda before
+saving (`checkHaciendaCredentials`, its own rate limit). The password, the .p12 and the PIN are
+sealed with AES-256-GCM (`sealSecret`, key `deriveSecret(BETTER_AUTH_SECRET, "einvoicing")`) and
+never shown again; the user's domain decides the environment (`@stag.` is the sandbox). Turned
+on, marking an order paid queues its document inside the same transaction (`queueOrderEinvoice`,
+or by hand from the order when "issue as soon as paid" is off): an invoice (01) when the shopper
+gave a cédula at checkout ("Invoice in my name", `order.taxId`) or the owner typed one, a receipt
+(04) otherwise, numbered per kind under the settings row's lock with the store's branch and
+terminal (another terminal keeps numbers apart from another system). The API's job
+(`apps/api/src/jobs/einvoices.ts`, every 15 s) leases due documents (`for update skip locked`),
+builds and signs the XML from the order's lines (prices include VAT; CRC only), sends it, polls
+the answer with backoff and emails the buyer the XML and Hacienda's answer (`EinvoiceEmail`).
+A rejected document can be replaced by a new one; a failed one (credentials, key, unreachable) is
+retried from the order once fixed. `HACIENDA_PROVIDER_ID` is the provider ID on every document
+(the store's own without it). The shopper's order page shows the accepted document and
+`/orders/:token/:file` downloads its XML: another public entry, by the order's secret link, the
+same key as its page. e2e can't reach Hacienda, so scenarios save the credentials through core
+with a login check that says yes and `testCertificate` (`@monaztore/hacienda/testing`).
 
 Every `core` use case takes a `TenantContext` and filters by `organizationId`.
 - The workspace goes in the URL (`/app/:workspace/…`) and `requireTenant` resolves it with

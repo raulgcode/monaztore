@@ -18,6 +18,10 @@ export const rateLimits = {
   passwordEmail: { limit: 10, windowMs: 15 * MINUTE },
   /** Orders placed from one IP: a family buys a few, a script many. */
   orderIp: { limit: 10, windowMs: 15 * MINUTE },
+  /** Hacienda sign-in checks from one workspace (Factura electrónica): a store retyping, not a guesser. */
+  haciendaLogin: { limit: 10, windowMs: 15 * MINUTE },
+  /** Hacienda's public lookups (an ID, the CABYS catalog) from one workspace. */
+  haciendaLookup: { limit: 60, windowMs: 15 * MINUTE },
   /** Payment references sent from one IP. */
   paymentReferenceIp: { limit: 20, windowMs: 15 * MINUTE },
 } satisfies Record<string, RateLimitRule>;

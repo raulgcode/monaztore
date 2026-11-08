@@ -13,6 +13,7 @@
     "@monaztore/core": "workspace:*",
     "@monaztore/db": "workspace:*",
     "@monaztore/env": "workspace:*",
+    "@monaztore/hacienda": "workspace:*",
     "@monaztore/storage": "workspace:*",
     "@monaztore/tsconfig": "workspace:*",
     "@playwright/test": "catalog:",

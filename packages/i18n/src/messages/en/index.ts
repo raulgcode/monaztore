@@ -1,5 +1,6 @@
 import { auth } from "./auth";
 import { common } from "./common";
+import { einvoicing } from "./einvoicing";
 import { email } from "./email";
 import { forms } from "./forms";
 import { home } from "./home";
@@ -14,6 +15,7 @@ import { workspace } from "./workspace";
 export const en = {
   auth,
   common,
+  einvoicing,
   email,
   forms,
   home,

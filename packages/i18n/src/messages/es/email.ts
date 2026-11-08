@@ -20,4 +20,11 @@ export const email = {
   resetBody: "Toca el botón para elegir una nueva contraseña. El enlace sirve una hora.",
   resetButton: "Elegir contraseña",
   resetIgnore: "Si no lo pediste, ignora este correo: tu contraseña no cambia.",
+  einvoiceSubject: "{store}: tu factura electrónica del pedido #{number}",
+  eticketSubject: "{store}: tu tiquete electrónico del pedido #{number}",
+  einvoiceBody: "Hacienda aceptó el comprobante que {store} emitió por tu compra.",
+  einvoiceNumber: "Número: {consecutive}",
+  einvoiceClave: "Clave: {clave}",
+  einvoiceFiles:
+    "Van adjuntos el XML firmado y la respuesta de Hacienda. Guárdalos para tus registros.",
 } as const satisfies Translation<typeof en>["email"];

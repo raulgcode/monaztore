@@ -1,0 +1,23 @@
+{
+  "name": "@monaztore/hacienda",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./locations": "./src/locations.ts",
+    "./testing": "./src/testing/certificate.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@dojocoding/hacienda-sdk": "catalog:",
+    "@juniorov/cr-locations": "catalog:"
+  },
+  "devDependencies": {
+    "@monaztore/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/node-forge": "catalog:",
+    "node-forge": "catalog:"
+  }
+}

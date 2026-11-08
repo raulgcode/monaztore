@@ -17,6 +17,8 @@
     "@monaztore/db": "workspace:*",
     "@monaztore/email": "workspace:*",
     "@monaztore/env": "workspace:*",
+    "@monaztore/hacienda": "workspace:*",
+    "@monaztore/i18n": "workspace:*",
     "fastify": "catalog:",
     "fastify-type-provider-zod": "catalog:",
     "zod": "catalog:"

@@ -58,6 +58,8 @@ export const storeSettings = pgTable("store_settings", {
   currency: text().notNull().default("CRC"),
   /** How shoppers pay: SINPE Móvil and bank transfer for now (see `StorePayments`). */
   payments: jsonb().$type<StorePayments>().notNull().default({}),
+  /** ISO 3166 country the store sells from. Costa Rica (CR) turns on Hacienda's invoicing. */
+  country: text().notNull().default("CR"),
   /** The number the next order gets: #1001, #1002… Taken under the row's lock. */
   nextOrderNumber: integer().notNull().default(1001),
   ...timestamps,
@@ -76,6 +78,13 @@ export type PaymentMethod = "sinpe" | "transfer";
  * the store checks it; paid; cancelled. Shipping states come later.
  */
 export type OrderStatus = "pending_payment" | "payment_submitted" | "paid" | "cancelled";
+
+/** Whom the shopper wants the invoice made out to, in Costa Rica (Hacienda's ID types). */
+export interface OrderTaxId {
+  idType: "01" | "02" | "03" | "04";
+  idNumber: string;
+  name: string;
+}
 
 export interface ShippingAddress {
   line1: string;
@@ -103,6 +112,8 @@ export const order = pgTable(
     name: text().notNull(),
     phone: text().notNull(),
     shippingAddress: jsonb().$type<ShippingAddress>().notNull(),
+    /** "Invoice in my name": only where the store issues electronic invoices. */
+    taxId: jsonb().$type<OrderTaxId>(),
     currency: text().notNull(),
     /** Minor units. */
     subtotal: bigint({ mode: "number" }).notNull(),

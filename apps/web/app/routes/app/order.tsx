@@ -1,5 +1,17 @@
-import { cancelOrder, DomainError, getOrder, markOrderPaid } from "@monaztore/core";
+import { parseWithZod } from "@conform-to/zod/v4";
+import { invoiceToSchema, taxIdFromForm } from "@monaztore/contracts";
+import {
+  cancelOrder,
+  DomainError,
+  getEinvoicing,
+  getOrder,
+  getOrderEinvoices,
+  issueOrderEinvoice,
+  markOrderPaid,
+  retryEinvoice,
+} from "@monaztore/core";
 import { data, Form, href, Link, useNavigation } from "react-router";
+import { OrderEinvoice } from "~/components/einvoicing/order-einvoice";
 import { OrderStatusBadge } from "~/components/orders/order-status";
 import { PageHeader } from "~/components/page-header";
 import { Button } from "~/components/ui/button";
@@ -20,23 +32,64 @@ function orderNumber(param: string): number {
 }
 
 export async function loader({ params, context }: Route.LoaderArgs) {
-  const order = await getOrder(context.get(tenantContext), orderNumber(params.number));
+  const tenant = context.get(tenantContext);
+  const number = orderNumber(params.number);
+  const [order, einvoicing] = await Promise.all([getOrder(tenant, number), getEinvoicing(tenant)]);
   if (!order) throw data("Order not found", { status: 404 });
-  return { order, i18n: translations(context, "orders") };
+  // Electronic invoicing only shows in Costa Rica, once it was turned on or an order has one.
+  const einvoices = einvoicing.available ? await getOrderEinvoices(tenant, number) : [];
+  const showEinvoices = einvoicing.available && (einvoicing.enabled || einvoices.length > 0);
+  return {
+    order,
+    einvoicing: showEinvoices ? { enabled: einvoicing.enabled, einvoices } : null,
+    i18n: showEinvoices
+      ? translations(context, "orders", "einvoicing", "forms")
+      : translations(context, "orders"),
+  };
 }
 
 export async function action({ request, params, context }: Route.ActionArgs) {
   const tenant = context.get(tenantContext);
   const number = orderNumber(params.number);
-  const intent = (await request.formData()).get("intent");
+  const formData = await request.formData();
+  const intent = formData.get("intent");
+  if (intent === "einvoice") {
+    const submission = parseWithZod(formData, { schema: invoiceToSchema });
+    if (submission.status !== "success") {
+      return data({ done: null, result: submission.reply() }, { status: 400 });
+    }
+    try {
+      await issueOrderEinvoice(tenant, number, taxIdFromForm(submission.value));
+    } catch (error) {
+      if (error instanceof DomainError && error.code === "einvoice_exists") {
+        return data({ done: "einvoiceExists" as const, result: undefined }, { status: 409 });
+      }
+      if (error instanceof DomainError) {
+        return data({ done: "einvoiceOff" as const, result: undefined }, { status: 409 });
+      }
+      throw error;
+    }
+    return { done: "einvoiceIssued" as const, result: submission.reply({ resetForm: true }) };
+  }
+  if (intent === "einvoiceRetry") {
+    try {
+      await retryEinvoice(tenant, String(formData.get("id") ?? ""));
+    } catch (error) {
+      if (!(error instanceof DomainError)) throw error;
+    }
+    return { done: "einvoiceRetried" as const, result: undefined };
+  }
   try {
     if (intent === "paid") await markOrderPaid(tenant, number);
     else if (intent === "cancel") await cancelOrder(tenant, number);
     else throw data("Unknown intent", { status: 400 });
-    return { done: intent === "paid" ? ("paid" as const) : ("cancelled" as const) };
+    return {
+      done: intent === "paid" ? ("paid" as const) : ("cancelled" as const),
+      result: undefined,
+    };
   } catch (error) {
     if (error instanceof DomainError && error.code === "order_closed") {
-      return data({ done: "closed" as const }, { status: 409 });
+      return data({ done: "closed" as const, result: undefined }, { status: 409 });
     }
     throw error;
   }
@@ -54,7 +107,12 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
     paid: t("orders.paidDone"),
     cancelled: t("orders.cancelledDone"),
     closed: t("orders.closed"),
+    einvoiceIssued: loaderData.einvoicing ? t("einvoicing.issued") : "",
+    einvoiceRetried: loaderData.einvoicing ? t("einvoicing.retried") : "",
+    einvoiceExists: loaderData.einvoicing ? t("einvoicing.orderExists") : "",
+    einvoiceOff: loaderData.einvoicing ? t("einvoicing.orderOff") : "",
   };
+  const alerts = new Set(["closed", "einvoiceExists", "einvoiceOff"]);
 
   return (
     <>
@@ -74,9 +132,9 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
       >
         <OrderStatusBadge status={order.status} />
       </PageHeader>
-      {actionData ? (
+      {actionData?.done ? (
         <p
-          role={actionData.done === "closed" ? "alert" : "status"}
+          role={alerts.has(actionData.done) ? "alert" : "status"}
           className="mb-4 rounded-md border p-3 text-sm"
         >
           {notice[actionData.done]}
@@ -164,6 +222,15 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
             <span>{money(order.total)}</span>
           </p>
         </section>
+        {loaderData.einvoicing ? (
+          <OrderEinvoice
+            workspace={params.workspace}
+            paid={order.status === "paid"}
+            einvoices={loaderData.einvoicing.einvoices}
+            taxId={order.taxId}
+            lastResult={actionData?.result}
+          />
+        ) : null}
       </div>
     </>
   );

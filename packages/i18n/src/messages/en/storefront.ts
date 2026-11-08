@@ -91,4 +91,15 @@ export const storefront = {
   orderSummary: "What you ordered",
   deliverTo: "Delivery to",
   orderLinkHint: "Keep this page: its address is your link to the order.",
+  invoiceSection: "Invoice in my name (optional)",
+  invoiceSectionHint:
+    "With your personal or company ID (cédula). Without it you get an electronic receipt.",
+  invoiceIdLabel: "ID (cédula)",
+  invoiceNameLabel: "Name on the invoice",
+  einvoiceHeading: "Your electronic invoice",
+  einvoiceIntro: "Hacienda accepted it. We also sent it to your email.",
+  einvoiceInvoice: "Electronic invoice {consecutive}",
+  einvoiceTicket: "Electronic receipt {consecutive}",
+  einvoiceDocument: "Download the invoice (XML)",
+  einvoiceResponse: "Download Hacienda's answer (XML)",
 } as const;

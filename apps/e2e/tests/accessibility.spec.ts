@@ -5,7 +5,7 @@ const schemes = ["light", "dark"] as const;
 // Public pages, before signing in.
 const publicPages = ["/", "/login", "/login?with=link", "/sign-up", "/forgot-password"];
 // Sections inside the workspace, after /app/:workspace. A new section goes here.
-const workspaceSections = ["", "/orders", "/pages", "/store", "/settings"];
+const workspaceSections = ["", "/orders", "/pages", "/store", "/invoicing", "/settings"];
 // Storefront pages, on a store's own domain. A new storefront page goes here.
 const storePages = [
   "/",
