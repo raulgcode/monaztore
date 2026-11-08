@@ -2,7 +2,7 @@ import { getFormProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { paymentReferenceSchema } from "@monaztore/contracts";
 import { DomainError, getOrderByToken, submitPaymentReference } from "@monaztore/core";
-import { data, Form, useNavigation } from "react-router";
+import { data, Form, href, useNavigation } from "react-router";
 import { FieldErrors, TextField } from "~/components/text-field";
 import { Button } from "~/components/ui/button";
 import { metaT, useLocale, useT } from "~/lib/i18n";
@@ -49,7 +49,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   return data({ result: submission.reply({ resetForm: true }) });
 }
 
-export default function Order({ loaderData, actionData }: Route.ComponentProps) {
+export default function Order({ loaderData, actionData, params }: Route.ComponentProps) {
   const t = useT();
   const locale = useLocale();
   const navigation = useNavigation();
@@ -141,6 +141,39 @@ export default function Order({ loaderData, actionData }: Route.ComponentProps) 
           {order.shippingAddress.city}, {order.shippingAddress.province}
         </p>
       </section>
+      {order.einvoice ? (
+        <section aria-labelledby="einvoice" className="grid gap-1 rounded-md border p-4 text-sm">
+          <h2 id="einvoice" className="font-medium">
+            {t("storefront.einvoiceHeading")}
+          </h2>
+          <p>{t("storefront.einvoiceIntro")}</p>
+          <p>
+            {t(
+              order.einvoice.kind === "invoice"
+                ? "storefront.einvoiceInvoice"
+                : "storefront.einvoiceTicket",
+              {
+                consecutive: order.einvoice.consecutive,
+              },
+            )}
+          </p>
+          <div className="flex flex-wrap gap-x-4">
+            {(["document", "response"] as const).map((file) => (
+              <a
+                key={file}
+                href={href("/orders/:token/:file", { token: params.token, file: `${file}.xml` })}
+                className="inline-flex min-h-11 items-center underline underline-offset-4"
+              >
+                {t(
+                  file === "document"
+                    ? "storefront.einvoiceDocument"
+                    : "storefront.einvoiceResponse",
+                )}
+              </a>
+            ))}
+          </div>
+        </section>
+      ) : null}
       <p className="text-sm text-muted-foreground">{t("storefront.orderLinkHint")}</p>
     </div>
   );

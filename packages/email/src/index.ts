@@ -8,7 +8,12 @@ export {
   EmailNote,
   EmailText,
 } from "./layout";
-export { createMailer, type Mailer, type SendEmailInput } from "./mailer";
+export {
+  createMailer,
+  type EmailAttachment,
+  type Mailer,
+  type SendEmailInput,
+} from "./mailer";
 export { type RenderedEmail, renderEmail } from "./render";
 export {
   AccountEmail,
@@ -16,4 +21,10 @@ export {
   type AccountEmailProps,
   accountEmailSubject,
 } from "./templates/account";
+export {
+  EinvoiceEmail,
+  type EinvoiceEmailProps,
+  einvoiceMessage,
+  einvoiceSubject,
+} from "./templates/einvoice";
 export { MagicLinkEmail, type MagicLinkEmailProps, magicLinkSubject } from "./templates/magic-link";

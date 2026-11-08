@@ -3,6 +3,7 @@ export * from "./catalog-import";
 export * from "./catalog-query";
 export * from "./checkout";
 export * from "./color";
+export * from "./einvoicing";
 export * from "./message";
 export * from "./pages";
 export * from "./store-settings";

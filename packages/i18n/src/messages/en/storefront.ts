@@ -133,4 +133,15 @@ export const storefront = {
   highlight_wholesale_1: "Delivery to your business",
   highlight_wholesale_2: "Stock and prices up to date",
   highlight_wholesale_3: "Orders with your invoice",
+  invoiceSection: "Invoice in my name (optional)",
+  invoiceSectionHint:
+    "With your personal or company ID (cédula). Without it you get an electronic receipt.",
+  invoiceIdLabel: "ID (cédula)",
+  invoiceNameLabel: "Name on the invoice",
+  einvoiceHeading: "Your electronic invoice",
+  einvoiceIntro: "Hacienda accepted it. We also sent it to your email.",
+  einvoiceInvoice: "Electronic invoice {consecutive}",
+  einvoiceTicket: "Electronic receipt {consecutive}",
+  einvoiceDocument: "Download the invoice (XML)",
+  einvoiceResponse: "Download Hacienda's answer (XML)",
 } as const;

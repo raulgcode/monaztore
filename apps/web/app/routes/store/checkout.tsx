@@ -1,7 +1,13 @@
 import { getFormProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
-import { checkoutSchema } from "@monaztore/contracts";
-import { DomainError, getPaymentOptions, placeOrder, priceCart } from "@monaztore/core";
+import { checkoutSchema, checkoutWithInvoiceSchema, taxIdFromForm } from "@monaztore/contracts";
+import {
+  DomainError,
+  getPaymentOptions,
+  placeOrder,
+  priceCart,
+  storeIssuesInvoices,
+} from "@monaztore/core";
 import { data, Form, href, Link, redirect, useNavigation } from "react-router";
 import { FieldErrors, TextField } from "~/components/text-field";
 import { Button } from "~/components/ui/button";
@@ -22,21 +28,27 @@ export function meta({ matches }: Route.MetaArgs) {
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const store = requireStore(context);
-  const [cart, payments] = await Promise.all([
+  const [cart, payments, invoices] = await Promise.all([
     readCart(request).then((lines) => priceCart(store, lines)),
     getPaymentOptions(store),
+    storeIssuesInvoices(store.db, store.store.organizationId),
   ]);
   if (cart.lines.length === 0) throw redirect(href("/cart"));
   return {
     cart,
     methods: (["sinpe", "transfer"] as const).filter((method) => payments[method]),
+    // A store in Costa Rica with electronic invoicing on asks who the invoice is for.
+    invoices,
     i18n: translations(context, "forms"),
   };
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
   const store = requireStore(context);
-  const submission = parseWithZod(await request.formData(), { schema: checkoutSchema });
+  const invoices = await storeIssuesInvoices(store.db, store.store.organizationId);
+  const submission = parseWithZod(await request.formData(), {
+    schema: invoices ? checkoutWithInvoiceSchema : checkoutSchema,
+  });
   if (submission.status !== "success") {
     return data({ result: submission.reply(), cartChanged: false }, { status: 400 });
   }
@@ -53,6 +65,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     const placed = await placeOrder(store, {
       cart: await readCart(request),
       checkout: submission.value,
+      taxId: invoiceTo(submission.value),
       locale: localeOf(context),
     });
     throw redirect(href("/orders/:token", { token: placed.token }), {
@@ -78,19 +91,29 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 }
 
+/** The "invoice in my name" fields as the order's `taxId`, when the form had them. */
+function invoiceTo(value: object) {
+  if (!("taxIdNumber" in value && "taxName" in value)) return null;
+  const { taxIdNumber, taxName } = value;
+  return typeof taxIdNumber === "string" && typeof taxName === "string"
+    ? taxIdFromForm({ taxIdNumber, taxName })
+    : null;
+}
+
 export default function Checkout({ loaderData, actionData }: Route.ComponentProps) {
   const t = useT();
   const locale = useLocale();
   const navigation = useNavigation();
   const placing = navigation.state === "submitting";
-  const { cart, methods } = loaderData;
+  const { cart, methods, invoices } = loaderData;
   const money = (minor: number) => formatPrice(minor, cart.currency, locale);
   const [form, fields] = useForm({
     id: "checkout",
     lastResult: actionData?.result,
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
-    onValidate: ({ formData }) => parseWithZod(formData, { schema: checkoutSchema }),
+    onValidate: ({ formData }) =>
+      parseWithZod(formData, { schema: invoices ? checkoutWithInvoiceSchema : checkoutSchema }),
     defaultValue: { paymentMethod: methods[0] },
   });
 
@@ -156,6 +179,7 @@ export default function Checkout({ loaderData, actionData }: Route.ComponentProp
               />
               <TextField field={fields.notes} label={t("storefront.notesLabel")} />
             </fieldset>
+            {invoices ? <InvoiceTo fields={fields} /> : null}
             <fieldset
               className="grid gap-3"
               aria-describedby={
@@ -219,5 +243,34 @@ export default function Checkout({ loaderData, actionData }: Route.ComponentProp
         </section>
       </div>
     </>
+  );
+}
+
+type CheckoutFields = ReturnType<typeof useForm<Record<string, string>>>[1];
+
+/** "Invoice in my name": closed by default, open again when one of its fields has an error. */
+function InvoiceTo({ fields }: { fields: CheckoutFields }) {
+  const t = useT();
+  const idNumber = fields.taxIdNumber;
+  const name = fields.taxName;
+  if (!idNumber || !name) return null;
+  return (
+    <details
+      className="rounded-md border p-3"
+      open={Boolean(idNumber.errors || name.errors || idNumber.initialValue)}
+    >
+      <summary className="flex min-h-11 cursor-pointer items-center font-medium">
+        {t("storefront.invoiceSection")}
+      </summary>
+      <div className="grid gap-4 pt-3">
+        <p className="text-sm text-muted-foreground">{t("storefront.invoiceSectionHint")}</p>
+        <TextField field={idNumber} label={t("storefront.invoiceIdLabel")} inputMode="numeric" />
+        <TextField
+          field={name}
+          label={t("storefront.invoiceNameLabel")}
+          autoComplete="organization"
+        />
+      </div>
+    </details>
   );
 }

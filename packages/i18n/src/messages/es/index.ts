@@ -3,6 +3,7 @@ import type { en } from "../en";
 import { auth } from "./auth";
 import { common } from "./common";
 import { design } from "./design";
+import { einvoicing } from "./einvoicing";
 import { email } from "./email";
 import { forms } from "./forms";
 import { home } from "./home";
@@ -17,6 +18,7 @@ export const es = {
   auth,
   common,
   design,
+  einvoicing,
   email,
   forms,
   home,

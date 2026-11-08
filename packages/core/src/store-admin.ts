@@ -1,5 +1,6 @@
 import { and, asc, count, desc, eq, inArray, schema, sql } from "@monaztore/db";
 import type { OrderStatus, StorePayments } from "@monaztore/db/schema";
+import { queueOrderEinvoice } from "./einvoicing";
 import { DomainError } from "./errors";
 import type { TenantContext } from "./tenant";
 
@@ -108,8 +109,21 @@ export async function markOrderPaid(ctx: TenantContext, number: number): Promise
           inArray(schema.order.status, ["pending_payment", "payment_submitted"]),
         ),
       )
-      .returning({ customerId: schema.order.customerId, total: schema.order.total });
+      .returning({
+        id: schema.order.id,
+        customerId: schema.order.customerId,
+        total: schema.order.total,
+      });
     if (!updated) throw new DomainError("order_closed", "Only an open order can be paid");
+    // Costa Rica: the order's invoice or ticket goes to Hacienda's queue, if the store issues
+    // them on payment. Paid without it all the same if something stops it.
+    await queueOrderEinvoice(tx, {
+      organizationId: ctx.organizationId,
+      orderId: updated.id,
+      onlyAuto: true,
+    }).catch((error: unknown) => {
+      if (!(error instanceof DomainError)) throw error;
+    });
     if (updated.customerId) {
       await tx
         .update(schema.customer)

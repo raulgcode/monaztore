@@ -12,6 +12,7 @@
   "dependencies": {
     "@monaztore/contracts": "workspace:*",
     "@monaztore/db": "workspace:*",
+    "@monaztore/hacienda": "workspace:*",
     "@monaztore/storage": "workspace:*",
     "sanitize-html": "catalog:",
     "zod": "catalog:"

@@ -4,13 +4,14 @@ import { domainSchema, paymentSettingsSchema, paymentsFromForm } from "@monaztor
 import {
   addStoreDomain,
   DomainError,
+  getEinvoicing,
   getStorePayments,
   listStoreDomains,
   removeStoreDomain,
   setPrimaryDomain,
   updateStorePayments,
 } from "@monaztore/core";
-import { data, Form, useNavigation } from "react-router";
+import { data, Form, href, Link, useNavigation } from "react-router";
 import { PageHeader } from "~/components/page-header";
 import { FieldErrors, TextField } from "~/components/text-field";
 import { Button } from "~/components/ui/button";
@@ -28,9 +29,10 @@ export function meta({ matches }: Route.MetaArgs) {
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const tenant = context.get(tenantContext);
-  const [domains, payments] = await Promise.all([
+  const [domains, payments, einvoicing] = await Promise.all([
     listStoreDomains(tenant),
     getStorePayments(tenant),
+    getEinvoicing(tenant),
   ]);
   const primary = domains.find((domain) => domain.primary) ?? domains[0];
   return {
@@ -38,7 +40,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     payments,
     storeUrl: primary ? storeOrigin(primary.hostname, request.url) : null,
     owner: tenant.role === "owner",
-    i18n: translations(context, "store", "forms"),
+    // Electronic invoicing is for stores in Costa Rica only.
+    einvoicing: einvoicing.available ? { enabled: einvoicing.enabled } : null,
+    i18n: einvoicing.available
+      ? translations(context, "store", "forms", "einvoicing")
+      : translations(context, "store", "forms"),
   };
 }
 
@@ -96,7 +102,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   throw data("Unknown intent", { status: 400 });
 }
 
-export default function Store({ loaderData, actionData }: Route.ComponentProps) {
+export default function Store({ loaderData, actionData, params }: Route.ComponentProps) {
   const t = useT();
   const { owner } = loaderData;
   return (
@@ -117,6 +123,17 @@ export default function Store({ loaderData, actionData }: Route.ComponentProps) 
         </p>
       )}
       <div className="grid gap-6">
+        {loaderData.einvoicing ? (
+          <Link
+            to={href("/app/:workspace/invoicing", { workspace: params.workspace })}
+            className="grid min-h-14 gap-1 rounded-xl border bg-card p-4 text-card-foreground hover:bg-muted"
+          >
+            <span className="font-medium">{t("einvoicing.open")} →</span>
+            <span className="text-sm text-muted-foreground">
+              {loaderData.einvoicing.enabled ? t("einvoicing.statusOn") : t("einvoicing.openHint")}
+            </span>
+          </Link>
+        ) : null}
         <Domains
           domains={loaderData.domains}
           owner={owner}

@@ -1,6 +1,8 @@
 import { createDatabase } from "@monaztore/db";
-import { getServerEnv } from "@monaztore/env";
+import { createMailer } from "@monaztore/email";
+import { deriveSecret, getServerEnv } from "@monaztore/env";
 import { buildApp } from "./app";
+import { scheduleEinvoiceDelivery } from "./jobs/einvoices";
 import { scheduleRateLimitCleanup } from "./jobs/rate-limits";
 
 const env = getServerEnv();
@@ -15,7 +17,17 @@ const app = await buildApp({
 });
 
 // Scheduled jobs live in this process (one machine on Fly, see fly.api.toml). Each returns its stop.
-const stops = [scheduleRateLimitCleanup({ db: connection.db, log: app.log })];
+const stops = [
+  scheduleRateLimitCleanup({ db: connection.db, log: app.log }),
+  // Costa Rica's electronic invoices: sign, send to Hacienda, read its answer, email the buyer.
+  scheduleEinvoiceDelivery({
+    db: connection.db,
+    log: app.log,
+    mailer: createMailer(env),
+    sealKey: deriveSecret(env.BETTER_AUTH_SECRET, "einvoicing"),
+    providerId: env.HACIENDA_PROVIDER_ID,
+  }),
+];
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.once(signal, async () => {

@@ -1,5 +1,5 @@
 {
-  "id": "ea0d7400-7780-4224-9362-cbbf5c92724b",
+  "id": "41e781a0-be57-48eb-a3cb-5083b67053e9",
   "prevId": "140c8053-c607-4ed9-b7c5-d0c9a12c0331",
   "version": "7",
   "dialect": "postgresql",
@@ -1174,6 +1174,12 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
+        },
+        "tax_id": {
+          "name": "tax_id",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         },
         "currency": {
           "name": "currency",
@@ -2427,19 +2433,19 @@
           "notNull": true,
           "default": "'{}'::jsonb"
         },
+        "country": {
+          "name": "country",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'CR'"
+        },
         "next_order_number": {
           "name": "next_order_number",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "default": 1001
-        },
-        "theme": {
-          "name": "theme",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
         },
         "created_at": {
           "name": "created_at",
@@ -2461,6 +2467,530 @@
         "store_settings_organization_id_organization_id_fk": {
           "name": "store_settings_organization_id_organization_id_fk",
           "tableFrom": "store_settings",
+          "tableTo": "organization",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.einvoice": {
+      "name": "einvoice",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "order_number": {
+          "name": "order_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "environment": {
+          "name": "environment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "number": {
+          "name": "number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "consecutive": {
+          "name": "consecutive",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "clave": {
+          "name": "clave",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "security_code": {
+          "name": "security_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "issued_at": {
+          "name": "issued_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "receiver": {
+          "name": "receiver",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total": {
+          "name": "total",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'queued'"
+        },
+        "signed_xml": {
+          "name": "signed_xml",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "response_xml": {
+          "name": "response_xml",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "problem": {
+          "name": "problem",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "message": {
+          "name": "message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "next_attempt_at": {
+          "name": "next_attempt_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "lease_until": {
+          "name": "lease_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sent_at": {
+          "name": "sent_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decided_at": {
+          "name": "decided_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "emailed_at": {
+          "name": "emailed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "einvoice_clave_idx": {
+          "name": "einvoice_clave_idx",
+          "columns": [
+            {
+              "expression": "clave",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "einvoice_consecutive_idx": {
+          "name": "einvoice_consecutive_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "environment",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "consecutive",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "einvoice_order_idx": {
+          "name": "einvoice_order_idx",
+          "columns": [
+            {
+              "expression": "order_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"einvoice\".\"status\" <> 'rejected'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "einvoice_organization_idx": {
+          "name": "einvoice_organization_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "einvoice_due_idx": {
+          "name": "einvoice_due_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "next_attempt_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "einvoice_organization_id_organization_id_fk": {
+          "name": "einvoice_organization_id_organization_id_fk",
+          "tableFrom": "einvoice",
+          "tableTo": "organization",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "einvoice_order_id_order_id_fk": {
+          "name": "einvoice_order_id_order_id_fk",
+          "tableFrom": "einvoice",
+          "tableTo": "order",
+          "columnsFrom": [
+            "order_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.store_einvoicing": {
+      "name": "store_einvoicing",
+      "schema": "",
+      "columns": {
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "auto_issue": {
+          "name": "auto_issue",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "id_type": {
+          "name": "id_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_number": {
+          "name": "id_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "commercial_name": {
+          "name": "commercial_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "phone": {
+          "name": "phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "activity_code": {
+          "name": "activity_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "province": {
+          "name": "province",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "canton": {
+          "name": "canton",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "district": {
+          "name": "district",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "cabys": {
+          "name": "cabys",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "cabys_description": {
+          "name": "cabys_description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "branch": {
+          "name": "branch",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "terminal": {
+          "name": "terminal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "hacienda_username": {
+          "name": "hacienda_username",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "hacienda_password": {
+          "name": "hacienda_password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "certificate": {
+          "name": "certificate",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "certificate_pin": {
+          "name": "certificate_pin",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "certificate_subject": {
+          "name": "certificate_subject",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "certificate_expires_at": {
+          "name": "certificate_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "next_invoice_number": {
+          "name": "next_invoice_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "next_ticket_number": {
+          "name": "next_ticket_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "store_einvoicing_organization_id_organization_id_fk": {
+          "name": "store_einvoicing_organization_id_organization_id_fk",
+          "tableFrom": "store_einvoicing",
           "tableTo": "organization",
           "columnsFrom": [
             "organization_id"

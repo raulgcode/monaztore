@@ -10,6 +10,14 @@ export interface SendEmailInput {
   replyTo?: string;
   /** A template from this package: an `EmailLayout` in MJML. */
   react: ReactElement;
+  /** Files that travel with it, such as an electronic invoice's XML. */
+  attachments?: EmailAttachment[];
+}
+
+export interface EmailAttachment {
+  filename: string;
+  content: string | Buffer;
+  contentType?: string;
 }
 
 export interface Mailer {
@@ -27,7 +35,7 @@ export function createMailer(env: EmailEnv, transporter?: Transporter): Mailer {
     });
 
   return {
-    async send({ to, subject, replyTo, react }) {
+    async send({ to, subject, replyTo, react, attachments }) {
       const { html, text } = await renderEmail(react);
       await transport.sendMail({
         from: env.EMAIL_FROM,
@@ -36,6 +44,7 @@ export function createMailer(env: EmailEnv, transporter?: Transporter): Mailer {
         subject,
         html,
         text,
+        attachments,
       });
     },
   };

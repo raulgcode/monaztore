@@ -16,4 +16,10 @@ export const email = {
   resetBody: "Tap the button to choose a new password. The link works for an hour.",
   resetButton: "Choose password",
   resetIgnore: "If you didn't ask for it, ignore this email: your password stays the same.",
+  einvoiceSubject: "{store}: your electronic invoice for order #{number}",
+  eticketSubject: "{store}: your electronic receipt for order #{number}",
+  einvoiceBody: "Hacienda accepted the document {store} issued for your purchase.",
+  einvoiceNumber: "Number: {consecutive}",
+  einvoiceClave: "Key (clave): {clave}",
+  einvoiceFiles: "Attached are the signed XML and Hacienda's answer. Keep them for your records.",
 } as const;

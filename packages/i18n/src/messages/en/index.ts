@@ -1,6 +1,7 @@
 import { auth } from "./auth";
 import { common } from "./common";
 import { design } from "./design";
+import { einvoicing } from "./einvoicing";
 import { email } from "./email";
 import { forms } from "./forms";
 import { home } from "./home";
@@ -16,6 +17,7 @@ export const en = {
   auth,
   common,
   design,
+  einvoicing,
   email,
   forms,
   home,

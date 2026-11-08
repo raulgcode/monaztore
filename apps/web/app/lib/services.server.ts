@@ -18,6 +18,8 @@ export const env = getServerEnv();
 export const secrets = {
   /** Signs the app's own cookies (`createCookie({ secrets: [secrets.cookies] })`). */
   cookies: deriveSecret(env.BETTER_AUTH_SECRET, "cookies"),
+  /** Seals each store's Hacienda password and signing key; the API's worker opens them. */
+  einvoicing: deriveSecret(env.BETTER_AUTH_SECRET, "einvoicing"),
 };
 
 export const database = singleton("__monaztoreDatabase", () => createDatabase(env.DATABASE_URL));

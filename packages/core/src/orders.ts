@@ -1,7 +1,8 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { CartLine, CheckoutInput, CheckoutPaymentMethod } from "@monaztore/contracts";
 import { and, asc, type Database, eq, inArray, schema, sql } from "@monaztore/db";
-import type { OrderStatus, StorePayments } from "@monaztore/db/schema";
+import type { EinvoiceKind, OrderStatus, OrderTaxId, StorePayments } from "@monaztore/db/schema";
+import { storeIssuesInvoices } from "./einvoicing";
 import { DomainError } from "./errors";
 import type { StorefrontContext } from "./storefront";
 import type { TenantContext } from "./tenant";
@@ -195,7 +196,14 @@ export async function placeOrder(
     cart,
     checkout,
     locale,
-  }: { cart: readonly CartLine[]; checkout: CheckoutInput; locale: string },
+    taxId = null,
+  }: {
+    cart: readonly CartLine[];
+    checkout: CheckoutInput;
+    locale: string;
+    /** "Invoice in my name" (Costa Rica): kept only if the store issues invoices. */
+    taxId?: OrderTaxId | null;
+  },
 ): Promise<PlacedOrder> {
   const organizationId = ctx.store.organizationId;
   return ctx.db.transaction(async (tx) => {
@@ -257,6 +265,7 @@ export async function placeOrder(
         subtotal: priced.subtotal,
         total: priced.subtotal,
         locale,
+        taxId: taxId && (await storeIssuesInvoices(tx, organizationId)) ? taxId : null,
       })
       .returning({ id: schema.order.id });
     if (!created) throw new Error("Order not created");
@@ -316,6 +325,49 @@ export interface ShopperOrder {
   }[];
   /** Where to send the money, for the method they chose. */
   payTo: PaymentOptions;
+  /** Hacienda's document, once it accepted it (Costa Rica). */
+  einvoice: ShopperEinvoice | null;
+}
+
+export interface ShopperEinvoice {
+  kind: EinvoiceKind;
+  consecutive: string;
+  clave: string;
+}
+
+/** The order's live document (not a rejected one), with its files. */
+async function orderEinvoice(ctx: StorefrontContext, orderId: string) {
+  const [found] = await ctx.db
+    .select({
+      kind: schema.einvoice.kind,
+      consecutive: schema.einvoice.consecutive,
+      clave: schema.einvoice.clave,
+      status: schema.einvoice.status,
+      signedXml: schema.einvoice.signedXml,
+      responseXml: schema.einvoice.responseXml,
+    })
+    .from(schema.einvoice)
+    .where(
+      and(
+        eq(schema.einvoice.organizationId, ctx.store.organizationId),
+        eq(schema.einvoice.orderId, orderId),
+        eq(schema.einvoice.status, "accepted"),
+      ),
+    );
+  return found;
+}
+
+/** The accepted document's signed XML or Hacienda's answer, for the order's link only. */
+export async function getShopperEinvoiceFile(
+  ctx: StorefrontContext,
+  token: string,
+  file: "document" | "response",
+) {
+  const found = await orderByToken(ctx, token);
+  if (!found) return undefined;
+  const einvoice = await orderEinvoice(ctx, found.id);
+  const xml = file === "document" ? einvoice?.signedXml : einvoice?.responseXml;
+  return einvoice && xml ? { clave: einvoice.clave, xml } : undefined;
 }
 
 async function orderByToken(ctx: StorefrontContext, token: string) {
@@ -349,7 +401,10 @@ export async function getOrderByToken(
     .from(schema.orderLine)
     .where(eq(schema.orderLine.orderId, found.id))
     .orderBy(asc(schema.orderLine.position));
-  const options = await getPaymentOptions(ctx);
+  const [options, einvoice] = await Promise.all([
+    getPaymentOptions(ctx),
+    orderEinvoice(ctx, found.id),
+  ]);
   const method = found.paymentMethod as CheckoutPaymentMethod;
   return {
     number: found.number,
@@ -365,6 +420,9 @@ export async function getOrderByToken(
     shippingAddress: found.shippingAddress,
     lines,
     payTo: options[method] ? { [method]: options[method] } : {},
+    einvoice: einvoice
+      ? { kind: einvoice.kind, consecutive: einvoice.consecutive, clave: einvoice.clave }
+      : null,
   };
 }
 

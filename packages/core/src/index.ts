@@ -15,16 +15,46 @@ export {
   listVariants,
   storefrontPaths,
 } from "./catalog-import";
+export {
+  type AcceptedEinvoice,
+  deliverEinvoices,
+  EINVOICE_MAX_ATTEMPTS,
+  type EinvoiceDeliveryDeps,
+  retryDelayMs,
+} from "./einvoice-delivery";
+export {
+  countEinvoicesToReview,
+  EINVOICES_PAGE_SIZE,
+  EINVOICING_COUNTRY,
+  type EinvoiceFile,
+  type EinvoiceRow,
+  type EinvoicingSettings,
+  getEinvoiceFile,
+  getEinvoicing,
+  getOrderEinvoices,
+  issueOrderEinvoice,
+  listEinvoices,
+  queueOrderEinvoice,
+  retryEinvoice,
+  saveEinvoicingCredentials,
+  saveEinvoicingIssuer,
+  saveEinvoicingOptions,
+  saveEinvoicingProduct,
+  setEinvoicingEnabled,
+  storeIssuesInvoices,
+} from "./einvoicing";
 export { DomainError, NotFoundError } from "./errors";
 export {
   getOrderByToken,
   getPaymentOptions,
+  getShopperEinvoiceFile,
   type PaymentOptions,
   type PlacedOrder,
   type PricedCart,
   type PricedLine,
   placeOrder,
   priceCart,
+  type ShopperEinvoice,
   type ShopperOrder,
   submitPaymentReference,
   updateStorePayments,
@@ -55,6 +85,7 @@ export {
   type RateLimitResult,
   type RateLimitRule,
 } from "./rate-limits";
+export { openSecret, sealSecret } from "./sealed";
 export { slugify, uniqueSlug } from "./slug";
 export {
   ADMIN_ORDERS_PAGE_SIZE,
