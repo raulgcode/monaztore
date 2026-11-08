@@ -59,6 +59,18 @@ export const emailEnvSchema = z.object({
   EMAIL_FROM: z.string().min(3),
 });
 
+/**
+ * Where the store's files (product photos) live: a private Cloudflare R2 bucket with its four
+ * values, or a folder on disk without them (FILES_DIR, `.data/files` by default).
+ */
+export const filesEnvSchema = z.object({
+  R2_ACCOUNT_ID: optionalString,
+  R2_ACCESS_KEY_ID: optionalString,
+  R2_SECRET_ACCESS_KEY: optionalString,
+  R2_BUCKET: optionalString,
+  FILES_DIR: optionalString,
+});
+
 /** The value in `.env.example`: fine on a laptop, never on a public server. */
 export const EXAMPLE_AUTH_SECRET = "change-me-to-a-long-random-string-of-32-chars";
 
@@ -86,6 +98,7 @@ export const serverEnvSchema = z
     GOOGLE_CLIENT_SECRET: optionalString,
     ...databaseEnvSchema.shape,
     ...emailEnvSchema.shape,
+    ...filesEnvSchema.shape,
   })
   .superRefine((env, ctx) => {
     // A production build on localhost (e2e, Lighthouse) may keep it; a real host may not.
@@ -110,6 +123,24 @@ export const serverEnvSchema = z
 export type DatabaseEnv = z.infer<typeof databaseEnvSchema>;
 export type EmailEnv = z.infer<typeof emailEnvSchema>;
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
+export type FilesEnv = z.infer<typeof filesEnvSchema>;
+
+export interface R2Credentials {
+  accountId: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  bucket: string;
+}
+
+/** The R2 bucket and its token, or undefined when any value is missing (files go to disk). */
+export function r2Credentials(
+  env: Pick<FilesEnv, "R2_ACCOUNT_ID" | "R2_ACCESS_KEY_ID" | "R2_SECRET_ACCESS_KEY" | "R2_BUCKET">,
+): R2Credentials | undefined {
+  const { R2_ACCOUNT_ID: accountId, R2_ACCESS_KEY_ID: accessKeyId } = env;
+  const { R2_SECRET_ACCESS_KEY: secretAccessKey, R2_BUCKET: bucket } = env;
+  if (!accountId || !accessKeyId || !secretAccessKey || !bucket) return undefined;
+  return { accountId, accessKeyId, secretAccessKey, bucket };
+}
 
 export interface GoogleCredentials {
   clientId: string;

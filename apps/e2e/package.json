@@ -9,12 +9,16 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "catalog:",
-    "@playwright/test": "catalog:",
     "@monaztore/contracts": "workspace:*",
     "@monaztore/core": "workspace:*",
     "@monaztore/db": "workspace:*",
     "@monaztore/env": "workspace:*",
+    "@monaztore/storage": "workspace:*",
     "@monaztore/tsconfig": "workspace:*",
+    "@playwright/test": "catalog:",
     "@types/node": "catalog:"
+  },
+  "dependencies": {
+    "sharp": "catalog:"
   }
 }

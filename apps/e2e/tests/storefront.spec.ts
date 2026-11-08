@@ -1,5 +1,5 @@
 import { expect, ownerTest as test } from "../support/fixtures";
-import { openStore, requestStore } from "../support/storefront";
+import { catalogWithCopiedPhoto, openStore, requestStore } from "../support/storefront";
 
 test.describe("Feature: the store on its own domain", () => {
   test("Scenario: a shopper opens the store, sees only what is for sale and opens a product with its price and stock", async ({
@@ -33,6 +33,32 @@ test.describe("Feature: the store on its own domain", () => {
       await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
         "href",
         `${store}/products/pura-vida-mug`,
+      );
+    });
+  });
+
+  test("Scenario: a migrated product shows its photo from the store's own files, not the old shop", async ({
+    page,
+    workspace,
+    baseURL,
+  }) => {
+    const store =
+      await test.step("Given the mug's photo was copied when the shop moved", async () =>
+        openStore(workspace, baseURL, await catalogWithCopiedPhoto(workspace)));
+
+    await test.step("When a shopper opens the mug", async () => {
+      await page.goto(`${store}/products/pura-vida-mug`);
+    });
+
+    await test.step("Then the photo loads from the store itself and is shared with its full address", async () => {
+      const photo = page.getByRole("img", { name: "White mug" });
+      await expect(photo).toHaveAttribute("src", /^\/media\/organizations\/.+\.webp$/);
+      await expect
+        .poll(() => photo.evaluate((img: HTMLImageElement) => img.naturalWidth))
+        .toBe(800);
+      await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+        "content",
+        new RegExp(`^${store}/media/organizations/`),
       );
     });
   });

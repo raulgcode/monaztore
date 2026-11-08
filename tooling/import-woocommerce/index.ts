@@ -14,14 +14,27 @@
  *   --from catalog.json  imports a file saved with --out instead of reading the shop
  *   --currency CRC       when the shop's currency can't be read
  *   --no-customers       leaves customers out
+ *   --keep-image-urls    links the photos where they are instead of copying them
+ *
+ * The photos are copied to the store's own files (R2 with R2_*, FILES_DIR on disk without them),
+ * re-encoded as WebP, so the store doesn't depend on the old site. Node's fetch only goes
+ * through a proxy with NODE_USE_ENV_PROXY=1.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { type ImportedCatalog, importedCatalogSchema } from "@monaztore/contracts";
-import { importCatalog, ownerContextForStore } from "@monaztore/core";
+import { copyCatalogImages, importCatalog, ownerContextForStore } from "@monaztore/core";
 import { createDatabase } from "@monaztore/db";
-import { databaseEnvSchema, loadDotEnv, parseEnv } from "@monaztore/env";
+import {
+  databaseEnvSchema,
+  filesEnvSchema,
+  loadDotEnv,
+  parseEnv,
+  r2Credentials,
+} from "@monaztore/env";
 import { fetchWooCommerceCatalog } from "@monaztore/importer-woocommerce";
+import { createFileStore } from "@monaztore/storage";
+import { downloadImage, webImage } from "@monaztore/storage/images";
 
 function fail(message: string): never {
   console.error(`✗ ${message}`);
@@ -37,6 +50,7 @@ const { values } = parseArgs({
     from: { type: "string" },
     currency: { type: "string" },
     "no-customers": { type: "boolean", default: false },
+    "keep-image-urls": { type: "boolean", default: false },
   },
 });
 
@@ -67,6 +81,11 @@ if (values.from) {
   } catch (error) {
     fail((error as Error).message);
   }
+  const checked = importedCatalogSchema.safeParse(catalog);
+  if (!checked.success) {
+    const [issue] = checked.error.issues;
+    fail(`The shop answered something unexpected at ${issue?.path.join(".")}: ${issue?.message}`);
+  }
 }
 
 console.log(
@@ -95,6 +114,25 @@ const { db, close } = createDatabase(env.DATABASE_URL);
 try {
   const ctx = await ownerContextForStore(db, values.store);
   if (!ctx) fail(`There is no store "${values.store}" with an owner`);
+  if (!values["keep-image-urls"]) {
+    const filesEnv = parseEnv(filesEnvSchema);
+    const files = createFileStore({ r2: r2Credentials(filesEnv), dir: filesEnv.FILES_DIR });
+    console.log(`\n▸ Copying the photos to the store's files (${files.kind})`);
+    const copy = await copyCatalogImages(ctx, catalog, {
+      files,
+      download: (url) => downloadImage(url),
+      convert: (bytes) => webImage(bytes),
+      onProgress: (done, total) => {
+        if (done % 50 === 0 || done === total) console.log(`  ${done}/${total} photos`);
+      },
+    });
+    catalog = copy.catalog;
+    console.log(`  ✓ ${copy.copied} copied${copy.failed ? `, ${copy.failed} failed` : ""}`);
+    for (const warning of catalog.warnings.filter((w) => w.startsWith("Couldn't copy"))) {
+      console.log(`  ⚠ ${warning}`);
+    }
+  }
+
   console.log(`\n▸ Importing into ${values.store}`);
   const result = await importCatalog(ctx, catalog);
   console.log(

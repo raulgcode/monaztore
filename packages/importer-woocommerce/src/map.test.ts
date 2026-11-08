@@ -3,6 +3,7 @@ import { v3Customers, v3SimpleProduct, v3VariableProduct, v3Variations } from ".
 import {
   decimalToMinor,
   decodeEntities,
+  imageSrc,
   mapV3Customer,
   mapV3Product,
   pathOf,
@@ -49,6 +50,22 @@ describe("pricing", () => {
 });
 
 describe("helpers", () => {
+  it("takes an image's own file, out of Jetpack's CDN, and nothing for an empty one", () => {
+    expect(
+      imageSrc(
+        "https://i0.wp.com/shop.example/wp-content/uploads/2023/07/taza.png?fit=1000%2C1000&ssl=1",
+      ),
+    ).toBe("https://shop.example/wp-content/uploads/2023/07/taza.png");
+    expect(imageSrc("https://i2.wp.com/shop.example/a.jpg")).toBe("https://shop.example/a.jpg");
+    expect(imageSrc("https://shop.example/wp-content/uploads/a.jpg?v=2")).toBe(
+      "https://shop.example/wp-content/uploads/a.jpg?v=2",
+    );
+    // WordPress answers `false` for a category without an image.
+    expect(imageSrc(false)).toBeNull();
+    expect(imageSrc("")).toBeNull();
+    expect(imageSrc(undefined)).toBeNull();
+    expect(imageSrc("not a url")).toBeNull();
+  });
   it("keeps the old path, decoded, to redirect from", () => {
     expect(pathOf("https://shop.example/producto/caf%C3%A9-tostado/")).toBe(
       "/producto/café-tostado/",

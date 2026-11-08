@@ -17,6 +17,8 @@ export default [
     // Last: old addresses of a migrated shop (301) and every other 404.
     route("*", "routes/store/fallback.tsx"),
   ]),
+  // A store's files (product photos), named by their contents: `/media/organizations/<id>/…`.
+  route("media/*", "routes/media.ts"),
   route("login", "routes/login.tsx"),
   // Email and password: only answer when AUTH_METHODS has "password" (404 otherwise).
   route("sign-up", "routes/sign-up.tsx"),

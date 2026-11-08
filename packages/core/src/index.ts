@@ -1,4 +1,12 @@
 export {
+  type ConvertedImage,
+  copyCatalogImages,
+  type ImageCopyDeps,
+  type ImageCopyResult,
+  mediaKeyOf,
+  mediaPath,
+} from "./catalog-images";
+export {
   type CatalogImportResult,
   type CatalogImportStats,
   importCatalog,

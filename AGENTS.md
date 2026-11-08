@@ -7,21 +7,22 @@ following these rules. If a rule doesn't apply, change it here first and then th
 
 ## Monorepo map
 
-| Path                            | What it is                                                                       |
-| ------------------------------- | -------------------------------------------------------------------------------- |
-| `apps/web`                      | React Router 8 (framework mode): pages, sign-in, the workspace                   |
-| `apps/api`                      | Fastify + Zod: public API, webhooks and scheduled jobs                           |
-| `apps/e2e`                      | Playwright: BDD scenarios on phone and desktop, accessibility (axe)              |
-| `packages/core`                 | Multi-tenant use cases (stores, catalog, imports). All business logic lives here |
-| `packages/contracts`            | `zod/mini` schemas shared by forms, actions, API and core                        |
-| `packages/db`                   | Drizzle: schema, migrations, client, test utilities                              |
-| `packages/auth`                 | Better Auth: email link, password, Google and organizations                      |
-| `packages/email`                | Nodemailer + MJML: branded emails, in light and dark                             |
-| `packages/i18n`                 | Languages (en, es): typed dictionaries, `t()`, language choice                   |
-| `packages/env`                  | Environment variable validation with Zod                                         |
-| `packages/importer-woocommerce` | Reads a WooCommerce shop (REST v3 or Store API) into Monaztore's shape           |
-| `packages/create`               | `create-monaztore`: a new project from this template, `rename`, template updates |
-| `tooling/*`                     | Repo scripts: setup, release, Fly secrets, remote e2e                            |
+| Path                            | What it is                                                                        |
+| ------------------------------- | --------------------------------------------------------------------------------- |
+| `apps/web`                      | React Router 8 (framework mode): pages, sign-in, the workspace                    |
+| `apps/api`                      | Fastify + Zod: public API, webhooks and scheduled jobs                            |
+| `apps/e2e`                      | Playwright: BDD scenarios on phone and desktop, accessibility (axe)               |
+| `packages/core`                 | Multi-tenant use cases (stores, catalog, imports). All business logic lives here  |
+| `packages/contracts`            | `zod/mini` schemas shared by forms, actions, API and core                         |
+| `packages/db`                   | Drizzle: schema, migrations, client, test utilities                               |
+| `packages/auth`                 | Better Auth: email link, password, Google and organizations                       |
+| `packages/email`                | Nodemailer + MJML: branded emails, in light and dark                              |
+| `packages/i18n`                 | Languages (en, es): typed dictionaries, `t()`, language choice                    |
+| `packages/env`                  | Environment variable validation with Zod                                          |
+| `packages/importer-woocommerce` | Reads a WooCommerce shop (REST v3 or Store API) into Monaztore's shape            |
+| `packages/storage`              | Store files (product photos): Cloudflare R2 or a folder on disk; WebP re-encoding |
+| `packages/create`               | `create-monaztore`: a new project from this template, `rename`, template updates  |
+| `tooling/*`                     | Repo scripts: setup, release, Fly secrets, remote e2e                             |
 
 ## A template: one instance per client
 
@@ -230,6 +231,14 @@ time. `placeOrder` prices again under lock, numbers the order from `store_settin
 lowers the stock it counts and keeps only the SHA-256 of the order link's token
 (`/orders/:token`, a secret path). Manual payments (SINPE Móvil, transfer) live in
 `store_settings.payments`; the shopper sends the reference and the store confirms it.
+
+Photos (`core/src/catalog-images.ts`, `@monaztore/storage`): `pnpm import:woocommerce` copies
+every photo to the store's own files before importing (`copyCatalogImages`: downloaded once,
+re-encoded as WebP with `webImage`, named by content under `organizations/<id>/images/`), so a
+migrated store never hotlinks the old shop; Jetpack CDN addresses (`i0.wp.com/…`) are read from
+the shop's own host (`imageSrc`). `files` (`services.server.ts`) is R2 with `R2_*` and
+`FILES_DIR` on disk without them; `/media/*` serves only `organizations/…` keys, cached forever.
+Share cards and JSON-LD resolve them to the store's origin (`absoluteUrl`).
 
 The store in the workspace (`core/src/store-admin.ts`): Orders (`/app/:workspace/orders`, filter
 by state in `?status=`) confirms a payment (`markOrderPaid`, which adds to the customer's orders

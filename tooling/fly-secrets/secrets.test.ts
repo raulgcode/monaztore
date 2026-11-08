@@ -10,6 +10,10 @@ const production = {
   SMTP_PASSWORD: "re_123",
   SMTP_SECURE: "true",
   EMAIL_FROM: "Monaztore <support@monaztore.com>",
+  R2_ACCOUNT_ID: "acc123",
+  R2_ACCESS_KEY_ID: "key",
+  R2_SECRET_ACCESS_KEY: "secret",
+  R2_BUCKET: "monaztore-files",
 };
 
 describe("planSecrets", () => {
@@ -26,6 +30,7 @@ describe("planSecrets", () => {
       CLIENT_IP_HEADER: "fly-client-ip",
       TEST_DATABASE_URL: "postgres://localhost/test",
       MAILPIT_URL: "http://localhost:8025",
+      FILES_DIR: ".data/files",
       GOOGLE_CLIENT_ID: "",
     });
     expect(plan.problems).toEqual([]);
@@ -35,6 +40,7 @@ describe("planSecrets", () => {
       "CLIENT_IP_HEADER",
       "TEST_DATABASE_URL",
       "MAILPIT_URL",
+      "FILES_DIR",
       "GOOGLE_CLIENT_ID",
     ]);
   });
@@ -59,11 +65,12 @@ describe("planSecrets", () => {
   });
 
   it("asks for what production can't run without", () => {
-    const { DATABASE_URL, BETTER_AUTH_SECRET, EMAIL_FROM, ...rest } = production;
+    const { DATABASE_URL, BETTER_AUTH_SECRET, EMAIL_FROM, R2_BUCKET, ...rest } = production;
     expect(planSecrets(rest).problems).toEqual([
       expect.stringMatching(/^DATABASE_URL is missing/),
       expect.stringMatching(/^BETTER_AUTH_SECRET is missing/),
       expect.stringMatching(/^EMAIL_FROM is missing/),
+      "Production keeps its files in R2: R2_BUCKET missing",
     ]);
   });
 });

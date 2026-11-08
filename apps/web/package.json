@@ -23,6 +23,7 @@
     "@monaztore/email": "workspace:*",
     "@monaztore/env": "workspace:*",
     "@monaztore/i18n": "workspace:*",
+    "@monaztore/storage": "workspace:*",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
     "isbot": "catalog:",

@@ -12,6 +12,11 @@ export function storeOrigin(canonicalHost: string, requestUrl: string): string {
   return `${url.protocol}//${canonicalHost}${url.port ? `:${url.port}` : ""}`;
 }
 
+/** A photo's address for a crawler: our own `/media/…` files, on the page's own origin. */
+export function absoluteUrl(url: string, base: string): string {
+  return new URL(url, base).toString();
+}
+
 export interface PageSeo {
   title: string;
   description: string;
@@ -41,7 +46,7 @@ export function pageMeta({
     { property: "og:url", content: canonical },
     ...(image
       ? [
-          { property: "og:image", content: image },
+          { property: "og:image", content: absoluteUrl(image, canonical) },
           { name: "twitter:card", content: "summary_large_image" },
         ]
       : [{ name: "twitter:card", content: "summary" }]),
@@ -69,7 +74,7 @@ export function productJsonLd(product: ProductSeoInput): MetaDescriptor {
       name: product.name,
       description: product.description,
       url: product.url,
-      image: product.images,
+      image: product.images.map((image) => absoluteUrl(image, product.url)),
       ...(product.sku ? { sku: product.sku } : {}),
       brand: { "@type": "Brand", name: product.brand },
       ...(product.price !== null

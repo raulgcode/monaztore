@@ -32,6 +32,20 @@ describe("pageMeta", () => {
     expect(meta).toContainEqual({ property: "og:image", content: "https://t.cr/taza.jpg" });
     expect(meta).toContainEqual({ name: "twitter:card", content: "summary_large_image" });
   });
+
+  it("shares our own copy of a photo with its full address", () => {
+    const meta = pageMeta({
+      title: "Taza",
+      description: "",
+      canonical: "https://t.cr/products/taza",
+      image: "/media/organizations/o1/images/abc.webp",
+      siteName: "Tienda",
+    });
+    expect(meta).toContainEqual({
+      property: "og:image",
+      content: "https://t.cr/media/organizations/o1/images/abc.webp",
+    });
+  });
 });
 
 describe("productJsonLd", () => {
@@ -40,7 +54,7 @@ describe("productJsonLd", () => {
       name: "Taza",
       description: "De cerámica",
       url: "https://t.cr/products/taza",
-      images: [],
+      images: ["/media/organizations/o1/images/abc.webp"],
       sku: "T1",
       price: 599_050,
       currency: "CRC",
@@ -48,6 +62,7 @@ describe("productJsonLd", () => {
       brand: "Tienda",
     });
     expect((ld as { "script:ld+json": unknown })["script:ld+json"]).toMatchObject({
+      image: ["https://t.cr/media/organizations/o1/images/abc.webp"],
       sku: "T1",
       offers: {
         price: "5990.50",

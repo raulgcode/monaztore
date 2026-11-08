@@ -11,6 +11,10 @@ export interface WooCommerceConnection {
   perPage?: number;
 }
 
+export interface RequestOptions {
+  anonymous?: boolean;
+}
+
 export class WooCommerceError extends Error {
   constructor(
     readonly status: number,
@@ -58,16 +62,21 @@ export class WooCommerceClient {
     return url;
   }
 
+  /**
+   * `anonymous` leaves the keys out: WordPress's own endpoints (`wp/v2/…`) answer 401 to
+   * WooCommerce's keys, and what the importer reads there is public anyway.
+   */
   async get<T>(
     path: string,
     query: Record<string, string | number> = {},
+    { anonymous = false }: RequestOptions = {},
   ): Promise<{ data: T; totalPages: number }> {
     const url = this.url(path, query);
     const response = await this.fetch(url, {
       headers: {
         accept: "application/json",
         "user-agent": "Monaztore-Importer/1.0",
-        ...(this.auth ? { authorization: this.auth } : {}),
+        ...(this.auth && !anonymous ? { authorization: this.auth } : {}),
       },
     });
     if (!response.ok) {
@@ -89,14 +98,18 @@ export class WooCommerceClient {
   }
 
   /** Every page of a list endpoint, in order. */
-  async all<T>(path: string, query: Record<string, string | number> = {}): Promise<T[]> {
+  async all<T>(
+    path: string,
+    query: Record<string, string | number> = {},
+    options: RequestOptions = {},
+  ): Promise<T[]> {
     const items: T[] = [];
     for (let page = 1; ; page++) {
-      const { data, totalPages } = await this.get<T[]>(path, {
-        per_page: this.perPage,
-        ...query,
-        page,
-      });
+      const { data, totalPages } = await this.get<T[]>(
+        path,
+        { per_page: this.perPage, ...query, page },
+        options,
+      );
       items.push(...data);
       if (page >= totalPages || data.length === 0) return items;
     }

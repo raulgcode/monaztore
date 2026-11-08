@@ -75,7 +75,7 @@ describe("WooCommerceClient", () => {
 
 describe("fetchWooCommerceCatalog", () => {
   it("with keys, brings categories with their URLs, products with variations, and customers", async () => {
-    const { fetcher } = fakeShop({
+    const { fetcher, requests } = fakeShop({
       "wc/v3/data/currencies/current": { code: "CRC" },
       "wc/v3/settings/products/woocommerce_weight_unit": { value: "kg" },
       "wc/v3/products/categories": [v3Categories],
@@ -110,6 +110,9 @@ describe("fetchWooCommerceCatalog", () => {
     ]);
     expect(catalog.customers.map((c) => c.email)).toEqual(["ana@example.com"]);
     expect(catalog.warnings).toEqual([]);
+    // WordPress refuses its own endpoints with WooCommerce's keys: the public one goes without.
+    expect(requests.find((r) => r.path === "wp/v2/product_cat")?.auth).toBeNull();
+    expect(requests.find((r) => r.path === "wc/v3/products")?.auth).toMatch(/^Basic /);
   });
 
   it("without keys, uses the public Store API and says what it couldn't bring", async () => {

@@ -2,7 +2,8 @@ import { createAuth, type RateLimitStorage } from "@monaztore/auth";
 import { hitRateLimit } from "@monaztore/core";
 import { createDatabase } from "@monaztore/db";
 import { createMailer } from "@monaztore/email";
-import { deriveSecret, getServerEnv, googleCredentials } from "@monaztore/env";
+import { deriveSecret, getServerEnv, googleCredentials, r2Credentials } from "@monaztore/env";
+import { createFileStore } from "@monaztore/storage";
 
 // Server-only singletons. Cached on globalThis so dev HMR doesn't open a new pool per reload.
 function singleton<T>(name: string, create: () => T): T {
@@ -22,6 +23,10 @@ export const secrets = {
 export const database = singleton("__monaztoreDatabase", () => createDatabase(env.DATABASE_URL));
 export const db = database.db;
 export const mailer = singleton("__monaztoreMailer", () => createMailer(env));
+/** The store's files (product photos): R2 with R2_*, FILES_DIR on disk without them. */
+export const files = singleton("__monaztoreFiles", () =>
+  createFileStore({ r2: r2Credentials(env), dir: env.FILES_DIR }),
+);
 
 /** Better Auth's rate limit, in Postgres so it holds across every machine. */
 const authRateLimitStorage: RateLimitStorage = {

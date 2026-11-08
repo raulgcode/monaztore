@@ -2,13 +2,17 @@ import { randomUUID } from "node:crypto";
 import type { ImportedCatalog } from "@monaztore/contracts";
 import {
   addStoreDomain,
+  copyCatalogImages,
   importCatalog,
   listImportedProducts,
   placeOrder,
   submitPaymentReference,
   updateStorePayments,
 } from "@monaztore/core";
+import { defaultFilesDir, diskFileStore } from "@monaztore/storage";
+import { webImage } from "@monaztore/storage/images";
 import type { APIRequestContext } from "@playwright/test";
+import sharp from "sharp";
 import type { Workspace } from "./database";
 
 /** A small shop, like one brought over from WooCommerce: two collections, three products. */
@@ -120,6 +124,31 @@ export async function openStore(
   await addStoreDomain(workspace.tenant, hostname, { primary: true });
   const port = new URL(baseURL ?? "http://localhost:4173").port;
   return `http://${hostname}:${port}`;
+}
+
+/**
+ * The sample catalog with a photo of the mug on the old shop, copied to the store's files as
+ * the importer does (the web server reads the same `.data/files`).
+ */
+export async function catalogWithCopiedPhoto(workspace: Workspace): Promise<ImportedCatalog> {
+  const oldPhoto = "https://shop.example/wp-content/uploads/mug.png";
+  const catalog: ImportedCatalog = {
+    ...sampleCatalog,
+    products: sampleCatalog.products.map((product) =>
+      product.slug === "pura-vida-mug"
+        ? { ...product, images: [{ url: oldPhoto, alt: "White mug" }] }
+        : product,
+    ),
+  };
+  const { catalog: copied } = await copyCatalogImages(workspace.tenant, catalog, {
+    files: diskFileStore(defaultFilesDir()),
+    download: () =>
+      sharp({ create: { width: 800, height: 800, channels: 3, background: "#f5f0e6" } })
+        .png()
+        .toBuffer(),
+    convert: (bytes) => webImage(bytes),
+  });
+  return copied;
 }
 
 /**

@@ -74,9 +74,11 @@ async function fetchWithKeys(
   // v3 categories don't carry their URL; WordPress's own taxonomy endpoint does.
   const links = new Map<number, string>();
   try {
-    const terms = await client.all<{ id: number; link: string }>("wp/v2/product_cat", {
-      _fields: "id,link",
-    });
+    const terms = await client.all<{ id: number; link: string }>(
+      "wp/v2/product_cat",
+      { _fields: "id,link" },
+      { anonymous: true },
+    );
     for (const term of terms) links.set(term.id, term.link);
   } catch {
     warnings.push("Couldn't read category URLs: their old links won't redirect.");

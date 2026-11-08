@@ -4,7 +4,8 @@
  */
 export const setInFlyToml = ["NODE_ENV", "PORT", "APP_URL", "API_URL", "CLIENT_IP_HEADER"];
 
-const localOnly = ["TEST_DATABASE_URL", "MAILPIT_URL"];
+const localOnly = ["TEST_DATABASE_URL", "MAILPIT_URL", "FILES_DIR"];
+const r2 = ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET"];
 
 export interface SecretsPlan {
   /** What goes to `fly secrets set`, the same on the web and the API. */
@@ -64,6 +65,12 @@ export function planSecrets(
   }
   if (!secrets.EMAIL_FROM)
     problems.push("EMAIL_FROM is missing (e.g. Monaztore <support@monaztore.com>)");
+
+  // Fly's disks are per machine and go away on a deploy: production keeps its files in R2.
+  const r2Missing = r2.filter((key) => !secrets[key]);
+  if (r2Missing.length > 0) {
+    problems.push(`Production keeps its files in R2: ${r2Missing.join(", ")} missing`);
+  }
 
   if (secrets.AUTH_RATE_LIMIT === "off") {
     problems.push("AUTH_RATE_LIMIT=off is only for the e2e tests: remove it");

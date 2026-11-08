@@ -9,7 +9,7 @@ export namespace V3 {
     parent: number;
     description: string;
     menu_order?: number;
-    image: { src: string; alt?: string } | null;
+    image: { src: string | false; alt?: string } | null;
   }
 
   export interface Attribute {
@@ -41,7 +41,7 @@ export namespace V3 {
     stock_status: "instock" | "outofstock" | "onbackorder" | string;
     weight: string;
     categories: { id: number }[];
-    images: { src: string; alt?: string }[];
+    images: { src: string | false; alt?: string }[];
     attributes: Attribute[];
     variations: number[];
     meta_data?: MetaData[];
@@ -56,7 +56,7 @@ export namespace V3 {
     manage_stock: boolean | "parent";
     stock_quantity: number | null;
     stock_status: string;
-    image: { src: string } | null;
+    image: { src: string | false } | null;
     attributes: { name: string; option: string }[];
   }
 
@@ -85,7 +85,7 @@ export namespace Store {
     slug: string;
     parent: number;
     description: string;
-    image: { src: string; alt?: string } | null;
+    image: { src: string | false; alt?: string } | null;
     permalink: string;
   }
 
@@ -100,7 +100,7 @@ export namespace Store {
     short_description: string;
     prices: Prices;
     is_in_stock: boolean;
-    images: { src: string; alt?: string }[];
+    images: { src: string | false; alt?: string }[];
     categories: { id: number }[];
     attributes: { name: string; has_variations: boolean; terms: { name: string }[] }[];
     variations: { id: number; attributes: { name: string; value: string }[] }[];

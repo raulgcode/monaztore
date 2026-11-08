@@ -57,6 +57,29 @@ export function pathOf(url: string | null | undefined): string | null {
   }
 }
 
+/** Jetpack's image CDN: `i0.wp.com/<shop host>/<path>` serves a resized copy of the shop's file. */
+const jetpackCdn = /^i[0-3]\.wp\.com$/;
+
+/**
+ * The address of an image's own file, or null when there is none (WordPress answers `false` for
+ * a category without an image). A Jetpack CDN address becomes the shop's original file, at full
+ * size and on the shop's own host, so copying the images needs no other host.
+ */
+export function imageSrc(src: string | false | null | undefined): string | null {
+  if (!src) return null;
+  let url: URL;
+  try {
+    url = new URL(src);
+  } catch {
+    return null;
+  }
+  if (jetpackCdn.test(url.hostname)) {
+    const [, host, ...rest] = url.pathname.split("/");
+    if (host && rest.length > 0) return `https://${host}/${rest.join("/")}`;
+  }
+  return url.toString();
+}
+
 /** WordPress encodes `&`, `'` and friends in names: shown as text, they must be plain. */
 export function decodeEntities(text: string): string {
   const named: Record<string, string> = {
@@ -117,6 +140,13 @@ export function seoFromMeta(meta: V3.MetaData[] | undefined) {
   };
 }
 
+function productImages(images: { src: string | false; alt?: string }[]) {
+  return images.flatMap((image) => {
+    const url = imageSrc(image.src);
+    return url ? [{ url, alt: image.alt ?? "" }] : [];
+  });
+}
+
 export function mapV3Category(category: V3.Category, url?: string): ImportedCategory {
   return {
     externalId: String(category.id),
@@ -124,7 +154,7 @@ export function mapV3Category(category: V3.Category, url?: string): ImportedCate
     slug: category.slug,
     name: decodeEntities(category.name),
     description: category.description,
-    imageUrl: category.image?.src ?? null,
+    imageUrl: imageSrc(category.image?.src),
     position: category.menu_order ?? 0,
     oldPath: pathOf(url),
   };
@@ -146,7 +176,7 @@ export function mapV3Variation(variation: V3.Variation): ImportedVariant {
     ),
     ...pricing(decimalToMinor(variation.regular_price), decimalToMinor(variation.sale_price)),
     ...stock(variation.manage_stock, variation.stock_quantity, variation.stock_status),
-    imageUrl: variation.image?.src ?? null,
+    imageUrl: imageSrc(variation.image?.src),
   };
 }
 
@@ -169,7 +199,7 @@ export function mapV3Product(
     weightGrams: toGrams(product.weight, weightUnit),
     ...seoFromMeta(product.meta_data),
     categoryExternalIds: product.categories.map((category) => String(category.id)),
-    images: product.images.map((image) => ({ url: image.src, alt: image.alt ?? "" })),
+    images: productImages(product.images),
     options: product.attributes
       .filter((attribute) => attribute.variation)
       .map((attribute) => ({ name: decodeEntities(attribute.name), values: attribute.options })),
@@ -200,7 +230,7 @@ export function mapStoreCategory(category: Store.Category): ImportedCategory {
     slug: category.slug,
     name: decodeEntities(category.name),
     description: category.description,
-    imageUrl: category.image?.src ?? null,
+    imageUrl: imageSrc(category.image?.src),
     position: 0,
     oldPath: pathOf(category.permalink),
   };
@@ -235,7 +265,7 @@ export function mapStoreProduct(
     seoTitle: null,
     seoDescription: null,
     categoryExternalIds: product.categories.map((category) => String(category.id)),
-    images: product.images.map((image) => ({ url: image.src, alt: image.alt ?? "" })),
+    images: productImages(product.images),
     options: product.attributes
       .filter((attribute) => attribute.has_variations)
       .map((attribute) => ({
@@ -256,7 +286,7 @@ export function mapStoreProduct(
         ...(detail ? storePricing(detail.prices) : { price: null, compareAtPrice: null }),
         stockQuantity: null,
         inStock: detail?.is_in_stock ?? product.is_in_stock,
-        imageUrl: detail?.images[0]?.src ?? null,
+        imageUrl: imageSrc(detail?.images[0]?.src),
       };
     }),
     oldPath: pathOf(product.permalink),
