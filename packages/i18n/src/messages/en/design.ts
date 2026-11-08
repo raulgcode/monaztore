@@ -1,5 +1,10 @@
 /** "Store design" in the workspace: the storefront's theme and the store's brand on it. */
 export const design = {
+  filtersHeading: "Catalog filters",
+  filtersIntro:
+    "What shoppers can narrow the catalog by, in the themes with filters. Untick what makes no sense in your store. Price hides by itself when everything costs the same.",
+  filterPrice: "Price",
+  filterAvailability: "In stock and on sale",
   title: "Store design",
   intro: "Pick how your store looks and put your brand on it. Shoppers see it as soon as you save.",
   openStore: "See my store",

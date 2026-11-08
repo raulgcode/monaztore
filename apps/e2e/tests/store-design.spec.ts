@@ -249,4 +249,90 @@ test.describe("Feature: the store's design", () => {
       await expect(page.getByRole("link", { name: "View cart" })).toBeInViewport();
     });
   });
+
+  test("Scenario: the owner turns off the size filter in Design and the catalog stops offering it", async ({
+    page,
+    baseURL,
+    signInWithWorkspace,
+    workspaceOf,
+  }) => {
+    const store = await test.step("Given a sock store in the Boutique theme", async () => {
+      await signInWithWorkspace(page);
+      const workspace = await workspaceOf(page);
+      const address = await openStore(workspace, baseURL, sockCatalog);
+      await updateStoreTheme(workspace.tenant, storeThemeSchema.parse({ theme: "boutique" }));
+      return address;
+    });
+
+    await test.step("When the owner unticks Size in the catalog filters and saves", async () => {
+      await openSection(page, "Design");
+      await page
+        .getByRole("group", { name: "Catalog filters" })
+        .getByLabel("Size", { exact: true })
+        .uncheck();
+      await page.getByRole("button", { name: "Save design" }).click();
+      await expect(page.getByRole("main").getByRole("status")).toHaveText(
+        "Saved. Your store already looks like this.",
+      );
+    });
+
+    await test.step("Then the catalog filters by color and price, not by size", async () => {
+      await page.goto(`${store}/products`);
+      const filters = page.getByRole("complementary", { name: "Filters" });
+      if (await page.getByRole("button", { name: "Filters" }).isVisible()) {
+        await page.getByRole("button", { name: "Filters" }).click();
+      }
+      await expect(filters.getByRole("group", { name: "Color" })).toBeVisible();
+      await expect(filters.getByRole("group", { name: "Price" })).toBeVisible();
+      await expect(filters.getByRole("group", { name: "Size" })).toHaveCount(0);
+    });
+  });
+
+  test("Scenario: a filter with many values shows a few, finds the rest by name and keeps what was picked", async ({
+    page,
+    baseURL,
+    isMobile,
+    signInWithWorkspace,
+    workspaceOf,
+  }) => {
+    const store = await test.step("Given a sock store with twenty designs", async () => {
+      await signInWithWorkspace(page);
+      const designs = Array.from(
+        { length: 20 },
+        (_, i) => `Design ${String(i + 1).padStart(2, "0")}`,
+      );
+      return openStore(await workspaceOf(page), baseURL, {
+        ...sockCatalog,
+        products: designs.map((design, i) =>
+          sock(`sock-${i + 1}`, `Sock ${i + 1}`, 350_000, { Design: [design] }),
+        ),
+      });
+    });
+
+    await test.step("When the shopper opens the catalog's filters", async () => {
+      await page.goto(`${store}/products`);
+      if (isMobile) await page.getByRole("button", { name: "Filters" }).click();
+    });
+
+    const designs = page.getByRole("group", { name: "Design" });
+    await test.step("Then Design shows 8 values and offers the other 12", async () => {
+      await expect(designs.getByRole("checkbox", { includeHidden: true })).toHaveCount(20);
+      await expect(designs.getByText("Design 08")).toBeVisible();
+      await expect(designs.getByText("Design 09")).toBeHidden();
+      await expect(designs.getByText("See 12 more")).toBeVisible();
+    });
+
+    await test.step("When they pick Design 01, then find and pick Design 17", async () => {
+      await designs.getByText("Design 01").click();
+      await expect(page).toHaveURL(/f\.Design=Design\+01/);
+      await designs.getByRole("searchbox", { name: "Find in Design" }).fill("17");
+      await designs.getByText("Design 17").click();
+    });
+
+    await test.step("Then both stay on", async () => {
+      await expect(page).toHaveURL(/f\.Design=Design\+01.*f\.Design=Design\+17/);
+      if (isMobile) await page.getByRole("button", { name: "See 2 products" }).click();
+      await expect(page.getByRole("main").getByRole("status").first()).toHaveText("2 products");
+    });
+  });
 });

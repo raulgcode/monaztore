@@ -1,16 +1,24 @@
 import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
-import { domainSchema, paymentSettingsSchema, paymentsFromForm } from "@monaztore/contracts";
+import {
+  domainSchema,
+  paymentSettingsSchema,
+  paymentsFromForm,
+  storeLocaleSchema,
+} from "@monaztore/contracts";
 import {
   addStoreDomain,
   DomainError,
   getEinvoicing,
+  getStoreLocale,
   getStorePayments,
   listStoreDomains,
   removeStoreDomain,
   setPrimaryDomain,
+  updateStoreLocale,
   updateStorePayments,
 } from "@monaztore/core";
+import { localeNames, locales } from "@monaztore/i18n";
 import { data, Form, href, Link, useNavigation } from "react-router";
 import { PageHeader } from "~/components/page-header";
 import { FieldErrors, TextField } from "~/components/text-field";
@@ -29,15 +37,17 @@ export function meta({ matches }: Route.MetaArgs) {
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const tenant = context.get(tenantContext);
-  const [domains, payments, einvoicing] = await Promise.all([
+  const [domains, payments, einvoicing, storeLocale] = await Promise.all([
     listStoreDomains(tenant),
     getStorePayments(tenant),
     getEinvoicing(tenant),
+    getStoreLocale(tenant),
   ]);
   const primary = domains.find((domain) => domain.primary) ?? domains[0];
   return {
     domains,
     payments,
+    storeLocale,
     storeUrl: primary ? storeOrigin(primary.hostname, request.url) : null,
     owner: tenant.role === "owner",
     // Electronic invoicing is for stores in Costa Rica only.
@@ -53,6 +63,15 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (tenant.role !== "owner") throw data("Only owners change the store", { status: 403 });
   const formData = await request.formData();
   const intent = formData.get("intent");
+
+  if (intent === "locale") {
+    const submission = parseWithZod(formData, { schema: storeLocaleSchema });
+    if (submission.status !== "success") {
+      return data({ intent, result: submission.reply(), done: null }, { status: 400 });
+    }
+    await updateStoreLocale(tenant, submission.value.locale);
+    return { intent, result: submission.reply(), done: "localeSaved" as const };
+  }
 
   if (intent === "payments") {
     const submission = parseWithZod(formData, { schema: paymentSettingsSchema });
@@ -141,6 +160,11 @@ export default function Store({ loaderData, actionData, params }: Route.Componen
             </span>
           </Link>
         ) : null}
+        <StoreLanguage
+          locale={loaderData.storeLocale}
+          owner={owner}
+          actionData={actionData?.intent === "locale" ? actionData : undefined}
+        />
         <Domains
           domains={loaderData.domains}
           owner={owner}
@@ -157,6 +181,71 @@ export default function Store({ loaderData, actionData, params }: Route.Componen
 }
 
 type ActionData = Route.ComponentProps["actionData"];
+
+/** The language the store's shoppers see; each one named in itself. */
+function StoreLanguage({
+  locale,
+  owner,
+  actionData,
+}: {
+  locale: string;
+  owner: boolean;
+  actionData: ActionData;
+}) {
+  const t = useT();
+  const navigation = useNavigation();
+  const [form, fields] = useForm({
+    id: "store-locale",
+    lastResult: actionData?.result,
+    defaultValue: { locale },
+    onValidate: ({ formData }) => parseWithZod(formData, { schema: storeLocaleSchema }),
+  });
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <h2>{t("store.languageHeading")}</h2>
+        </CardTitle>
+        <CardDescription>{t("store.languageIntro")}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Form method="post" className="grid gap-4" {...getFormProps(form)}>
+          <input type="hidden" name="intent" value="locale" />
+          <fieldset className="grid gap-2 sm:grid-cols-2" disabled={!owner}>
+            <legend className="sr-only">{t("store.languageHeading")}</legend>
+            {locales.map((option) => (
+              <label
+                key={option}
+                lang={option}
+                className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border p-3 has-[:checked]:border-primary has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50"
+              >
+                <input
+                  type="radio"
+                  name={fields.locale.name}
+                  value={option}
+                  defaultChecked={option === locale}
+                  className="size-4 accent-primary"
+                />
+                {localeNames[option]}
+              </label>
+            ))}
+          </fieldset>
+          <FieldErrors id={fields.locale.errorId} errors={fields.locale.errors} />
+          {owner ? (
+            <Button type="submit" disabled={navigation.state === "submitting"}>
+              {t("store.saveLanguage")}
+            </Button>
+          ) : null}
+          {actionData?.done === "localeSaved" ? (
+            <p role="status" className="text-sm">
+              {t("store.languageSaved")}
+            </p>
+          ) : null}
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}
 
 function Domains({
   domains,

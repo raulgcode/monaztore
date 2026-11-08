@@ -6,9 +6,11 @@ import { listStoreDomains } from "./store-admin";
 import {
   addStoreDomain,
   canOpenWorkspace,
+  getStoreLocale,
   normalizeHostname,
   resolveOnlyStore,
   resolveStoreByHost,
+  updateStoreLocale,
 } from "./stores";
 import { resolveTenant } from "./workspaces";
 
@@ -141,5 +143,28 @@ describe("one store per instance (STORE_MODE=single)", () => {
     expect(await canOpenWorkspace(db, "multi")).toBe(true);
     await ownerOf();
     expect(await canOpenWorkspace(db, "single")).toBe(false);
+  });
+});
+
+describe("the store's language", () => {
+  it("is Spanish until the owner picks, and the store found by its Host carries the pick", async () => {
+    const { ctx } = await ownerOf();
+    const hostname = uniqueDomain("idioma");
+    await addStoreDomain(ctx, hostname, { primary: true });
+
+    expect(await getStoreLocale(ctx)).toBe("es");
+    expect((await resolveStoreByHost(db, hostname))?.locale).toBeNull();
+
+    await updateStoreLocale(ctx, "en");
+
+    expect(await getStoreLocale(ctx)).toBe("en");
+    expect((await resolveStoreByHost(db, hostname))?.locale).toBe("en");
+  });
+
+  it("only an owner changes it", async () => {
+    const { ctx } = await ownerOf();
+    await expect(updateStoreLocale({ ...ctx, role: "member" }, "en")).rejects.toThrow(
+      "Only owners set the language",
+    );
   });
 });

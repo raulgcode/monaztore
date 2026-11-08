@@ -22,9 +22,37 @@ async function store() {
   return { owner, storefront: { db, store: found } };
 }
 
-const input = (values: Record<string, string>) => storeThemeSchema.parse(values);
+const input = (values: Record<string, string | string[]>) => storeThemeSchema.parse(values);
 
 describe("store themes", () => {
+  it("turns off the catalog filters the form offered and left unticked, and keeps the rest", async () => {
+    const { owner, storefront } = await store();
+
+    await updateStoreTheme(
+      owner,
+      input({
+        theme: "boutique",
+        offeredFilters: ["option:Talla", "option:Diseño", "price"],
+        shownFilters: "option:Talla",
+      }),
+    );
+    expect((await getStoreTheme(storefront)).hiddenFilters).toEqual(["option:Diseño", "price"]);
+
+    // A later form that no longer offers "Diseño" (no product has it now) leaves it off.
+    await updateStoreTheme(
+      owner,
+      input({
+        theme: "boutique",
+        offeredFilters: ["option:Talla", "price"],
+        shownFilters: ["price"],
+      }),
+    );
+    expect((await getStoreTheme(storefront)).hiddenFilters).toEqual([
+      "option:Diseño",
+      "option:Talla",
+    ]);
+  });
+
   it("a new store shows the default theme", async () => {
     const { storefront } = await store();
 

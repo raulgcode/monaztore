@@ -10,6 +10,8 @@ import {
   getThemeSettings,
   getWorkspace,
   listStoreDomains,
+  listStoreOptionNames,
+  optionFilterKey,
   updateStoreTheme,
 } from "@monaztore/core";
 import { paletteOf, storeThemes, type ThemePalette } from "@monaztore/core/themes";
@@ -41,14 +43,21 @@ export function meta({ matches }: Route.MetaArgs) {
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const tenant = context.get(tenantContext);
-  const [settings, domains, workspace] = await Promise.all([
+  const [settings, domains, workspace, optionNames] = await Promise.all([
     getThemeSettings(tenant),
     listStoreDomains(tenant),
     getWorkspace(tenant),
+    listStoreOptionNames(tenant),
   ]);
   const primary = domains.find((domain) => domain.primary) ?? domains[0];
   return {
     settings,
+    // The catalog's filters the owner can turn off: price, availability and each option.
+    filters: [
+      ...optionNames.map((name) => ({ key: optionFilterKey(name), name })),
+      { key: "price", name: null },
+      { key: "availability", name: null },
+    ],
     workspaceName: workspace.name,
     storeUrl: primary ? storeOrigin(primary.hostname, request.url) : null,
     owner: tenant.role === "owner",
@@ -109,6 +118,7 @@ export default function Design({ loaderData, actionData }: Route.ComponentProps)
   const navigation = useNavigation();
   const { settings, owner } = loaderData;
   const highlights = settings.highlights ?? [];
+  const hiddenFilters = settings.hiddenFilters ?? [];
   const [form, fields] = useForm({
     id: "design",
     lastResult: actionData?.result,
@@ -326,6 +336,38 @@ export default function Design({ loaderData, actionData }: Route.ComponentProps)
                       field={field}
                       label={t("design.highlight", { n: String(i + 1) })}
                     />
+                  ))}
+                </fieldset>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  <h2>{t("design.filtersHeading")}</h2>
+                </CardTitle>
+                <CardDescription>{t("design.filtersIntro")}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <fieldset className="grid gap-1">
+                  <legend className="sr-only">{t("design.filtersHeading")}</legend>
+                  {loaderData.filters.map((filter) => (
+                    <div key={filter.key} className="flex min-h-11 items-center gap-3">
+                      <input type="hidden" name={fields.offeredFilters.name} value={filter.key} />
+                      <input
+                        id={`filter-${filter.key}`}
+                        type="checkbox"
+                        name={fields.shownFilters.name}
+                        value={filter.key}
+                        defaultChecked={!hiddenFilters.includes(filter.key)}
+                        className="size-5 accent-primary"
+                      />
+                      <Label htmlFor={`filter-${filter.key}`} className="font-normal">
+                        {filter.name ??
+                          (filter.key === "price"
+                            ? t("design.filterPrice")
+                            : t("design.filterAvailability"))}
+                      </Label>
+                    </div>
                   ))}
                 </fieldset>
               </CardContent>

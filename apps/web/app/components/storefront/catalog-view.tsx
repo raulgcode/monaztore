@@ -52,11 +52,17 @@ export function CatalogView({
   // Each change shows its results right away; typing a price waits for "Apply".
   const onChange = (event: React.FormEvent<HTMLFormElement>) => {
     const target = event.target as HTMLInputElement;
-    if (target.type === "number") return;
+    // Typing a price waits for "Apply"; the search inside a filter group only narrows its list.
+    if (target.type === "number" || !target.name) return;
     submit(event.currentTarget, { preventScrollReset: true, replace: true });
   };
   return (
-    <div className={cn(facets && "lg:grid lg:grid-cols-[15rem_1fr] lg:items-start lg:gap-10")}>
+    <div
+      className={cn(
+        // minmax(0, …): a long row of chips scrolls inside its column instead of widening it.
+        facets && "lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-10",
+      )}
+    >
       <Form
         id={FORM_ID}
         method="get"
@@ -75,7 +81,9 @@ export function CatalogView({
           />
         ) : null}
       </Form>
-      <div className={cn(navigation.state === "loading" && "opacity-60 transition-opacity")}>
+      <div
+        className={cn("min-w-0", navigation.state === "loading" && "opacity-60 transition-opacity")}
+      >
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground" role="status">
             {t("storefront.productCount", { count: page.total })}
@@ -188,38 +196,14 @@ function FiltersPanel({
         <h2 className="hidden font-heading text-lg font-semibold lg:block">
           {t("storefront.filters")}
         </h2>
-        {facets.options.map((option) => {
-          const selected = query.options[option.name] ?? [];
-          // A value picked but no longer in the list still shows, so it can be taken off.
-          const values = [
-            ...option.values,
-            ...selected
-              .filter((value) => !option.values.some((v) => v.value === value))
-              .map((value) => ({ value, count: 0 })),
-          ];
-          return (
-            <fieldset key={option.name} className="grid gap-2">
-              <legend className="mb-2 text-sm font-semibold">{option.name}</legend>
-              <div className="flex flex-wrap gap-2">
-                {values.map(({ value, count }) => (
-                  <label key={value} className="relative">
-                    <input
-                      type="checkbox"
-                      name={`${OPTION_PARAM}${option.name}`}
-                      value={value}
-                      defaultChecked={selected.includes(value)}
-                      key={`${value}-${selected.includes(value)}`}
-                      className="peer sr-only"
-                    />
-                    <span className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-1 rounded-md border px-3 text-sm peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground peer-focus-visible:ring-[3px] peer-focus-visible:ring-ring/50 hover:border-primary">
-                      {value} <span className="text-xs opacity-80">({count})</span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-          );
-        })}
+        {facets.options.map((option) => (
+          <OptionFilter
+            key={option.name}
+            name={option.name}
+            values={option.values}
+            selected={query.options[option.name] ?? []}
+          />
+        ))}
         {facets.price ? (
           <fieldset className="grid gap-2">
             <legend className="mb-2 text-sm font-semibold">{t("storefront.priceRange")}</legend>
@@ -262,17 +246,19 @@ function FiltersPanel({
             </div>
           </fieldset>
         ) : null}
-        <fieldset className="grid gap-1">
-          <legend className="mb-2 text-sm font-semibold">{t("storefront.availability")}</legend>
-          <Check name="stock" checked={query.inStock} count={facets.inStock}>
-            {t("storefront.inStockOnly")}
-          </Check>
-          {facets.onSale > 0 || query.onSale ? (
-            <Check name="sale" checked={query.onSale} count={facets.onSale}>
-              {t("storefront.onSaleOnly")}
+        {facets.availability ? (
+          <fieldset className="grid gap-1">
+            <legend className="mb-2 text-sm font-semibold">{t("storefront.availability")}</legend>
+            <Check name="stock" checked={query.inStock} count={facets.inStock}>
+              {t("storefront.inStockOnly")}
             </Check>
-          ) : null}
-        </fieldset>
+            {facets.onSale > 0 || query.onSale ? (
+              <Check name="sale" checked={query.onSale} count={facets.onSale}>
+                {t("storefront.onSaleOnly")}
+              </Check>
+            ) : null}
+          </fieldset>
+        ) : null}
       </div>
       <div className="border-t p-4 lg:hidden">
         <Button type="submit" className="w-full" onClick={onClose}>
@@ -280,6 +266,101 @@ function FiltersPanel({
         </Button>
       </div>
     </aside>
+  );
+}
+
+/** How many values a filter shows before "See more": a long list mustn't stretch the page. */
+const VISIBLE_VALUES = 8;
+/** From how many values a filter gets its own search box. */
+const SEARCHABLE_VALUES = 12;
+
+/**
+ * One option's values as chips. A long one (Superchiva's dozens of designs) shows the first few,
+ * the ones picked always among them, and the rest behind "See more", with a box to find one.
+ */
+function OptionFilter({
+  name,
+  values: listed,
+  selected,
+}: {
+  name: string;
+  values: { value: string; count: number }[];
+  selected: string[];
+}) {
+  const t = useT();
+  const searchId = useId();
+  const [search, setSearch] = useState("");
+  // A value picked but no longer in the list still shows, so it can be taken off.
+  const values = [
+    ...listed,
+    ...selected
+      .filter((value) => !listed.some((v) => v.value === value))
+      .map((value) => ({ value, count: 0 })),
+  ];
+  const needle = search.trim().toLocaleLowerCase();
+  const matches = needle
+    ? values.filter(({ value }) => value.toLocaleLowerCase().includes(needle))
+    : values;
+  // While searching every value stays in the form (hidden when it doesn't match), so what was
+  // already picked is still sent.
+  const first = needle
+    ? values
+    : values.filter(({ value }, index) => index < VISIBLE_VALUES || selected.includes(value));
+  const rest = needle ? [] : values.filter((value) => !first.includes(value));
+  const chip = ({ value, count }: { value: string; count: number }) => (
+    <label
+      key={value}
+      className="relative"
+      hidden={needle ? !matches.some((m) => m.value === value) : undefined}
+    >
+      <input
+        type="checkbox"
+        name={`${OPTION_PARAM}${name}`}
+        value={value}
+        defaultChecked={selected.includes(value)}
+        key={`${value}-${selected.includes(value)}`}
+        className="peer sr-only"
+      />
+      <span className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-1 rounded-full border px-3 text-sm peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground peer-focus-visible:ring-[3px] peer-focus-visible:ring-ring/50 hover:border-primary">
+        {value} <span className="text-xs opacity-80">({count})</span>
+      </span>
+    </label>
+  );
+  return (
+    <fieldset className="grid gap-2">
+      <legend className="mb-2 text-sm font-semibold">{name}</legend>
+      {values.length >= SEARCHABLE_VALUES ? (
+        <div className="grid gap-1">
+          <Label htmlFor={searchId} className="sr-only">
+            {t("storefront.findValue", { name })}
+          </Label>
+          <Input
+            id={searchId}
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.currentTarget.value)}
+            placeholder={t("storefront.findValue", { name })}
+            className="h-11"
+          />
+        </div>
+      ) : null}
+      <div className="flex flex-wrap gap-2">{first.map(chip)}</div>
+      {needle && matches.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t("storefront.noValueMatches")}</p>
+      ) : null}
+      {rest.length > 0 ? (
+        <details className="group grid gap-2">
+          <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-sm font-medium text-link underline-offset-4 hover:underline [&::-webkit-details-marker]:hidden">
+            <span className="group-open:hidden">
+              {t("storefront.seeMoreValues", { count: String(rest.length) })}
+            </span>
+            <span className="hidden group-open:inline">{t("storefront.seeFewerValues")}</span>
+          </summary>
+          {/* The rest scroll inside the group, so opening it never stretches the page. */}
+          <div className="flex max-h-72 flex-wrap gap-2 overflow-y-auto pt-2">{rest.map(chip)}</div>
+        </details>
+      ) : null}
+    </fieldset>
   );
 }
 

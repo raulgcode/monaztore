@@ -1,5 +1,10 @@
 /** The store's settings in the workspace: domains and payments. */
 export const store = {
+  languageHeading: "Store language",
+  languageIntro:
+    "Your customers see the store in this language. Anyone who reads another can switch at the foot of the store.",
+  saveLanguage: "Save language",
+  languageSaved: "Saved. Your store already speaks this language.",
   title: "Store",
   intro: "Where your store answers and how shoppers pay.",
   domainsHeading: "Domains",

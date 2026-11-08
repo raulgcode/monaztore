@@ -7,6 +7,7 @@ import {
   listStoreProducts,
   listTopCollections,
   type StorefrontContext,
+  withoutHiddenFilters,
 } from "@monaztore/core";
 import { storeOrigin } from "./store-seo";
 
@@ -52,5 +53,8 @@ export async function catalogPage(
     listStoreProducts(store, scope),
     theme.layout.filters ? listStoreFacets(store, scope) : null,
   ]);
-  return { query, page, facets };
+  const shown = facets && withoutHiddenFilters(facets, theme.hiddenFilters);
+  // Every filter turned off: no panel at all.
+  const any = shown && (shown.price || shown.options.length > 0 || shown.availability);
+  return { query, page, facets: any ? shown : null };
 }

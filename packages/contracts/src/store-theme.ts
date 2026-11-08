@@ -8,6 +8,15 @@ import { storeThemeIds } from "./store-theme-ids";
 
 export const HIGHLIGHTS_MAX = 3;
 
+/** A list from repeated form fields: none, one or many. */
+const stringList = z._default(
+  z.pipe(
+    z.union([z.string(), z.array(z.string())]),
+    z.transform((value) => (Array.isArray(value) ? value : [value]).slice(0, 20)),
+  ),
+  [],
+);
+
 const optionalText = (max: number) =>
   z._default(z.string().check(z.trim(), z.maxLength(max, message("forms.textTooLong"))), "");
 
@@ -54,5 +63,8 @@ export const storeThemeSchema = z.object({
   highlight3: optionalText(60),
   removeLogo: checkbox,
   removeHero: checkbox,
+  /** The catalog filters the form offered, and those left ticked: the rest are turned off. */
+  offeredFilters: stringList,
+  shownFilters: stringList,
 });
 export type StoreThemeInput = z.infer<typeof storeThemeSchema>;

@@ -179,8 +179,10 @@ export {
   getStoreInfo,
   getStoreProduct,
   listStoreFacets,
+  listStoreOptionNames,
   listStoreProducts,
   listTopCollections,
+  optionFilterKey,
   type ProductCard,
   type ProductPage,
   type ProductQuery,
@@ -193,16 +195,20 @@ export {
   type StoreProduct,
   sitemapEntries,
   sortOptionValues,
+  withoutHiddenFilters,
 } from "./storefront";
 export {
   addStoreDomain,
   canOpenWorkspace,
+  DEFAULT_STORE_LOCALE,
+  getStoreLocale,
   normalizeHostname,
   ownerContextForStore,
   resolveOnlyStore,
   resolveStoreByHost,
   type StorefrontStore,
   type StoreMode,
+  updateStoreLocale,
 } from "./stores";
 export {
   endSupportVisit,
