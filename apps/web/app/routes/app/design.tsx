@@ -173,6 +173,7 @@ export default function Design({ loaderData, actionData }: Route.ComponentProps)
                       <input
                         {...getInputProps(fields.theme, { type: "radio", value: id })}
                         key={`${id}-${fields.theme.initialValue}`}
+                        id={`${fields.theme.id}-${id}`}
                         className="peer sr-only"
                       />
                       <span className="grid h-full cursor-pointer gap-2 rounded-lg border-2 p-3 peer-checked:border-primary peer-focus-visible:ring-[3px] peer-focus-visible:ring-ring/50 hover:border-primary">
