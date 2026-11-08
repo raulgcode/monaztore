@@ -8,7 +8,12 @@ import {
   test,
 } from "../support/fixtures";
 import { getLinkFromEmail, uniqueEmail } from "../support/mailpit";
-import { openStore, placeSampleOrder, sellEbook } from "../support/storefront";
+import {
+  catalogWithCopiedPhoto,
+  openStore,
+  placeSampleOrder,
+  sellEbook,
+} from "../support/storefront";
 
 const schemes = ["light", "dark"] as const;
 // Public pages, before signing in.
@@ -90,7 +95,12 @@ test.describe("Feature: accessibility (axe, WCAG 2.2 AA)", () => {
       ownerTest(
         "Scenario: the storefront pages have no violations",
         async ({ page, workspace, baseURL, expectAccessible }) => {
-          const store = await openStore(workspace, baseURL);
+          // The mug with three photos, so its page has the photo carousel.
+          const store = await openStore(
+            workspace,
+            baseURL,
+            await catalogWithCopiedPhoto(workspace, 3),
+          );
           for (const path of storePages) {
             await page.goto(`${store}${path}`);
             await expectAccessible(page);

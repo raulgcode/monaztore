@@ -74,6 +74,8 @@ export const storeSettings = pgTable("store_settings", {
 export interface StoreThemeSettings {
   /** A theme of `storeThemes` in core; unknown or missing = the default theme. */
   theme?: string;
+  /** One of the theme's palettes (`storeThemes[theme].palettes`); the first when unset. */
+  palette?: string;
   /** `#rrggbb`. core adjusts it so it reads in light and dark. */
   brandColor?: string;
   /** `/media/…` addresses of the store's own files. */

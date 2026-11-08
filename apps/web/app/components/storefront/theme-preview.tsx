@@ -11,6 +11,8 @@ import { cn } from "~/lib/utils";
  */
 export function ThemePreview({
   theme,
+  palette,
+  scheme,
   brandColor,
   name,
   logoUrl,
@@ -20,6 +22,9 @@ export function ThemePreview({
   compact = false,
 }: {
   theme: StoreThemeId;
+  palette?: string;
+  /** Light or dark, whatever the workspace itself is in; unset follows it. */
+  scheme?: "light" | "dark";
   brandColor?: string;
   name: string;
   logoUrl?: string | null;
@@ -29,14 +34,14 @@ export function ThemePreview({
   compact?: boolean;
 }) {
   const t = useT();
-  const resolved = resolveStoreTheme({ theme, brandColor });
+  const resolved = resolveStoreTheme({ theme, palette, brandColor });
   const { layout } = resolved;
   const heading = title || name;
   const products = compact ? 3 : layout.productCard === "row" ? 4 : 4;
   return (
     <div
       aria-hidden
-      style={resolved.style as React.CSSProperties}
+      style={{ ...(resolved.style as React.CSSProperties), colorScheme: scheme }}
       className={cn(
         "overflow-hidden rounded-lg border bg-background text-foreground",
         compact ? "text-[0.55rem]" : "text-xs",

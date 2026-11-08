@@ -12,7 +12,9 @@ import {
   listStoreDomains,
   updateStoreTheme,
 } from "@monaztore/core";
-import { storeThemes } from "@monaztore/core/themes";
+import { paletteOf, storeThemes, type ThemePalette } from "@monaztore/core/themes";
+import { MoonIcon, SunIcon } from "lucide-react";
+import { useState } from "react";
 import { data, Form, useNavigation } from "react-router";
 import { PageHeader } from "~/components/page-header";
 import { ThemePreview } from "~/components/storefront/theme-preview";
@@ -117,6 +119,7 @@ export default function Design({ loaderData, actionData }: Route.ComponentProps)
       theme: storeThemeIds.includes(settings.theme as StoreThemeId)
         ? settings.theme
         : storeThemeIds[0],
+      palette: settings.palette ?? "",
       brandColor: settings.brandColor ?? "",
       heroTitle: settings.heroTitle ?? "",
       heroSubtitle: settings.heroSubtitle ?? "",
@@ -128,6 +131,9 @@ export default function Design({ loaderData, actionData }: Route.ComponentProps)
   });
   const theme = (fields.theme.value as StoreThemeId | undefined) ?? storeThemeIds[0];
   const brandColor = normalizeHex(fields.brandColor.value ?? "") ?? "";
+  // A palette of another theme falls back to this theme's first, as the store will.
+  const palette = paletteOf(theme, fields.palette.value).id;
+  const [scheme, setScheme] = useState<"light" | "dark">("light");
   const busy = navigation.state === "submitting";
 
   return (
@@ -200,15 +206,39 @@ export default function Design({ loaderData, actionData }: Route.ComponentProps)
             <Card>
               <CardHeader>
                 <CardTitle>
-                  <h2>{t("design.brandHeading")}</h2>
+                  <h2>{t("design.colorsHeading")}</h2>
                 </CardTitle>
+                <CardDescription>{t("design.colorsIntro")}</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-5">
+                <fieldset key={theme} className="grid gap-2">
+                  <legend className="sr-only">{t("design.colorsLegend")}</legend>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {storeThemes[theme].palettes.map((option) => (
+                      <label key={option.id} className="relative">
+                        <input
+                          type="radio"
+                          name={fields.palette.name}
+                          form={form.id}
+                          value={option.id}
+                          defaultChecked={option.id === palette}
+                          className="peer sr-only"
+                        />
+                        <span className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border-2 p-2 peer-checked:border-primary peer-focus-visible:ring-[3px] peer-focus-visible:ring-ring/50 hover:border-primary">
+                          <Swatch colors={option} />
+                          <span className="text-sm font-medium">
+                            {t(`design.palette_${option.id}`)}
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
                 <div className="grid grid-cols-[auto_1fr] items-start gap-3">
                   <input
                     type="color"
                     aria-label={t("design.pickColor")}
-                    value={brandColor || storeThemes[theme].colors.light.primary}
+                    value={brandColor || paletteOf(theme, palette).light.primary}
                     onChange={(event) =>
                       form.update({ name: fields.brandColor.name, value: event.target.value })
                     }
@@ -217,7 +247,7 @@ export default function Design({ loaderData, actionData }: Route.ComponentProps)
                   <TextField
                     field={fields.brandColor}
                     label={t("design.brandColor")}
-                    description={t("design.brandColorHint")}
+                    description={t("design.ownColorHint")}
                     placeholder="#be185d"
                     autoCapitalize="none"
                     spellCheck={false}
@@ -233,6 +263,16 @@ export default function Design({ loaderData, actionData }: Route.ComponentProps)
                     {t("design.useThemeColor")}
                   </Button>
                 ) : null}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  <h2>{t("design.brandHeading")}</h2>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-5">
                 <PhotoField
                   name="logo"
                   label={t("design.logo")}
@@ -313,8 +353,30 @@ export default function Design({ loaderData, actionData }: Route.ComponentProps)
             {t("design.preview")}
           </h2>
           <p className="text-sm text-muted-foreground">{t("design.previewHint")}</p>
+          <fieldset className="flex items-center gap-2">
+            <legend className="sr-only">{t("design.previewScheme")}</legend>
+            {(["light", "dark"] as const).map((mode) => (
+              <Button
+                key={mode}
+                type="button"
+                variant={scheme === mode ? "default" : "outline"}
+                aria-pressed={scheme === mode}
+                className="min-h-11 px-4"
+                onClick={() => setScheme(mode)}
+              >
+                {mode === "light" ? (
+                  <SunIcon aria-hidden className="size-4" />
+                ) : (
+                  <MoonIcon aria-hidden className="size-4" />
+                )}
+                {t(mode === "light" ? "design.previewLight" : "design.previewDark")}
+              </Button>
+            ))}
+          </fieldset>
           <ThemePreview
             theme={theme}
+            palette={palette}
+            scheme={scheme}
             brandColor={brandColor}
             name={loaderData.workspaceName}
             logoUrl={fields.removeLogo.value === "on" ? null : settings.logoUrl}
@@ -386,5 +448,25 @@ function PhotoField({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** A palette at a glance: its light and dark pages, each with its brand color on top. */
+function Swatch({ colors }: { colors: ThemePalette }) {
+  return (
+    <span aria-hidden className="flex shrink-0 overflow-hidden rounded-full border">
+      {(["light", "dark"] as const).map((mode) => (
+        <span
+          key={mode}
+          className="grid size-7 place-items-center"
+          style={{ backgroundColor: colors[mode].background }}
+        >
+          <span
+            className="size-3.5 rounded-full"
+            style={{ backgroundColor: colors[mode].primary }}
+          />
+        </span>
+      ))}
+    </span>
   );
 }

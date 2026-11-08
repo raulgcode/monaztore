@@ -28,7 +28,7 @@ export function Price({
   const onSale = compareAtPrice !== null && compareAtPrice > price;
   return (
     <p className={cn("flex flex-wrap items-baseline gap-x-2", className)}>
-      <span className="font-semibold">
+      <span className={cn("font-semibold", onSale && "text-primary")}>
         {from ? t("storefront.fromPrice", { price: amount }) : amount}
       </span>
       {onSale ? (

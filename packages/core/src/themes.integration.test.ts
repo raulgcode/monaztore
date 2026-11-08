@@ -44,19 +44,20 @@ describe("store themes", () => {
     );
     await updateStoreTheme(
       owner,
-      input({ theme: "boutique", heroTitle: "Nuevas", removeHero: "on" }),
+      input({ theme: "boutique", palette: "sand", heroTitle: "Nuevas", removeHero: "on" }),
     );
 
     const theme = await getStoreTheme(storefront);
     expect(theme).toMatchObject({
       id: "boutique",
+      palette: "sand",
       heroTitle: "Nuevas",
       logoUrl: "/media/organizations/x/images/logo.webp",
       heroImageUrl: null,
       heroImageSmallUrl: null,
     });
-    // The brand color is not kept when the form sends it empty: the theme's own comes back.
-    expect(theme.style["--primary"]).toBe("light-dark(#be185d, #f9a8d4)");
+    // The brand color is not kept when the form sends it empty: the palette's own comes back.
+    expect(theme.style["--primary"]).toBe("light-dark(#9a3412, #fdba74)");
   });
 
   it("only owners change the design, and another store never sees it", async () => {

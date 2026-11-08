@@ -25,11 +25,47 @@ export const PAGE_BACKGROUND = { light: "#ffffff", dark: "#09090b" } as const;
 /** Cards (`--card`): in dark they are lighter than the page, so links need more there. */
 export const CARD_BACKGROUND = { light: "#ffffff", dark: "#18181b" } as const;
 
-export interface ThemeColors {
+/** Every color a storefront paints with, in one mode (light or dark). */
+export interface PaletteColors {
+  background: string;
+  foreground: string;
+  card: string;
+  muted: string;
+  mutedForeground: string;
+  border: string;
+  /** Input borders: 3:1 against the surfaces. */
+  input: string;
   primary: string;
   primaryForeground: string;
   accent: string;
   accentForeground: string;
+  destructive: string;
+}
+
+/**
+ * A theme's set of colors, for light and dark: the surfaces (page, cards, muted bands) and the
+ * brand color with what it gives (buttons, links, the soft accent bands). The store owner picks
+ * one in Design and may put their own brand color over it.
+ */
+/** Every theme's palettes: unique, so each has one name (`design.palette_<id>`). */
+export type PaletteId =
+  | "indigo"
+  | "forest"
+  | "ocean"
+  | "graphite"
+  | "rose"
+  | "sand"
+  | "noir"
+  | "sage"
+  | "sea"
+  | "navy"
+  | "field"
+  | "slate";
+
+export interface ThemePalette {
+  id: PaletteId;
+  light: PaletteColors;
+  dark: PaletteColors;
 }
 
 export interface ThemeLayout {
@@ -55,29 +91,136 @@ export interface ThemeLayout {
 
 export interface StoreThemePreset {
   id: StoreThemeId;
-  /** Who it is for, as an i18n key suffix: `store.theme_<id>`, `store.theme_<id>For`. */
-  colors: { light: ThemeColors; dark: ThemeColors };
+  /** The theme's palettes; the first is the one a store starts with. */
+  palettes: ThemePalette[];
   layout: ThemeLayout;
+}
+
+type Surfaces = Omit<
+  PaletteColors,
+  "primary" | "primaryForeground" | "accent" | "accentForeground"
+>;
+
+/** Plain white and near black: the platform's own (app.css). */
+const neutral: { light: Surfaces; dark: Surfaces } = {
+  light: {
+    background: PAGE_BACKGROUND.light,
+    foreground: "#18181b",
+    card: CARD_BACKGROUND.light,
+    muted: "#f4f4f5",
+    mutedForeground: "#52525b",
+    border: "#e4e4e7",
+    input: "#71717a",
+    destructive: "#b91c1c",
+  },
+  dark: {
+    background: PAGE_BACKGROUND.dark,
+    foreground: "#fafafa",
+    card: CARD_BACKGROUND.dark,
+    muted: "#27272a",
+    mutedForeground: "#a1a1aa",
+    border: "#27272a",
+    input: "#71717a",
+    destructive: "#f87171",
+  },
+};
+
+/** Paper and espresso: warm, for fashion and handmade goods. */
+const warm: { light: Surfaces; dark: Surfaces } = {
+  light: {
+    background: "#faf7f2",
+    foreground: "#1c1917",
+    card: "#ffffff",
+    muted: "#f1ebe2",
+    mutedForeground: "#57534e",
+    border: "#e7e0d5",
+    input: "#78716c",
+    destructive: "#b91c1c",
+  },
+  dark: {
+    background: "#14110f",
+    foreground: "#f5f0e8",
+    card: "#1f1b18",
+    muted: "#2a2420",
+    mutedForeground: "#a8a29e",
+    border: "#332c26",
+    input: "#78716c",
+    destructive: "#f87171",
+  },
+};
+
+/** Cool slate: crisp, for catalogs and businesses. */
+const cool: { light: Surfaces; dark: Surfaces } = {
+  light: {
+    background: "#f8fafc",
+    foreground: "#0f172a",
+    card: "#ffffff",
+    muted: "#f1f5f9",
+    mutedForeground: "#475569",
+    border: "#e2e8f0",
+    input: "#64748b",
+    destructive: "#b91c1c",
+  },
+  dark: {
+    background: "#0b1120",
+    foreground: "#f1f5f9",
+    card: "#131c2e",
+    muted: "#1e293b",
+    mutedForeground: "#94a3b8",
+    border: "#1e293b",
+    input: "#64748b",
+    destructive: "#f87171",
+  },
+};
+
+/** A color that reads as text on each of `surfaces` (4.5:1), nudged as little as possible. */
+function readableOnAll(color: string, surfaces: string[]): string {
+  let result = color;
+  for (let round = 0; round < 3; round++) {
+    for (const surface of surfaces) result = ensureContrast(result, surface);
+  }
+  return result;
+}
+
+/** The brand's colors on a mode's surfaces: buttons, links and the soft accent bands. */
+function brandOn(brand: string, surfaces: Surfaces, mode: "light" | "dark"): PaletteColors {
+  const primary = readableOnAll(brand, [surfaces.card, surfaces.background]);
+  const accent = mixColors(primary, surfaces.background, mode === "light" ? 0.9 : 0.82);
+  return {
+    ...surfaces,
+    primary,
+    primaryForeground: readableOn(
+      primary,
+      mode === "light" ? surfaces.foreground : surfaces.background,
+      "#ffffff",
+    ),
+    accent,
+    accentForeground: readableOnAll(primary, [accent]),
+  };
+}
+
+function palette(
+  id: PaletteId,
+  surfaces: { light: Surfaces; dark: Surfaces },
+  brand: { light: string; dark: string },
+): ThemePalette {
+  return {
+    id,
+    light: brandOn(brand.light, surfaces.light, "light"),
+    dark: brandOn(brand.dark, surfaces.dark, "dark"),
+  };
 }
 
 export const storeThemes: Record<StoreThemeId, StoreThemePreset> = {
   // Any store: clean, neutral, the platform's indigo.
   essential: {
     id: "essential",
-    colors: {
-      light: {
-        primary: "#4338ca",
-        primaryForeground: "#ffffff",
-        accent: "#eef2ff",
-        accentForeground: "#3730a3",
-      },
-      dark: {
-        primary: "#a5b4fc",
-        primaryForeground: "#1e1b4b",
-        accent: "#1e1b4b",
-        accentForeground: "#e0e7ff",
-      },
-    },
+    palettes: [
+      palette("indigo", neutral, { light: "#4338ca", dark: "#a5b4fc" }),
+      palette("forest", neutral, { light: "#15803d", dark: "#86efac" }),
+      palette("ocean", cool, { light: "#0369a1", dark: "#7dd3fc" }),
+      palette("graphite", neutral, { light: "#18181b", dark: "#fafafa" }),
+    ],
     layout: {
       hero: "banner",
       productCard: "square",
@@ -91,20 +234,12 @@ export const storeThemes: Record<StoreThemeId, StoreThemePreset> = {
   // Clothes, socks and accessories: big photos, tall cards, serif headings, filters by size.
   boutique: {
     id: "boutique",
-    colors: {
-      light: {
-        primary: "#be185d",
-        primaryForeground: "#ffffff",
-        accent: "#fdf2f8",
-        accentForeground: "#9d174d",
-      },
-      dark: {
-        primary: "#f9a8d4",
-        primaryForeground: "#500724",
-        accent: "#3b0a22",
-        accentForeground: "#fbcfe8",
-      },
-    },
+    palettes: [
+      palette("rose", neutral, { light: "#be185d", dark: "#f9a8d4" }),
+      palette("sand", warm, { light: "#9a3412", dark: "#fdba74" }),
+      palette("noir", neutral, { light: "#18181b", dark: "#fafafa" }),
+      palette("sage", warm, { light: "#3f6212", dark: "#bef264" }),
+    ],
     layout: {
       hero: "spotlight",
       productCard: "portrait",
@@ -118,20 +253,12 @@ export const storeThemes: Record<StoreThemeId, StoreThemePreset> = {
   // Selling to businesses (seafood, produce, supplies): a dense list with codes, search first.
   wholesale: {
     id: "wholesale",
-    colors: {
-      light: {
-        primary: "#0e7490",
-        primaryForeground: "#ffffff",
-        accent: "#ecfeff",
-        accentForeground: "#155e75",
-      },
-      dark: {
-        primary: "#67e8f9",
-        primaryForeground: "#083344",
-        accent: "#082f3a",
-        accentForeground: "#a5f3fc",
-      },
-    },
+    palettes: [
+      palette("sea", cool, { light: "#0e7490", dark: "#67e8f9" }),
+      palette("navy", cool, { light: "#1e3a8a", dark: "#93c5fd" }),
+      palette("field", neutral, { light: "#166534", dark: "#86efac" }),
+      palette("slate", cool, { light: "#334155", dark: "#cbd5e1" }),
+    ],
     layout: {
       hero: "compact",
       productCard: "row",
@@ -144,44 +271,63 @@ export const storeThemes: Record<StoreThemeId, StoreThemePreset> = {
   },
 };
 
-/** The colors a brand color gives: readable as a button and as a link, in light and dark. */
-export function brandColors(brand: string): { light: ThemeColors; dark: ThemeColors } {
-  const light = ensureContrast(brand, CARD_BACKGROUND.light);
-  const dark = ensureContrast(brand, CARD_BACKGROUND.dark);
-  const lightAccent = mixColors(light, PAGE_BACKGROUND.light, 0.9);
-  const darkAccent = mixColors(dark, PAGE_BACKGROUND.dark, 0.82);
+/** The theme's palette with this id, or its first one. */
+export function paletteOf(theme: StoreThemeId, id?: string): ThemePalette {
+  const { palettes } = storeThemes[theme];
+  const found = palettes.find((palette) => palette.id === id) ?? palettes[0];
+  if (!found) throw new Error(`Theme ${theme} has no palettes`);
+  return found;
+}
+
+/** A palette's surfaces with the store's own brand color: readable in light and dark. */
+export function brandPalette(base: ThemePalette, brand: string): ThemePalette {
+  const strip = ({
+    primary,
+    primaryForeground,
+    accent,
+    accentForeground,
+    ...rest
+  }: PaletteColors) => rest;
   return {
-    light: {
-      primary: light,
-      primaryForeground: readableOn(light, "#18181b", "#ffffff"),
-      accent: lightAccent,
-      accentForeground: ensureContrast(light, lightAccent),
-    },
-    dark: {
-      primary: dark,
-      primaryForeground: readableOn(dark, PAGE_BACKGROUND.dark, "#ffffff"),
-      accent: darkAccent,
-      accentForeground: ensureContrast(dark, darkAccent),
-    },
+    id: base.id,
+    light: brandOn(brand, strip(base.light), "light"),
+    dark: brandOn(brand, strip(base.dark), "dark"),
   };
 }
 
-/** Every text-on-surface pair of a palette, for the AA checks. */
-export function colorPairs(colors: { light: ThemeColors; dark: ThemeColors }) {
+/** Every text-on-surface pair of a palette (4.5:1) and its graphics (3:1), for the AA checks. */
+export function contrastChecks(colors: { light: PaletteColors; dark: PaletteColors }) {
   return (["light", "dark"] as const).flatMap((mode) => {
     const c = colors[mode];
-    const page = PAGE_BACKGROUND[mode];
+    const text: [string, string, string][] = [
+      ["text", c.foreground, c.background],
+      ["text on a card", c.foreground, c.card],
+      ["text on muted", c.foreground, c.muted],
+      ["muted text", c.mutedForeground, c.background],
+      ["muted text on a card", c.mutedForeground, c.card],
+      ["muted text on muted", c.mutedForeground, c.muted],
+      ["button", c.primaryForeground, c.primary],
+      ["link", c.primary, c.background],
+      ["link on a card", c.primary, c.card],
+      ["accent", c.accentForeground, c.accent],
+      ["error", c.destructive, c.background],
+      ["error on a card", c.destructive, c.card],
+    ];
+    const graphics: [string, string, string][] = [
+      ["input border", c.input, c.background],
+      ["input border on a card", c.input, c.card],
+    ];
     return [
-      { mode, name: "button", ratio: contrastRatio(c.primaryForeground, c.primary) },
-      { mode, name: "link", ratio: contrastRatio(c.primary, page) },
-      { mode, name: "link on a card", ratio: contrastRatio(c.primary, CARD_BACKGROUND[mode]) },
-      { mode, name: "accent", ratio: contrastRatio(c.accentForeground, c.accent) },
+      ...text.map(([name, a, b]) => ({ mode, name, ratio: contrastRatio(a, b), minimum: 4.5 })),
+      ...graphics.map(([name, a, b]) => ({ mode, name, ratio: contrastRatio(a, b), minimum: 3 })),
     ];
   });
 }
 
 export interface StoreTheme {
   id: StoreThemeId;
+  /** The palette in use (the theme's first when the store never picked one). */
+  palette: PaletteId;
   layout: ThemeLayout;
   /** CSS variables for the storefront's frame: `{ "--primary": "light-dark(#…, #…)" }`. */
   style: Record<`--${string}`, string>;
@@ -207,18 +353,34 @@ export function resolveStoreTheme(settings: StoreThemeSettings = {}): StoreTheme
     : defaultStoreThemeId;
   const preset = storeThemes[id];
   const brand = settings.brandColor ? normalizeHex(settings.brandColor) : undefined;
-  const colors = brand ? brandColors(brand) : preset.colors;
-  const pair = (key: keyof ThemeColors) => `light-dark(${colors.light[key]}, ${colors.dark[key]})`;
+  const base = paletteOf(id, settings.palette);
+  const colors = brand ? brandPalette(base, brand) : base;
+  const pair = (key: keyof PaletteColors) =>
+    `light-dark(${colors.light[key]}, ${colors.dark[key]})`;
   return {
     id,
+    palette: base.id,
     layout: preset.layout,
     style: {
+      "--background": pair("background"),
+      "--foreground": pair("foreground"),
+      "--card": pair("card"),
+      "--card-foreground": pair("foreground"),
+      "--popover": pair("card"),
+      "--popover-foreground": pair("foreground"),
+      "--secondary": pair("muted"),
+      "--secondary-foreground": pair("foreground"),
+      "--muted": pair("muted"),
+      "--muted-foreground": pair("mutedForeground"),
+      "--border": pair("border"),
+      "--input": pair("input"),
       "--primary": pair("primary"),
       "--primary-foreground": pair("primaryForeground"),
       "--ring": pair("primary"),
       "--link": pair("primary"),
       "--accent": pair("accent"),
       "--accent-foreground": pair("accentForeground"),
+      "--destructive": pair("destructive"),
       "--radius": `${preset.layout.radius}rem`,
       "--heading-font": fonts[preset.layout.headingFont],
     },

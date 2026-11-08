@@ -155,6 +155,16 @@
       navigation-progress-grow 8s 150ms cubic-bezier(0.1, 0.8, 0.2, 1) both;
   }
 
+  /* "Loading…" only when it takes a while: most pages arrive before it shows. */
+  .navigation-progress-pill {
+    animation: navigation-progress-in 150ms 500ms both;
+  }
+
+  /* A storefront draws its own, in the store's colors (StoreShell). */
+  :root:has([data-navigation-scope="store"]) [data-navigation-scope="root"] {
+    display: none;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     /* No movement: a full bar that just appears after the same delay. */
     .navigation-progress-bar {
