@@ -18,6 +18,8 @@ export const rateLimits = {
   passwordEmail: { limit: 10, windowMs: 15 * MINUTE },
   /** Orders placed from one IP: a family buys a few, a script many. */
   orderIp: { limit: 10, windowMs: 15 * MINUTE },
+  /** Discount codes tried in a cart from one IP: enough for typos, not for guessing them. */
+  couponIp: { limit: 20, windowMs: 15 * MINUTE },
   /** Hacienda sign-in checks from one workspace (Factura electrónica): a store retyping, not a guesser. */
   haciendaLogin: { limit: 10, windowMs: 15 * MINUTE },
   /** Hacienda's public lookups (an ID, the CABYS catalog) from one workspace. */

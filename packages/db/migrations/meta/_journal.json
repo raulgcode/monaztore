@@ -71,6 +71,13 @@
       "when": 1794151236564,
       "tag": "0009_store_locale",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794152702351,
+      "tag": "0010_products_and_coupons",
+      "breakpoints": true
     }
   ]
 }

@@ -29,4 +29,6 @@ export const store = {
   savePayments: "Save payments",
   paymentsSaved: "Payments saved.",
   ownersOnly: "Only the workspace's owner changes this.",
+  pagesCard: "Pages →",
+  pagesCardHint: "Your store's own pages, like “About us”.",
 } as const;

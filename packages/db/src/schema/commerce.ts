@@ -160,6 +160,11 @@ export const order = pgTable(
     currency: text().notNull(),
     /** Minor units. */
     subtotal: bigint({ mode: "number" }).notNull(),
+    /** What the coupon took off (minor units); `total` = `subtotal` − `discount`. */
+    discount: bigint({ mode: "number" }).notNull().default(0),
+    /** The coupon used, as typed then (uppercase): it stays if the coupon is deleted. */
+    couponCode: text(),
+    couponId: uuid().references(() => coupon.id, { onDelete: "set null" }),
     total: bigint({ mode: "number" }).notNull(),
     locale: text().notNull().default("en"),
     ...timestamps,
@@ -188,6 +193,8 @@ export const orderLine = pgTable(
     unitPrice: bigint({ mode: "number" }).notNull(),
     quantity: integer().notNull(),
     lineTotal: bigint({ mode: "number" }).notNull(),
+    /** This line's share of the order's coupon (minor units): what it really cost is the difference. */
+    discount: bigint({ mode: "number" }).notNull().default(0),
     position: integer().notNull().default(0),
   },
   (table) => [index("order_line_order_idx").on(table.orderId, table.position)],
@@ -246,6 +253,12 @@ export const product = pgTable(
     stockQuantity: integer(),
     inStock: boolean().notNull().default(true),
     weightGrams: integer(),
+    /**
+     * When the offer (`price` below `compareAtPrice`) runs, for the product and its variants.
+     * Outside these dates the regular price (`compareAtPrice`) is what it costs. null = open.
+     */
+    saleStartsAt: timestamp({ withTimezone: true }),
+    saleEndsAt: timestamp({ withTimezone: true }),
     seoTitle: text(),
     seoDescription: text(),
     /**
@@ -308,6 +321,11 @@ export const productOption = pgTable(
       .references(() => product.id, { onDelete: "cascade" }),
     name: text().notNull(),
     values: jsonb().$type<string[]>().notNull(),
+    /**
+     * The shopper picks it (its values make the variants). Off, it only describes the product
+     * ("Material: Algodón"): it still shows as a catalog filter.
+     */
+    variation: boolean().notNull().default(true),
     position: integer().notNull().default(0),
   },
   (table) => [index("product_option_product_idx").on(table.productId, table.position)],
@@ -491,4 +509,42 @@ export const orderDownload = pgTable(
     position: integer().notNull().default(0),
   },
   (table) => [index("order_download_order_idx").on(table.orderId, table.position)],
+);
+
+export type CouponKind = "percent" | "fixed";
+
+/**
+ * A discount code the store gives out ("VERANO10"): a percentage or an amount off the cart,
+ * between two dates, a number of times, from a minimum, on some products or collections.
+ * `usedCount` goes up when an order uses it and down when that order is cancelled.
+ */
+export const coupon = pgTable(
+  "coupon",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: organizationId(),
+    /** Always uppercase: shoppers type it any way. */
+    code: text().notNull(),
+    /** A note for the team ("Instagram, November"); shoppers never see it. */
+    note: text().notNull().default(""),
+    kind: text().$type<CouponKind>().notNull(),
+    /** percent: 1–100; fixed: minor units of the store's currency. */
+    amount: bigint({ mode: "number" }).notNull(),
+    startsAt: timestamp({ withTimezone: true }),
+    endsAt: timestamp({ withTimezone: true }),
+    /** Orders that can use it, in total and per email; null = no limit. */
+    usageLimit: integer(),
+    usageLimitPerCustomer: integer(),
+    /** The cart's subtotal it needs (minor units); null = any. */
+    minSubtotal: bigint({ mode: "number" }),
+    /** Only on these products or collections; both empty = the whole cart. */
+    productIds: jsonb().$type<string[]>().notNull().default([]),
+    categoryIds: jsonb().$type<string[]>().notNull().default([]),
+    /** Products already on offer don't get it too. */
+    excludeSaleItems: boolean().notNull().default(false),
+    active: boolean().notNull().default(true),
+    usedCount: integer().notNull().default(0),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("coupon_code_idx").on(table.organizationId, table.code)],
 );

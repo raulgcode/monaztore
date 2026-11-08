@@ -10,6 +10,7 @@ export const workspace = {
   creating: "Creating…",
   navHome: "Home",
   navOrders: "Orders",
+  navProducts: "Products",
   navDesign: "Design",
   navStore: "Store",
   navPages: "Pages",

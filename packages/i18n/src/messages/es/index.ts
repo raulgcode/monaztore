@@ -3,6 +3,7 @@ import type { en } from "../en";
 import { admin } from "./admin";
 import { auth } from "./auth";
 import { common } from "./common";
+import { coupons } from "./coupons";
 import { design } from "./design";
 import { digital } from "./digital";
 import { einvoicing } from "./einvoicing";
@@ -11,6 +12,7 @@ import { forms } from "./forms";
 import { home } from "./home";
 import { orders } from "./orders";
 import { pages } from "./pages";
+import { products } from "./products";
 import { security } from "./security";
 import { settings } from "./settings";
 import { store } from "./store";
@@ -21,6 +23,7 @@ export const es = {
   admin,
   auth,
   common,
+  coupons,
   design,
   digital,
   einvoicing,
@@ -29,6 +32,7 @@ export const es = {
   home,
   orders,
   pages,
+  products,
   security,
   settings,
   store,

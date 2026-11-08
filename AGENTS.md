@@ -252,6 +252,34 @@ and spend) or cancels an unpaid order (`cancelOrder`, which puts counted stock b
 (`/app/:workspace/store`) connects domains (one main domain: a new main one takes over) and sets
 the manual payments, owners only.
 
+Products (`core/src/products.ts`, `contracts/src/products.ts`): the workspace's Products
+(`/app/:workspace/products`, a bar item) lists the catalog with search, status, stock and
+collection filters and an order in the URL (`?q=&status=&stock=&category=&sort=&page=`,
+`readProductListQuery`), and changes up to `BULK_PRODUCTS_MAX` at once (`bulkUpdateProducts`:
+publish, draft, hide, an offer by percentage, a collection, delete). The editor
+(`products/:productId`, `new` for a new one) saves the whole product in one `saveProduct`: photos
+(uploaded one by one to `products/images` with `saveStoreImage`, cropped and reordered in the
+browser, the first is the cover; only the store's own `/media` keys are kept), price and offer
+(`price` is what it sells at, `compareAtPrice` the regular one; `saleStartsAt`/`saleEndsAt` bound
+the offer and `currentPrice` reads it every time, in the store's time zone from its country),
+stock, SKU (unique in the store), options and details (`product_option.variation`: the ones the
+shopper chooses make the variants, up to `VARIATION_ATTRIBUTES_MAX`; the rest show as details;
+all of them are filters), SEO and collections (`/collections`, a tab next to Products). Editing a
+published product's address leaves a 301. Its structured parts travel as JSON fields checked by
+the schema, like the page editor's blocks.
+
+Coupons (`core/src/coupons.ts`, `contracts/src/coupons.ts`, `/app/:workspace/coupons`, owners
+only): a code (stored upper case, unique per store) for a percentage or a fixed amount, with dates,
+total uses, uses per email, a minimum purchase, some products or collections and whether products
+on offer are left out. The shopper types it in the cart: a host-only signed `coupon` cookie keeps
+only the code (`lib/cart.server.ts`) and `priceCart` checks it every time (`couponDiscount`,
+spread over the lines with the largest remainder), so a code that stops working is said once and
+forgotten. Like "Add to cart", the cart's code field is checked only in its `action` (its own rate
+limit, `couponIp`), so the cart loads no schema. `placeOrder` locks the coupon row, prices again,
+keeps the discount on the order and each line (`order.discount`, `order_line.discount`) and counts
+the use; `cancelOrder` gives it back. Electronic invoices split a discounted line's units
+(`discountedUnits`) so their totals match the order.
+
 Digital products (`core/src/digital-products.ts`, `contracts/src/digital-products.ts`): a product
 with files (`product_file`) is a download. The owner makes one in the workspace's Digital products
 (`/app/:workspace/downloads`, linked from Store, not a bar item), with its file (up to 50 MB: only
@@ -272,7 +300,7 @@ one statement (`takeDownload`), so two at once can't pass the limit; with R2 the
 
 Pages (`core/src/pages.ts`, `contracts/src/pages.ts`): the store's own pages ("About us",
 "Questions"), built from blocks (heading, text, photo, button, questions, products) in the
-workspace's Pages (`/app/:workspace/pages/:pageId`, owners only), with the editor and its preview
+workspace's Pages (`/app/:workspace/pages/:pageId`, owners only; on the phone, whose bar fits six sections, Pages opens from Store: `NavItem.phone`), with the editor and its preview
 side by side from 1024 px and as tabs on the phone. Blocks are JSON checked by `pageBlocksSchema`
 and the text's HTML goes through `cleanHtml`; photos are uploaded with `saveStoreImage`. A
 published page answers at `/<slug>` on the store's hosts (`routes/store/fallback.tsx`, before the

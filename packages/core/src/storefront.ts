@@ -1,4 +1,4 @@
-import type { CatalogQuery, CatalogSort } from "@monaztore/contracts";
+import { type CatalogQuery, type CatalogSort, currentPrice } from "@monaztore/contracts";
 import {
   and,
   asc,
@@ -143,18 +143,26 @@ export interface ProductPage {
 const visible = (organizationId: string) =>
   and(eq(schema.product.organizationId, organizationId), eq(schema.product.status, "active"));
 
+/** The product's offer dates include now (either end may be open). */
+const saleOnSql = sql`(("product"."sale_starts_at" is null or "product"."sale_starts_at" <= now())
+  and ("product"."sale_ends_at" is null or "product"."sale_ends_at" > now()))`;
+
+/** What a price costs now: outside the offer's dates, the regular (crossed-out) one. */
+const priceNow = (price: string, compare: string) =>
+  sql`(case when ${sql.raw(compare)} > ${sql.raw(price)} and not ${saleOnSql} then ${sql.raw(compare)} else ${sql.raw(price)} end)`;
+
 /** The lowest price among a product and its variants: "from ₡10 000". */
 const fromPriceSql = sql`coalesce(
-  (select min(pv.price) from product_variant pv where pv.product_id = "product"."id"),
-  "product"."price")`;
+  (select min(${priceNow("pv.price", "pv.compare_at_price")}) from product_variant pv where pv.product_id = "product"."id"),
+  ${priceNow('"product"."price"', '"product"."compare_at_price"')})`;
 const fromPrice = sql<number | null>`${fromPriceSql}`.mapWith((value) =>
   value === null ? null : Number(value),
 );
 
 /** On sale: the product, or one of its variants, has a regular price above its price. */
-const onSaleSql = sql`("product"."compare_at_price" > "product"."price" or exists (
+const onSaleSql = sql`(${saleOnSql} and ("product"."compare_at_price" > "product"."price" or exists (
   select 1 from product_variant pv where pv.product_id = "product"."id"
-  and pv.compare_at_price > pv.price))`;
+  and pv.compare_at_price > pv.price)))`;
 
 const firstImage = (column: "url" | "alt") =>
   sql<string | null>`(select ${sql.raw(`pi.${column}`)} from product_image pi
@@ -273,7 +281,11 @@ export async function listStoreProducts(
       name: schema.product.name,
       sku: schema.product.sku,
       price: fromPrice,
-      compareAtPrice: schema.product.compareAtPrice,
+      compareAtPrice: sql<
+        number | null
+      >`(case when ${saleOnSql} then "product"."compare_at_price" end)`.mapWith((value) =>
+        value === null ? null : Number(value),
+      ),
       inStock: schema.product.inStock,
       imageUrl: firstImage("url"),
       imageAlt: firstImage("alt"),
@@ -496,7 +508,10 @@ export interface StoreProduct {
   seoTitle: string | null;
   seoDescription: string | null;
   images: { url: string; alt: string }[];
+  /** What the shopper picks (they make the variants). */
   options: { name: string; values: string[] }[];
+  /** Attributes that only describe it ("Material: Algodón"). */
+  details: { name: string; values: string[] }[];
   variants: {
     id: string;
     sku: string | null;
@@ -525,7 +540,11 @@ export async function getStoreProduct(
       .where(eq(schema.productImage.productId, product.id))
       .orderBy(asc(schema.productImage.position)),
     ctx.db
-      .select({ name: schema.productOption.name, values: schema.productOption.values })
+      .select({
+        name: schema.productOption.name,
+        values: schema.productOption.values,
+        variation: schema.productOption.variation,
+      })
       .from(schema.productOption)
       .where(eq(schema.productOption.productId, product.id))
       .orderBy(asc(schema.productOption.position)),
@@ -549,7 +568,18 @@ export async function getStoreProduct(
       .orderBy(asc(schema.category.position), asc(schema.category.name)),
     digitalProductIds(ctx.db, ctx.store.organizationId, [product.id]),
   ]);
-  const prices = variants.map((v) => v.price).filter((p): p is number => p !== null);
+  const now = new Date();
+  const own = currentPrice(product, product, now);
+  const priced = variants.map((variant) => ({
+    ...variant,
+    ...(variant.price === null ? own : currentPrice(variant, product, now)),
+  }));
+  const cheapest = priced
+    .filter((v) => v.price !== null)
+    .reduce<(typeof priced)[number] | undefined>(
+      (best, v) => (best === undefined || (v.price ?? 0) < (best.price ?? 0) ? v : best),
+      undefined,
+    );
   return {
     id: product.id,
     slug: product.slug,
@@ -557,15 +587,20 @@ export async function getStoreProduct(
     descriptionHtml: cleanHtml(product.description),
     summary: plainText(product.shortDescription || product.description),
     sku: product.sku,
-    price: prices.length > 0 ? Math.min(...prices) : product.price,
-    compareAtPrice: product.compareAtPrice,
+    price: cheapest ? cheapest.price : own.price,
+    compareAtPrice: cheapest ? cheapest.compareAtPrice : own.compareAtPrice,
     inStock: variants.length > 0 ? variants.some((v) => v.inStock) : product.inStock,
     digital: digital.has(product.id),
     seoTitle: product.seoTitle,
     seoDescription: product.seoDescription,
     images: images.map((image) => ({ url: image.url, alt: image.alt || product.name })),
-    options,
-    variants,
+    options: options
+      .filter((option) => option.variation)
+      .map(({ name, values }) => ({ name, values })),
+    details: options
+      .filter((option) => !option.variation)
+      .map(({ name, values }) => ({ name, values })),
+    variants: priced,
     collections,
   };
 }

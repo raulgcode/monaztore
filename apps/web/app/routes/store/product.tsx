@@ -141,6 +141,21 @@ export default function Product({ loaderData }: Route.ComponentProps) {
               dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
             />
           ) : null}
+          {product.details.length > 0 ? (
+            <section aria-labelledby="product-details" className="grid gap-2">
+              <h2 id="product-details" className="font-medium">
+                {t("storefront.details")}
+              </h2>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                {product.details.map((detail) => (
+                  <div key={detail.name} className="contents">
+                    <dt className="text-muted-foreground">{detail.name}</dt>
+                    <dd>{detail.values.join(", ")}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ) : null}
           {product.sku ? (
             <p className="text-sm text-muted-foreground">
               {t("storefront.sku", { sku: product.sku })}

@@ -25,6 +25,8 @@ export const orders = {
   noReference: "The shopper hasn't sent a reference yet.",
   items: "Items",
   total: "Total",
+  subtotal: "Subtotal",
+  discount: "Discount ({code})",
   markPaid: "Confirm payment",
   markPaidHint: "Only once the money shows in your account.",
   cancel: "Cancel order",
