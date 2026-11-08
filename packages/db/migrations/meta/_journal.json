@@ -64,6 +64,13 @@
       "when": 1794148812914,
       "tag": "0008_digital_downloads",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794151236564,
+      "tag": "0009_store_locale",
+      "breakpoints": true
     }
   ]
 }

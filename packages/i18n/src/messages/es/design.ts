@@ -2,6 +2,11 @@ import type { Translation } from "../../translate";
 import type { en } from "../en";
 
 export const design = {
+  filtersHeading: "Filtros del catálogo",
+  filtersIntro:
+    "Por qué pueden filtrar tus clientes el catálogo, en los temas con filtros. Desmarca lo que no tenga sentido en tu tienda. El precio se oculta solo cuando todo cuesta lo mismo.",
+  filterPrice: "Precio",
+  filterAvailability: "Disponible y en oferta",
   title: "Diseño de la tienda",
   intro: "Elige cómo se ve tu tienda y ponle tu marca. Tus clientes lo ven apenas guardas.",
   openStore: "Ver mi tienda",

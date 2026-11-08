@@ -9,6 +9,7 @@ import {
   listImportedProducts,
   placeOrder,
   submitPaymentReference,
+  updateStoreLocale,
   updateStorePayments,
 } from "@monaztore/core";
 import { defaultFilesDir, diskFileStore } from "@monaztore/storage";
@@ -128,8 +129,11 @@ export async function openStore(
   workspace: Workspace,
   baseURL: string | undefined,
   catalog: ImportedCatalog = sampleCatalog,
+  // Scenarios read the source texts (English); `null` leaves the store's own default (Spanish).
+  { locale = "en" }: { locale?: "en" | "es" | null } = {},
 ): Promise<string> {
   await importCatalog(workspace.tenant, catalog);
+  if (locale) await updateStoreLocale(workspace.tenant, locale);
   await updateStorePayments(workspace.tenant, {
     sinpe: { enabled: true, phone: "8888-1234", holder: "My company S.A." },
     transfer: {

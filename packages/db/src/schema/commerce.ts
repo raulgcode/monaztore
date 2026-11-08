@@ -58,6 +58,11 @@ export const storeSettings = pgTable("store_settings", {
   currency: text().notNull().default("CRC"),
   /** How shoppers pay: SINPE Móvil and bank transfer for now (see `StorePayments`). */
   payments: jsonb().$type<StorePayments>().notNull().default({}),
+  /**
+   * The language shoppers see (`en`, `es`) unless they pick another at the foot of the store;
+   * Spanish while the owner hasn't chosen. Never the browser's: the store speaks its own language.
+   */
+  locale: text(),
   /** ISO 3166 country the store sells from. Costa Rica (CR) turns on Hacienda's invoicing. */
   country: text().notNull().default("CR"),
   /** The number the next order gets: #1001, #1002… Taken under the row's lock. */
@@ -87,6 +92,11 @@ export interface StoreThemeSettings {
   heroSubtitle?: string;
   /** A line above the header: "Free shipping over ₡30 000". */
   announcement?: string;
+  /**
+   * Catalog filters the owner turned off: `price`, `availability` or `option:<name>` ("option:Talla").
+   * The rest show as the theme lays them out.
+   */
+  hiddenFilters?: string[];
   /** Up to three short promises ("Delivery in 24 h"); none = the theme's own. */
   highlights?: string[];
 }

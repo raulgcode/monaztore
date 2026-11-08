@@ -61,10 +61,24 @@ export async function updateStoreTheme(
     heroSubtitle: input.heroSubtitle,
     announcement: input.announcement,
     highlights: [input.highlight1, input.highlight2, input.highlight3].filter(Boolean),
+    // The filters offered on the form and left unticked; any other stays as it was.
+    ...hiddenFiltersOf(input, current.hiddenFilters ?? []),
   };
   await ctx.db
     .insert(schema.storeSettings)
     .values({ organizationId: ctx.organizationId, theme })
     .onConflictDoUpdate({ target: schema.storeSettings.organizationId, set: { theme } });
   return theme;
+}
+
+function hiddenFiltersOf(
+  input: StoreThemeInput,
+  current: string[],
+): Pick<StoreThemeSettings, "hiddenFilters"> {
+  const offered = new Set(input.offeredFilters);
+  const hidden = [
+    ...current.filter((key) => !offered.has(key)),
+    ...input.offeredFilters.filter((key) => !input.shownFilters.includes(key)),
+  ];
+  return hidden.length > 0 ? { hiddenFilters: [...new Set(hidden)] } : {};
 }

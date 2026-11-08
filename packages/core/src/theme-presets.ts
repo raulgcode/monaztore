@@ -339,6 +339,8 @@ export interface StoreTheme {
   announcement: string;
   /** The store's own; empty = the theme's (translated by the web). */
   highlights: string[];
+  /** Catalog filters the owner turned off (`withoutHiddenFilters`). */
+  hiddenFilters: string[];
 }
 
 const fonts = {
@@ -391,5 +393,6 @@ export function resolveStoreTheme(settings: StoreThemeSettings = {}): StoreTheme
     heroSubtitle: settings.heroSubtitle ?? "",
     announcement: settings.announcement ?? "",
     highlights: (settings.highlights ?? []).filter(Boolean).slice(0, 3),
+    hiddenFilters: settings.hiddenFilters ?? [],
   };
 }

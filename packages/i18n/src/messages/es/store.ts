@@ -1,7 +1,13 @@
 import type { Translation } from "../../translate";
+
 import type { en } from "../en";
 
 export const store = {
+  languageHeading: "Idioma de la tienda",
+  languageIntro:
+    "Tus clientes ven la tienda en este idioma. Quien lea otro lo cambia al pie de la tienda.",
+  saveLanguage: "Guardar idioma",
+  languageSaved: "Listo. Tu tienda ya habla este idioma.",
   title: "Tienda",
   intro: "Dónde responde tu tienda y cómo te pagan.",
   domainsHeading: "Dominios",

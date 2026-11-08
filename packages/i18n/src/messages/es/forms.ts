@@ -41,6 +41,7 @@ export const forms = {
   pageSlugReserved: "Tu tienda ya usa esta dirección. Elige otra.",
   pageSlugTaken: "Otra página ya tiene esta dirección",
   themeRequired: "Elige un tema",
+  languageRequired: "Elige un idioma",
   colorInvalid: "Escribe un color como #be185d",
   taxIdRequired: "Escribe el número de cédula",
   taxIdInvalid:

@@ -20,6 +20,8 @@ export interface StorefrontStore {
   name: string;
   slug: string;
   hostname: string;
+  /** The store's language for shoppers (`updateStoreLocale`); null while the owner hasn't chosen. */
+  locale?: string | null;
 }
 
 /**
@@ -41,9 +43,14 @@ export async function resolveStoreByHost(
         name: schema.organization.name,
         slug: schema.organization.slug,
         hostname: schema.storeDomain.hostname,
+        locale: schema.storeSettings.locale,
       })
       .from(schema.storeDomain)
       .innerJoin(schema.organization, eq(schema.organization.id, schema.storeDomain.organizationId))
+      .leftJoin(
+        schema.storeSettings,
+        eq(schema.storeSettings.organizationId, schema.storeDomain.organizationId),
+      )
       .where(eq(schema.storeDomain.hostname, candidate));
     if (found) return found;
   }
@@ -69,8 +76,10 @@ export async function resolveOnlyStore(
       organizationId: schema.organization.id,
       name: schema.organization.name,
       slug: schema.organization.slug,
+      locale: schema.storeSettings.locale,
     })
     .from(schema.organization)
+    .leftJoin(schema.storeSettings, eq(schema.storeSettings.organizationId, schema.organization.id))
     .orderBy(asc(schema.organization.createdAt), asc(schema.organization.id))
     .limit(1);
   if (!found) return undefined;
@@ -139,4 +148,25 @@ export async function ownerContextForStore(
     .limit(1);
   if (!found) return undefined;
   return { db, organizationId: found.organizationId, userId: found.userId, role: "owner" };
+}
+
+/** What a store speaks while its owner hasn't chosen: its shoppers are in Costa Rica. */
+export const DEFAULT_STORE_LOCALE = "es";
+
+/** The language the store's shoppers see, unless they pick another; owners only. */
+export async function updateStoreLocale(ctx: TenantContext, locale: string): Promise<void> {
+  if (ctx.role !== "owner") throw new DomainError("forbidden", "Only owners set the language");
+  await ctx.db
+    .insert(schema.storeSettings)
+    .values({ organizationId: ctx.organizationId, locale })
+    .onConflictDoUpdate({ target: schema.storeSettings.organizationId, set: { locale } });
+}
+
+/** The store's language as its shoppers get it by default. */
+export async function getStoreLocale(ctx: TenantContext): Promise<string> {
+  const [row] = await ctx.db
+    .select({ locale: schema.storeSettings.locale })
+    .from(schema.storeSettings)
+    .where(eq(schema.storeSettings.organizationId, ctx.organizationId));
+  return row?.locale ?? DEFAULT_STORE_LOCALE;
 }

@@ -1,11 +1,12 @@
 import type { StoreTheme } from "@monaztore/core";
-import { ShoppingBagIcon } from "lucide-react";
+import { localeNames, locales } from "@monaztore/i18n";
+import { GlobeIcon, ShoppingBagIcon } from "lucide-react";
 import type * as React from "react";
-import { href, Link, NavLink } from "react-router";
+import { Form, href, Link, NavLink, useLocation } from "react-router";
 import { NavigationProgress } from "~/components/navigation-progress";
 import { ThemeToggle } from "~/components/theme-toggle";
 import { ScrollShadow } from "~/components/ui/scroll-shadow";
-import { useT } from "~/lib/i18n";
+import { useLocale, useT } from "~/lib/i18n";
 import { cn } from "~/lib/utils";
 import { StoreSearch } from "./store-search";
 
@@ -152,10 +153,41 @@ export function StoreShell({
             </nav>
           ) : null}
         </div>
-        <p className="mx-auto max-w-6xl px-4 pb-6 text-xs text-muted-foreground">
-          {t("storefront.poweredBy")}
-        </p>
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 pb-6">
+          <StoreLanguage />
+          <p className="text-xs text-muted-foreground">{t("storefront.poweredBy")}</p>
+        </div>
       </footer>
     </div>
+  );
+}
+
+/**
+ * The store speaks the language its owner picked; a shopper who reads another switches here, and
+ * the store remembers it on this device. Each language is named in itself.
+ */
+function StoreLanguage() {
+  const t = useT();
+  const locale = useLocale();
+  const location = useLocation();
+  return (
+    <Form method="post" action={href("/locale")} className="flex items-center gap-1">
+      <input type="hidden" name="redirectTo" value={location.pathname + location.search} />
+      <GlobeIcon aria-hidden className="size-4 text-muted-foreground" />
+      <span className="sr-only">{t("common.languageLegend")}</span>
+      {locales.map((option) => (
+        <button
+          key={option}
+          type="submit"
+          name="locale"
+          value={option}
+          lang={option}
+          aria-current={option === locale ? "true" : undefined}
+          className="inline-flex min-h-11 items-center rounded-md px-2 text-sm underline-offset-4 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[current]:font-semibold aria-[current]:text-foreground"
+        >
+          {localeNames[option]}
+        </button>
+      ))}
+    </Form>
   );
 }

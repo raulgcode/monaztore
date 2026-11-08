@@ -34,6 +34,7 @@ export const forms = {
   pageSlugReserved: "Your store already uses this address. Pick another one.",
   pageSlugTaken: "Another page already has this address",
   themeRequired: "Pick a theme",
+  languageRequired: "Pick a language",
   colorInvalid: "Write a color like #be185d",
   taxIdRequired: "Enter the ID number",
   taxIdInvalid: "Enter a valid ID: 9 digits for a person, 10 for a company, 11 or 12 for a DIMEX",

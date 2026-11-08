@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { domainSchema, paymentSettingsSchema, paymentsFromForm } from "./store-settings";
+import {
+  domainSchema,
+  paymentSettingsSchema,
+  paymentsFromForm,
+  storeLocaleSchema,
+} from "./store-settings";
 
 describe("paymentSettingsSchema", () => {
   it("lets a method that is off stay empty", () => {
@@ -34,5 +39,12 @@ describe("domainSchema", () => {
     ["local", false],
   ])("%s → %s", (hostname, ok) => {
     expect(domainSchema.safeParse({ hostname }).success).toBe(ok);
+  });
+});
+
+describe("storeLocaleSchema", () => {
+  it("takes a language the store can be in", () => {
+    expect(storeLocaleSchema.parse({ locale: "es" })).toEqual({ locale: "es" });
+    expect(storeLocaleSchema.safeParse({ locale: "fr" }).success).toBe(false);
   });
 });

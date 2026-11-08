@@ -16,6 +16,7 @@ import {
 import sanitizeHtml from "sanitize-html";
 import { digitalProductIds } from "./digital-products";
 import type { StorefrontStore } from "./stores";
+import type { TenantContext } from "./tenant";
 
 /**
  * What the public storefront reads: one store, found by its Host (`resolveStoreByHost`), with no
@@ -336,7 +337,8 @@ export async function suggestStoreProducts(
 
 /** Options a store uses on fewer products than this aren't worth a filter. */
 const FACET_OPTIONS = 6;
-const FACET_VALUES = 30;
+// Every value, so the search inside a long filter (dozens of designs) finds any of them.
+const FACET_VALUES = 200;
 
 export interface CatalogFacets {
   /** The cheapest and dearest product in the list, minor units; null without prices. */
@@ -345,6 +347,22 @@ export interface CatalogFacets {
   options: { name: string; values: { value: string; count: number }[] }[];
   inStock: number;
   onSale: number;
+  /** "In stock only" and "On sale only"; off when the owner turned them off. */
+  availability: boolean;
+}
+
+/** A catalog filter the owner can turn off in Design: `price`, `availability`, `option:<name>`. */
+export const optionFilterKey = (name: string) => `option:${name}`;
+
+/** The facets without the filters the owner turned off (`hiddenFilters`). Pure. */
+export function withoutHiddenFilters(facets: CatalogFacets, hidden: string[]): CatalogFacets {
+  if (hidden.length === 0) return facets;
+  return {
+    ...facets,
+    price: hidden.includes("price") ? null : facets.price,
+    options: facets.options.filter((option) => !hidden.includes(optionFilterKey(option.name))),
+    availability: facets.availability && !hidden.includes("availability"),
+  };
 }
 
 /**
@@ -357,7 +375,7 @@ export async function listStoreFacets(
 ): Promise<CatalogFacets> {
   const categories = query.collection ? await collectionIds(ctx, query.collection) : undefined;
   if (query.collection && !categories) {
-    return { price: null, options: [], inStock: 0, onSale: 0 };
+    return { price: null, options: [], inStock: 0, onSale: 0, availability: true };
   }
   const base = conditions(ctx, { q: query.q }, categories);
   const names = await ctx.db
@@ -412,15 +430,38 @@ export async function listStoreFacets(
     ),
   ]);
   const price = bounds[0];
+  // One price for everything (every sock ₡4 500): nothing to narrow, unless a range is already on.
+  const priceRange =
+    price &&
+    price.min !== null &&
+    price.max !== null &&
+    (price.min < price.max || query.minPrice != null || query.maxPrice != null);
   return {
-    price:
-      price && price.min !== null && price.max !== null ? { min: price.min, max: price.max } : null,
+    price: priceRange ? { min: price.min ?? 0, max: price.max ?? 0 } : null,
     options: names
       .map(({ name }, i) => ({ name, values: sortOptionValues(options[i] ?? []) }))
       .filter((option) => option.values.length > 0),
     inStock: flags[0]?.inStock ?? 0,
     onSale: flags[0]?.onSale ?? 0,
+    availability: true,
   };
+}
+
+/**
+ * The options the store's products have ("Talla", "Diseño"), the most common first: what the
+ * owner can turn off as filters in Design.
+ */
+export async function listStoreOptionNames(ctx: TenantContext): Promise<string[]> {
+  const rows = await ctx.db
+    .select({ name: schema.productOption.name })
+    .from(schema.productOption)
+    .innerJoin(schema.product, eq(schema.product.id, schema.productOption.productId))
+    .where(eq(schema.product.organizationId, ctx.organizationId))
+    .groupBy(schema.productOption.name)
+    .having(sql`count(distinct ${schema.product.id}) > 1`)
+    .orderBy(sql`count(distinct ${schema.product.id}) desc`, asc(schema.productOption.name))
+    .limit(FACET_OPTIONS);
+  return rows.map((row) => row.name);
 }
 
 const sizeOrder = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"];

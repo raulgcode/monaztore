@@ -1,3 +1,4 @@
+import { locales } from "@monaztore/i18n";
 import { z } from "zod/mini";
 import { message } from "./message";
 
@@ -73,4 +74,9 @@ export const domainSchema = z.object({
       z.regex(/^(?!-)[a-z0-9-]+(\.[a-z0-9-]+)+$/, message("forms.domainInvalid")),
       z.maxLength(253, message("forms.domainInvalid")),
     ),
+});
+
+/** The language the store's shoppers see by default (they can switch at the foot of the store). */
+export const storeLocaleSchema = z.object({
+  locale: z.enum(locales, message("forms.languageRequired")),
 });
