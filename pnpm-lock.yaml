@@ -176,12 +176,21 @@ importers:
       '@biomejs/biome':
         specifier: 'catalog:'
         version: 2.6.3
+      '@monaztore/contracts':
+        specifier: workspace:*
+        version: link:packages/contracts
+      '@monaztore/core':
+        specifier: workspace:*
+        version: link:packages/core
       '@monaztore/db':
         specifier: workspace:*
         version: link:packages/db
       '@monaztore/env':
         specifier: workspace:*
         version: link:packages/env
+      '@monaztore/importer-woocommerce':
+        specifier: workspace:*
+        version: link:packages/importer-woocommerce
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.2
@@ -267,9 +276,6 @@ importers:
       '@axe-core/playwright':
         specifier: 'catalog:'
         version: 4.14.0(playwright-core@1.64.1)
-      '@playwright/test':
-        specifier: 'catalog:'
-        version: 1.64.1
       '@monaztore/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -282,6 +288,9 @@ importers:
       '@monaztore/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.64.1
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.2
@@ -294,12 +303,6 @@ importers:
       '@conform-to/zod':
         specifier: 'catalog:'
         version: 1.21.2(zod@4.6.7)
-      '@react-router/node':
-        specifier: 'catalog:'
-        version: 8.5.0(react-router@8.5.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(typescript@7.0.2)
-      '@react-router/serve':
-        specifier: 'catalog:'
-        version: 8.5.0(react-router@8.5.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(typescript@7.0.2)
       '@monaztore/auth':
         specifier: workspace:*
         version: link:../../packages/auth
@@ -321,6 +324,12 @@ importers:
       '@monaztore/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@react-router/node':
+        specifier: 'catalog:'
+        version: 8.5.0(react-router@8.5.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(typescript@7.0.2)
+      '@react-router/serve':
+        specifier: 'catalog:'
+        version: 8.5.0(react-router@8.5.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(typescript@7.0.2)
       class-variance-authority:
         specifier: 'catalog:'
         version: 0.7.1
@@ -355,12 +364,12 @@ importers:
       '@lhci/cli':
         specifier: 'catalog:'
         version: 0.15.1
-      '@react-router/dev':
-        specifier: 'catalog:'
-        version: 8.5.0(@react-router/serve@8.5.0(react-router@8.5.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(typescript@7.0.2))(react-router@8.5.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(typescript@7.0.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       '@monaztore/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
+      '@react-router/dev':
+        specifier: 'catalog:'
+        version: 8.5.0(@react-router/serve@8.5.0(react-router@8.5.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(typescript@7.0.2))(react-router@8.5.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(typescript@7.0.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       '@tailwindcss/vite':
         specifier: 'catalog:'
         version: 4.3.3(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
@@ -522,6 +531,16 @@ importers:
         version: link:../tsconfig
 
   packages/i18n:
+    devDependencies:
+      '@monaztore/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+
+  packages/importer-woocommerce:
+    dependencies:
+      '@monaztore/contracts':
+        specifier: workspace:*
+        version: link:../contracts
     devDependencies:
       '@monaztore/tsconfig':
         specifier: workspace:*
