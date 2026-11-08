@@ -127,7 +127,7 @@ async function storeWithCatalog(): Promise<StorefrontContext> {
 }
 
 describe("storefront", () => {
-  it("lists only active products, with their lowest price and first image", async () => {
+  it("lists only active products, with their lowest price, first two photos and first option", async () => {
     const ctx = await storeWithCatalog();
 
     const page = await listStoreProducts(ctx);
@@ -138,6 +138,12 @@ describe("storefront", () => {
       price: 900_000,
       imageUrl: "https://shop.example/a.jpg",
       imageAlt: "Camiseta Tica",
+      hoverImageUrl: "https://shop.example/b.jpg",
+      firstOption: { name: "Talla", values: ["S", "M"] },
+    });
+    expect(page.products.find((p) => p.slug === "taza")).toMatchObject({
+      hoverImageUrl: null,
+      firstOption: null,
     });
   });
 

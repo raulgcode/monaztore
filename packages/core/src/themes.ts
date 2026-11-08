@@ -52,6 +52,7 @@ export async function updateStoreTheme(
         : { url: current.heroImageUrl, smallUrl: current.heroImageSmallUrl };
   const theme: StoreThemeSettings = {
     theme: input.theme,
+    ...(input.palette ? { palette: input.palette } : {}),
     ...(input.brandColor ? { brandColor: input.brandColor } : {}),
     ...(logoUrl ? { logoUrl } : {}),
     ...(hero ? { heroImageUrl: hero.url } : {}),

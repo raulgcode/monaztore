@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import { downloadImage, webImage } from "./images";
+import { downloadImage, imageWidths, narrowerImage, webImage } from "./images";
 
 const png = (width: number, height: number) =>
   sharp({ create: { width, height, channels: 3, background: "#ff3366" } })
@@ -25,6 +25,21 @@ describe("webImage", () => {
     const svg =
       '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><script>x</script></svg>';
     await expect(webImage(new TextEncoder().encode(svg))).rejects.toThrow(/Unsupported/);
+  });
+});
+
+describe("narrowerImage", () => {
+  it("makes a photo as wide as asked, keeping its shape", async () => {
+    const image = await narrowerImage(await png(1200, 1500), 320);
+    expect([image.width, image.height]).toEqual([320, 400]);
+    expect((await sharp(image.body).metadata()).format).toBe("webp");
+  });
+
+  it("never enlarges, and only takes the widths pages ask for", async () => {
+    const image = await narrowerImage(await png(200, 200), 480);
+    expect(image.width).toBe(200);
+    await expect(narrowerImage(await png(200, 200), 333)).rejects.toThrow(/width/);
+    expect(imageWidths).toContain(160);
   });
 });
 

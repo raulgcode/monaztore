@@ -125,6 +125,10 @@ export interface ProductCard {
   inStock: boolean;
   imageUrl: string | null;
   imageAlt: string;
+  /** The second photo, shown when a pointer rests on the card (a look from another angle). */
+  hoverImageUrl: string | null;
+  /** The product's first option and its values ("Talla": S, M, L), for the card's line. */
+  firstOption: { name: string; values: string[] } | null;
 }
 
 export interface ProductPage {
@@ -153,6 +157,13 @@ const onSaleSql = sql`("product"."compare_at_price" > "product"."price" or exist
 const firstImage = (column: "url" | "alt") =>
   sql<string | null>`(select ${sql.raw(`pi.${column}`)} from product_image pi
    where pi.product_id = "product"."id" order by pi.position limit 1)`;
+
+const secondImage = sql<string | null>`(select pi.url from product_image pi
+   where pi.product_id = "product"."id" order by pi.position offset 1 limit 1)`;
+
+const firstOption = sql<{ name: string; values: string[] } | null>`(select
+   jsonb_build_object('name', po.name, 'values', po.values) from product_option po
+   where po.product_id = "product"."id" order by po.position limit 1)`;
 
 /** A product with any of `values` for the option `name` ("Talla": M or L). */
 const hasOption = (name: string, values: string[]) =>
@@ -264,6 +275,8 @@ export async function listStoreProducts(
       inStock: schema.product.inStock,
       imageUrl: firstImage("url"),
       imageAlt: firstImage("alt"),
+      hoverImageUrl: secondImage,
+      firstOption,
     })
     .from(schema.product)
     .where(where)

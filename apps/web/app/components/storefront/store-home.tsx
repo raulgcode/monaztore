@@ -5,7 +5,7 @@ import { useId } from "react";
 import { href, Link } from "react-router";
 import { buttonVariants } from "~/components/ui/button";
 import { useT } from "~/lib/i18n";
-import { useStoreShell } from "~/lib/store-theme";
+import { useStoreHighlights, useStoreShell } from "~/lib/store-theme";
 import { cn } from "~/lib/utils";
 import { ProductGrid } from "./product-grid";
 
@@ -24,15 +24,12 @@ export interface StoreHomeProps {
 export function StoreHome({ storeName, currency, products, total, sale }: StoreHomeProps) {
   const t = useT();
   const shell = useStoreShell();
+  const highlights = useStoreHighlights();
   if (!shell) return null;
   const { theme, collections } = shell;
   const { layout } = theme;
   const title = theme.heroTitle || storeName;
   const subtitle = theme.heroSubtitle || t(`storefront.heroSubtitle_${theme.id}`);
-  const highlights =
-    theme.highlights.length > 0
-      ? theme.highlights
-      : ([1, 2, 3] as const).map((n) => t(`storefront.highlight_${theme.id}_${n}`));
 
   const sections: Record<StoreTheme["layout"]["sections"][number], React.ReactNode> = {
     highlights: <Highlights key="highlights" items={highlights} />,

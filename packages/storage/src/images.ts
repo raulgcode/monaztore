@@ -42,6 +42,34 @@ export async function webImage(
   };
 }
 
+/**
+ * The widths a page may ask a store's photo in (`/media/…?w=320`), so a phone's grid never
+ * downloads the full photo: thumbnails, two-per-row cards, the gallery. A short fixed list, so
+ * nobody can make the server encode a photo at every width.
+ */
+export const imageWidths = [160, 320, 480, 640, 960] as const;
+export type ImageWidth = (typeof imageWidths)[number];
+
+/** A photo already ours (WebP) at a narrower width, for `srcset`. Never wider than it was. */
+export async function narrowerImage(
+  input: Uint8Array,
+  width: number,
+  { quality = 75 }: { quality?: number } = {},
+): Promise<WebImage> {
+  if (!imageWidths.includes(width as ImageWidth)) throw new Error(`Unsupported width: ${width}`);
+  const { data, info } = await sharp(input)
+    .resize({ width, withoutEnlargement: true })
+    .webp({ quality })
+    .toBuffer({ resolveWithObject: true });
+  return {
+    body: new Uint8Array(data),
+    contentType: "image/webp",
+    extension: "webp",
+    width: info.width,
+    height: info.height,
+  };
+}
+
 export interface DownloadOptions {
   fetch?: typeof globalThis.fetch;
   /** The largest file accepted. 20 MB by default. */

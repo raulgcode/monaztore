@@ -4,7 +4,7 @@ import { storeThemeSchema } from "@monaztore/contracts";
 import { updateStoreTheme } from "@monaztore/core";
 import { expect, test } from "../support/fixtures";
 import { openSection } from "../support/navigation";
-import { openStore } from "../support/storefront";
+import { catalogWithCopiedPhoto, openStore } from "../support/storefront";
 
 const sock = (
   slug: string,
@@ -49,7 +49,7 @@ const sockCatalog: ImportedCatalog = {
 };
 
 test.describe("Feature: the store's design", () => {
-  test("Scenario: the owner picks the Boutique theme with an announcement and the store shows it", async ({
+  test("Scenario: the owner picks the Boutique theme in its Sand colors with an announcement and the store shows it", async ({
     page,
     baseURL,
     signInWithWorkspace,
@@ -60,9 +60,10 @@ test.describe("Feature: the store's design", () => {
       return openStore(await workspaceOf(page), baseURL, sockCatalog);
     });
 
-    await test.step("When they pick Boutique, a title and an announcement in Design and save", async () => {
+    await test.step("When they pick Boutique, its Sand colors, a title and an announcement in Design and save", async () => {
       await openSection(page, "Design");
       await page.getByText("Boutique", { exact: true }).click();
+      await page.getByRole("group", { name: "Color set" }).getByText("Sand").click();
       await page.getByLabel("Title", { exact: true }).fill("Socks that tell stories");
       await page.getByLabel("Announcement at the top").fill("Free delivery over ₡25 000");
       await page.getByRole("button", { name: "Save design" }).click();
@@ -79,6 +80,62 @@ test.describe("Feature: the store's design", () => {
       await expect(page.getByText("Free delivery over ₡25 000")).toBeVisible();
       await expect(page.getByRole("heading", { level: 1 })).toHaveText("Socks that tell stories");
       await expect(page.getByText("Easy size exchanges")).toBeVisible();
+    });
+
+    await test.step("And its buttons wear Sand's rust color", async () => {
+      await expect(page.getByRole("button", { name: "Search" })).toHaveCSS(
+        "background-color",
+        "rgb(154, 52, 18)",
+      );
+    });
+  });
+
+  test("Scenario: a shopper goes through a product's photos with the arrows and the thumbnails", async ({
+    page,
+    baseURL,
+    signInWithWorkspace,
+    workspaceOf,
+  }) => {
+    const store = await test.step("Given a store with a mug that has three photos", async () => {
+      await signInWithWorkspace(page);
+      const workspace = await workspaceOf(page);
+      return openStore(workspace, baseURL, await catalogWithCopiedPhoto(workspace, 3));
+    });
+
+    await test.step("When the shopper opens the mug", async () => {
+      await page.goto(`${store}/products/pura-vida-mug`);
+    });
+
+    await test.step("Then the first photo is on and there is no way back yet", async () => {
+      await expect(page.getByRole("button", { name: "Show photo 1 of 3" })).toHaveAttribute(
+        "aria-current",
+        "true",
+      );
+      await expect(page.getByRole("button", { name: "Previous photo" })).toBeDisabled();
+    });
+
+    await test.step("When they tap the next arrow", async () => {
+      await page.getByRole("button", { name: "Next photo" }).click();
+    });
+
+    await test.step("Then the second photo is on and its thumbnail is marked", async () => {
+      await expect(page.getByRole("button", { name: "Show photo 2 of 3" })).toHaveAttribute(
+        "aria-current",
+        "true",
+      );
+      await expect(page.getByText("Photo 2 of 3")).toBeAttached();
+    });
+
+    await test.step("When they tap the last thumbnail", async () => {
+      await page.getByRole("button", { name: "Show photo 3 of 3" }).click();
+    });
+
+    await test.step("Then the last photo is on and there is no next arrow", async () => {
+      await expect(page.getByRole("button", { name: "Show photo 3 of 3" })).toHaveAttribute(
+        "aria-current",
+        "true",
+      );
+      await expect(page.getByRole("button", { name: "Next photo" })).toBeDisabled();
     });
   });
 

@@ -58,10 +58,11 @@ test.describe("Feature: the store on its own domain", () => {
 
     await test.step("Then the photo loads from the store itself and is shared with its full address", async () => {
       const photo = page.getByRole("img", { name: "White mug" });
-      await expect(photo).toHaveAttribute("src", /^\/media\/organizations\/.+\.webp$/);
+      await expect(photo).toHaveAttribute("src", /^\/media\/organizations\/.+\.webp\?w=960$/);
+      // It loads (a broken image has no width); its size follows the screen, from `srcset`.
       await expect
-        .poll(() => photo.evaluate((img: HTMLImageElement) => img.naturalWidth))
-        .toBe(800);
+        .poll(() => photo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0))
+        .toBe(true);
       await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
         "content",
         new RegExp(`^${store}/media/organizations/`),

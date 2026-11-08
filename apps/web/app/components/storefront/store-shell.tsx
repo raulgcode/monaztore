@@ -2,6 +2,7 @@ import type { StoreTheme } from "@monaztore/core";
 import { SearchIcon, ShoppingBagIcon } from "lucide-react";
 import type * as React from "react";
 import { Form, href, Link, NavLink } from "react-router";
+import { NavigationProgress } from "~/components/navigation-progress";
 import { ThemeToggle } from "~/components/theme-toggle";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -61,10 +62,11 @@ export function StoreShell({
   );
   return (
     <div
-      className="flex min-h-dvh flex-col"
+      className="flex min-h-dvh flex-col bg-background text-foreground"
       data-store-theme={theme?.id}
       style={theme?.style as React.CSSProperties | undefined}
     >
+      <NavigationProgress scope="store" />
       {theme?.announcement ? (
         <p className="bg-primary px-4 py-2 text-center text-sm font-medium text-primary-foreground">
           {theme.announcement}

@@ -192,16 +192,19 @@ export {
 } from "./support";
 export type { TenantContext } from "./tenant";
 export {
-  brandColors,
+  brandPalette,
   CARD_BACKGROUND,
-  colorPairs,
+  contrastChecks,
   PAGE_BACKGROUND,
+  type PaletteColors,
+  type PaletteId,
+  paletteOf,
   resolveStoreTheme,
   type StoreTheme,
   type StoreThemePreset,
   storeThemes,
-  type ThemeColors,
   type ThemeLayout,
+  type ThemePalette,
 } from "./theme-presets";
 export { getStoreTheme, getThemeSettings, updateStoreTheme } from "./themes";
 export { totpCode, totpStep } from "./totp";

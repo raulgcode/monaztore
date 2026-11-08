@@ -44,10 +44,12 @@ describe("NavigationProgress", () => {
 
     await expect.element(view.getByRole("status")).toHaveTextContent("Loading…");
     expect(document.querySelector('[data-navigation-progress="loading"]')).not.toBeNull();
+    expect(document.querySelector(".navigation-progress-pill")?.textContent).toBe("Loading…");
 
     finish();
     await expect.element(view.getByRole("heading", { name: "Slow page" })).toBeVisible();
     await expect.element(view.getByRole("status")).toHaveTextContent("");
     expect(document.querySelector(".navigation-progress-bar")).toBeNull();
+    expect(document.querySelector(".navigation-progress-pill")).toBeNull();
   });
 });

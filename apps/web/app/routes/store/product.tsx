@@ -1,11 +1,13 @@
 import { getStoreInfo, getStoreProduct } from "@monaztore/core";
-import { ImageIcon } from "lucide-react";
+import { CheckIcon } from "lucide-react";
 import { data, href, Link } from "react-router";
 import { AddToCart } from "~/components/storefront/add-to-cart";
 import { Price } from "~/components/storefront/price";
-import { ScrollShadow } from "~/components/ui/scroll-shadow";
+import { ProductGallery } from "~/components/storefront/product-gallery";
 import { useT } from "~/lib/i18n";
 import { pageMeta, productJsonLd, storeOrigin } from "~/lib/store-seo";
+import { useStoreHighlights } from "~/lib/store-theme";
+import { cn } from "~/lib/utils";
 import { requireStore } from "~/middleware/store.server";
 import type { Route } from "./+types/product";
 
@@ -54,6 +56,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 export default function Product({ loaderData }: Route.ComponentProps) {
   const t = useT();
+  const highlights = useStoreHighlights();
   const { product, currency } = loaderData;
   const prices = new Set(product.variants.map((variant) => variant.price));
   const collection = product.collections[0];
@@ -81,9 +84,11 @@ export default function Product({ loaderData }: Route.ComponentProps) {
         </ol>
       </nav>
       <div className="grid gap-6 md:grid-cols-2 md:gap-10">
-        <Gallery images={product.images} name={product.name} />
+        <ProductGallery images={product.images} name={product.name} />
         <div className="grid content-start gap-4">
-          <h1 className="text-2xl font-semibold tracking-tight text-balance">{product.name}</h1>
+          <h1 className="font-heading text-3xl leading-tight font-semibold tracking-tight text-balance md:text-4xl">
+            {product.name}
+          </h1>
           <Price
             price={product.price}
             compareAtPrice={product.compareAtPrice}
@@ -92,10 +97,18 @@ export default function Product({ loaderData }: Route.ComponentProps) {
             className="text-xl"
           />
           <p
-            className={
-              product.inStock ? "text-sm font-medium" : "text-sm font-medium text-destructive"
-            }
+            className={cn(
+              "flex items-center gap-2 text-sm font-medium",
+              !product.inStock && "text-destructive",
+            )}
           >
+            <span
+              aria-hidden
+              className={cn(
+                "size-2 rounded-full",
+                product.inStock ? "bg-primary" : "bg-destructive",
+              )}
+            />
             {product.inStock ? t("storefront.inStock") : t("storefront.soldOut")}
           </p>
           <AddToCart
@@ -105,6 +118,19 @@ export default function Product({ loaderData }: Route.ComponentProps) {
             currency={currency}
             inStock={product.inStock}
           />
+          {highlights.length > 0 ? (
+            <ul
+              aria-label={t("storefront.highlightsLabel")}
+              className="grid gap-2 rounded-[var(--radius)] bg-muted p-4 text-sm"
+            >
+              {highlights.map((item) => (
+                <li key={item} className="flex items-center gap-2">
+                  <CheckIcon aria-hidden className="size-4 shrink-0 text-primary" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          ) : null}
           {product.descriptionHtml ? (
             <div
               className="store-prose"
@@ -136,46 +162,5 @@ export default function Product({ loaderData }: Route.ComponentProps) {
         </div>
       </div>
     </>
-  );
-}
-
-/** Photos side by side that snap into place: a swipe on the phone, a row on a wide screen. */
-function Gallery({ images, name }: { images: { url: string; alt: string }[]; name: string }) {
-  const t = useT();
-  if (images.length === 0) {
-    return (
-      <div className="relative aspect-square rounded-md bg-muted">
-        <ImageIcon aria-hidden className="absolute inset-0 m-auto size-10 text-muted-foreground" />
-      </div>
-    );
-  }
-  return (
-    <section aria-label={t("storefront.photos", { name })}>
-      <ScrollShadow scrollerClassName="flex snap-x snap-mandatory gap-2 overflow-x-auto rounded-md">
-        {images.map((image, index) => (
-          <figure key={image.url} className="w-full shrink-0 snap-center">
-            <img
-              src={image.url}
-              alt={image.alt}
-              width={800}
-              height={800}
-              // The first photo is the page's largest paint: no lazy loading for it.
-              loading={index === 0 ? "eager" : "lazy"}
-              fetchPriority={index === 0 ? "high" : undefined}
-              decoding="async"
-              className="aspect-square w-full rounded-md bg-muted object-cover"
-            />
-            {images.length > 1 ? (
-              <figcaption className="mt-1 text-center text-xs text-muted-foreground">
-                {t("storefront.photoOf", {
-                  index: String(index + 1),
-                  total: String(images.length),
-                })}
-              </figcaption>
-            ) : null}
-          </figure>
-        ))}
-      </ScrollShadow>
-    </section>
   );
 }

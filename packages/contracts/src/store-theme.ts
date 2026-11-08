@@ -25,6 +25,8 @@ const checkbox = z._default(
  */
 export const storeThemeSchema = z.object({
   theme: z.enum(storeThemeIds, { error: message("forms.themeRequired") }),
+  /** The theme's palette; one it doesn't have falls back to its first (core). */
+  palette: z._default(z.string().check(z.trim(), z.maxLength(40)), ""),
   brandColor: z._default(
     z.pipe(
       z.string().check(z.trim()),

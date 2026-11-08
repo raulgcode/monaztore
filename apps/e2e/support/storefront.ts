@@ -143,24 +143,37 @@ export async function openStore(
   return `http://${hostname}:${port}`;
 }
 
+const photoColors = ["#f5f0e6", "#dbeafe", "#dcfce7"];
+
 /**
- * The sample catalog with a photo of the mug on the old shop, copied to the store's files as
- * the importer does (the web server reads the same `.data/files`).
+ * The sample catalog with photos of the mug on the old shop (one, or up to three), copied to the
+ * store's files as the importer does (the web server reads the same `.data/files`).
  */
-export async function catalogWithCopiedPhoto(workspace: Workspace): Promise<ImportedCatalog> {
-  const oldPhoto = "https://shop.example/wp-content/uploads/mug.png";
+export async function catalogWithCopiedPhoto(
+  workspace: Workspace,
+  photos = 1,
+): Promise<ImportedCatalog> {
+  const images = photoColors.slice(0, photos).map((_, index) => ({
+    url: `https://shop.example/wp-content/uploads/mug-${index + 1}.png`,
+    alt: index === 0 ? "White mug" : `White mug, photo ${index + 1}`,
+  }));
   const catalog: ImportedCatalog = {
     ...sampleCatalog,
     products: sampleCatalog.products.map((product) =>
-      product.slug === "pura-vida-mug"
-        ? { ...product, images: [{ url: oldPhoto, alt: "White mug" }] }
-        : product,
+      product.slug === "pura-vida-mug" ? { ...product, images } : product,
     ),
   };
   const { catalog: copied } = await copyCatalogImages(workspace.tenant, catalog, {
     files: diskFileStore(defaultFilesDir()),
-    download: () =>
-      sharp({ create: { width: 800, height: 800, channels: 3, background: "#f5f0e6" } })
+    download: (url) =>
+      sharp({
+        create: {
+          width: 800,
+          height: 800,
+          channels: 3,
+          background: photoColors[Number(url.match(/mug-(\d)/)?.[1] ?? 1) - 1] ?? "#f5f0e6",
+        },
+      })
         .png()
         .toBuffer(),
     convert: (bytes) => webImage(bytes),
