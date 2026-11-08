@@ -1,6 +1,13 @@
 import { randomUUID } from "node:crypto";
 import type { ImportedCatalog } from "@monaztore/contracts";
-import { addStoreDomain, importCatalog, updateStorePayments } from "@monaztore/core";
+import {
+  addStoreDomain,
+  importCatalog,
+  listImportedProducts,
+  placeOrder,
+  submitPaymentReference,
+  updateStorePayments,
+} from "@monaztore/core";
 import type { APIRequestContext } from "@playwright/test";
 import type { Workspace } from "./database";
 
@@ -130,4 +137,47 @@ export function requestStore(
     ...options,
     headers: { Host: url.host },
   });
+}
+
+/**
+ * An order a shopper placed in the workspace's store: one Pura Vida mug, paid with SINPE Móvil,
+ * and, with `reference`, the payment's reference already sent. Returns its number.
+ */
+export async function placeSampleOrder(
+  workspace: Workspace,
+  { name, reference }: { name: string; reference?: string },
+): Promise<number> {
+  await importCatalog(workspace.tenant, sampleCatalog);
+  await updateStorePayments(workspace.tenant, {
+    sinpe: { enabled: true, phone: "8888-1234", holder: "My company S.A." },
+  });
+  const mug = (await listImportedProducts(workspace.tenant, "woocommerce")).find(
+    (product) => product.slug === "pura-vida-mug",
+  );
+  if (!mug) throw new Error("No mug in the store");
+  const store = {
+    db: workspace.tenant.db,
+    store: {
+      organizationId: workspace.organizationId,
+      name: "My company",
+      slug: workspace.slug,
+      hostname: "localhost",
+    },
+  };
+  const placed = await placeOrder(store, {
+    cart: [{ productId: mug.id, variantId: null, quantity: 1 }],
+    checkout: {
+      email: "shopper@example.com",
+      name,
+      phone: "8888-0000",
+      line1: "100 m norte del parque",
+      city: "Heredia",
+      province: "Heredia",
+      notes: "",
+      paymentMethod: "sinpe",
+    },
+    locale: "en",
+  });
+  if (reference) await submitPaymentReference(store, placed.token, reference);
+  return placed.number;
 }

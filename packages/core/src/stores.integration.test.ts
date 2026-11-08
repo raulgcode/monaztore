@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createTestDatabase, createTestTenant } from "@monaztore/db/testing";
 import { afterAll, describe, expect, it } from "vitest";
+import { listStoreDomains } from "./store-admin";
 import { addStoreDomain, normalizeHostname, resolveStoreByHost } from "./stores";
 import { resolveTenant } from "./workspaces";
 
@@ -74,6 +75,20 @@ describe("addStoreDomain", () => {
     await expect(addStoreDomain(second.ctx, domain)).rejects.toMatchObject({
       code: "hostname_taken",
     });
+  });
+
+  it("a new main domain takes over from the old one: a store has one main domain", async () => {
+    const { ctx } = await ownerOf();
+    const old = uniqueDomain("vieja");
+    const next = uniqueDomain("nueva");
+    await addStoreDomain(ctx, old, { primary: true });
+
+    await addStoreDomain(ctx, next, { primary: true });
+
+    expect(await listStoreDomains(ctx)).toEqual([
+      { hostname: next, primary: true },
+      { hostname: old, primary: false },
+    ]);
   });
 
   it("only owners connect domains", async () => {
