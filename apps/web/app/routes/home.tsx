@@ -1,7 +1,7 @@
-import { getStoreInfo, listStoreProducts } from "@monaztore/core";
+import { getStoreInfo, getStoreTheme, listStoreProducts } from "@monaztore/core";
 import { href, Link } from "react-router";
 import { StandalonePage } from "~/components/standalone-page";
-import { ProductGrid } from "~/components/storefront/product-grid";
+import { StoreHome } from "~/components/storefront/store-home";
 import { buttonVariants } from "~/components/ui/button";
 import { storeContext } from "~/context";
 import { metaT, useT } from "~/lib/i18n";
@@ -10,15 +10,14 @@ import { auth } from "~/lib/services.server";
 import { pageMeta, storeOrigin } from "~/lib/store-seo";
 import type { Route } from "./+types/home";
 
-const FEATURED = 8;
-
 export function meta({ loaderData, matches }: Route.MetaArgs) {
   const t = metaT(matches);
   if (loaderData?.kind === "store") {
     return pageMeta({
       title: loaderData.storeName,
-      description: t("storefront.featured"),
+      description: loaderData.description || t("storefront.featured"),
       canonical: `${loaderData.origin}/`,
+      image: loaderData.heroImageUrl,
       siteName: loaderData.storeName,
     });
   }
@@ -29,14 +28,23 @@ export function meta({ loaderData, matches }: Route.MetaArgs) {
 export async function loader({ request, context }: Route.LoaderArgs) {
   const store = context.get(storeContext);
   if (store) {
-    const [info, page] = await Promise.all([getStoreInfo(store), listStoreProducts(store)]);
+    const theme = await getStoreTheme(store);
+    const { sections, homeProducts } = theme.layout;
+    const [info, latest, sale] = await Promise.all([
+      getStoreInfo(store),
+      listStoreProducts(store, {}, homeProducts),
+      sections.includes("sale") ? listStoreProducts(store, { onSale: true }, 4) : null,
+    ]);
     return {
       kind: "store" as const,
       storeName: info.name,
       currency: info.currency,
       origin: storeOrigin(info.canonicalHost, request.url),
-      products: page.products.slice(0, FEATURED),
-      total: page.total,
+      products: latest.products,
+      total: latest.total,
+      sale: sale?.products ?? [],
+      description: theme.heroSubtitle,
+      heroImageUrl: theme.heroImageUrl,
     };
   }
   const session = await auth.api.getSession({ headers: request.headers });
@@ -52,39 +60,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     <StoreHome {...loaderData} />
   ) : (
     <PlatformHome signedIn={loaderData.signedIn} />
-  );
-}
-
-function StoreHome({
-  storeName,
-  currency,
-  products,
-  total,
-}: {
-  storeName: string;
-  currency: string;
-  products: Parameters<typeof ProductGrid>[0]["products"];
-  total: number;
-}) {
-  const t = useT();
-  return (
-    <>
-      <h1 className="text-3xl font-semibold tracking-tight">{storeName}</h1>
-      <h2 className="mt-6 mb-4 text-lg font-medium">{t("storefront.featured")}</h2>
-      {products.length > 0 ? (
-        <ProductGrid products={products} currency={currency} />
-      ) : (
-        <p className="py-10 text-center text-muted-foreground">{t("storefront.noProducts")}</p>
-      )}
-      {total > products.length ? (
-        <Link
-          to={href("/products")}
-          className={buttonVariants({ variant: "outline", className: "mt-8 w-full sm:w-auto" })}
-        >
-          {t("storefront.seeAll")}
-        </Link>
-      ) : null}
-    </>
   );
 }
 

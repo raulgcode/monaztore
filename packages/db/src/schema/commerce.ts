@@ -60,8 +60,32 @@ export const storeSettings = pgTable("store_settings", {
   payments: jsonb().$type<StorePayments>().notNull().default({}),
   /** The number the next order gets: #1001, #1002… Taken under the row's lock. */
   nextOrderNumber: integer().notNull().default(1001),
+  /** The storefront's theme and the brand it carries (see `StoreThemeSettings`). */
+  theme: jsonb().$type<StoreThemeSettings>().notNull().default({}),
   ...timestamps,
 });
+
+/**
+ * How the storefront looks: one of the themes packaged in core and the store's brand on top.
+ * Every field is optional: what's missing comes from the theme.
+ */
+export interface StoreThemeSettings {
+  /** A theme of `storeThemes` in core; unknown or missing = the default theme. */
+  theme?: string;
+  /** `#rrggbb`. core adjusts it so it reads in light and dark. */
+  brandColor?: string;
+  /** `/media/…` addresses of the store's own files. */
+  logoUrl?: string;
+  heroImageUrl?: string;
+  /** The cover photo at phone size (720 px), so a phone never downloads the big one. */
+  heroImageSmallUrl?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  /** A line above the header: "Free shipping over ₡30 000". */
+  announcement?: string;
+  /** Up to three short promises ("Delivery in 24 h"); none = the theme's own. */
+  highlights?: string[];
+}
 
 /** Manual payments the store accepts, with what the shopper needs to pay. */
 export interface StorePayments {

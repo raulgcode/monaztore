@@ -47,6 +47,11 @@
   --sidebar: light-dark(#fafafa, #111113);
   --nav-active: light-dark(#eef2ff, #1e1b4b);
   --nav-active-foreground: light-dark(#3730a3, #c7d2fe);
+  /* Text over a photo (a storefront's cover): the photo is darkened with the scrim. */
+  --scrim: light-dark(#09090b, #09090b);
+  --on-scrim: light-dark(#ffffff, #ffffff);
+  /* Headings: a storefront theme may pick the system's serif (no font to download). */
+  --heading-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   /* Edge shadow of horizontal scrollers (<ScrollShadow>): there is more to see that way. */
   --scroll-shadow: light-dark(rgb(24 24 27 / 0.2), rgb(0 0 0 / 0.75));
 }
@@ -61,6 +66,7 @@
 
 @theme inline {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-heading: var(--heading-font);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -90,6 +96,8 @@
   --color-nav-active: var(--nav-active);
   --color-nav-active-foreground: var(--nav-active-foreground);
   --color-scroll-shadow: var(--scroll-shadow);
+  --color-scrim: var(--scrim);
+  --color-on-scrim: var(--on-scrim);
 }
 
 @layer base {

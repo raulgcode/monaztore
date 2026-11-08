@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { CARD_BACKGROUND, PAGE_BACKGROUND } from "@monaztore/core";
 import { emailPalette } from "@monaztore/email/brand";
 import { describe, expect, it } from "vitest";
 import { contrastRatio, themeBackground } from "./brand";
@@ -47,6 +48,7 @@ const textPairs: [string, string][] = [
   ["nav-active-foreground", "nav-active"],
   ["foreground", "sidebar"],
   ["muted-foreground", "sidebar"],
+  ["on-scrim", "scrim"],
 ];
 
 // [graphic, surface]: icons, focus rings and input borders need 3:1 (WCAG 1.4.11).
@@ -78,6 +80,13 @@ describe.each(["light", "dark"] as const)("%s theme", (theme) => {
 describe("theme-color", () => {
   it("matches each theme's background", () => {
     expect(token("background")).toEqual(themeBackground);
+  });
+});
+
+describe("storefront themes", () => {
+  it("check their colors against the page and the cards the web paints", () => {
+    expect(token("background")).toEqual(PAGE_BACKGROUND);
+    expect(token("card")).toEqual(CARD_BACKGROUND);
   });
 });
 

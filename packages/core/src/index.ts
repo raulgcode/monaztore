@@ -70,11 +70,13 @@ export {
   setPrimaryDomain,
 } from "./store-admin";
 export {
+  type CatalogFacets,
   cleanHtml,
   findRedirect,
   getStoreCollection,
   getStoreInfo,
   getStoreProduct,
+  listStoreFacets,
   listStoreProducts,
   listTopCollections,
   type ProductCard,
@@ -88,6 +90,7 @@ export {
   type StoreInfo,
   type StoreProduct,
   sitemapEntries,
+  sortOptionValues,
 } from "./storefront";
 export {
   addStoreDomain,
@@ -100,6 +103,19 @@ export {
   type StoreMode,
 } from "./stores";
 export type { TenantContext } from "./tenant";
+export {
+  brandColors,
+  CARD_BACKGROUND,
+  colorPairs,
+  PAGE_BACKGROUND,
+  resolveStoreTheme,
+  type StoreTheme,
+  type StoreThemePreset,
+  storeThemes,
+  type ThemeColors,
+  type ThemeLayout,
+} from "./theme-presets";
+export { getStoreTheme, getThemeSettings, updateStoreTheme } from "./themes";
 export {
   getWorkspace,
   listMemberships,

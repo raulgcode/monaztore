@@ -16,13 +16,19 @@ test.describe("Feature: the store on its own domain", () => {
 
     await test.step("Then the front page lists the active products, not the draft", async () => {
       await expect(page.getByRole("heading", { level: 1 })).toHaveText("My company");
-      await expect(page.getByRole("link", { name: /Pura Vida mug/ })).toBeVisible();
-      await expect(page.getByRole("link", { name: /Coffee beans/ })).toContainText("Sold out");
+      const newArrivals = page.getByRole("region", { name: "New arrivals" });
+      await expect(newArrivals.getByRole("link", { name: /Pura Vida mug/ })).toBeVisible();
+      await expect(newArrivals.getByRole("link", { name: /Coffee beans/ })).toContainText(
+        "Sold out",
+      );
       await expect(page.getByText("Secret draft")).toHaveCount(0);
     });
 
     await test.step("When they open the mug", async () => {
-      await page.getByRole("link", { name: /Pura Vida mug/ }).click();
+      await page
+        .getByRole("region", { name: "New arrivals" })
+        .getByRole("link", { name: /Pura Vida mug/ })
+        .click();
     });
 
     await test.step("Then they see its price on sale, its stock and its SEO title", async () => {

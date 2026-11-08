@@ -1,36 +1,32 @@
-import { getStoreInfo, listStoreProducts } from "@monaztore/core";
-import { Pagination } from "~/components/storefront/pagination";
-import { ProductGrid } from "~/components/storefront/product-grid";
+import { getStoreInfo } from "@monaztore/core";
+import { CatalogView } from "~/components/storefront/catalog-view";
 import { metaT, useT } from "~/lib/i18n";
 import { pageMeta, storeOrigin } from "~/lib/store-seo";
-import { pageParam } from "~/lib/storefront.server";
+import { useStoreTheme } from "~/lib/store-theme";
+import { catalogPage } from "~/lib/storefront.server";
 import { requireStore } from "~/middleware/store.server";
 import type { Route } from "./+types/products";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const store = requireStore(context);
   const url = new URL(request.url);
-  const q = url.searchParams.get("q")?.trim() ?? "";
-  const [info, page] = await Promise.all([
-    getStoreInfo(store),
-    listStoreProducts(store, { q, page: pageParam(url) }),
-  ]);
+  const [info, catalog] = await Promise.all([getStoreInfo(store), catalogPage(store, url)]);
   const origin = storeOrigin(info.canonicalHost, request.url);
   return {
-    q,
-    page,
+    ...catalog,
     currency: info.currency,
     storeName: info.name,
     canonical: `${origin}/products`,
+    // A search or a filtered list is not a page of its own for search engines.
+    indexable: [...url.searchParams.keys()].every((key) => key === "page"),
   };
 }
 
 export function meta({ loaderData, matches }: Route.MetaArgs) {
   if (!loaderData) return [];
   const t = metaT(matches);
-  const title = loaderData.q
-    ? t("storefront.resultsFor", { q: loaderData.q })
-    : t("storefront.allProducts");
+  const { q } = loaderData.query;
+  const title = q ? t("storefront.resultsFor", { q }) : t("storefront.allProducts");
   return [
     ...pageMeta({
       title: `${title} | ${loaderData.storeName}`,
@@ -38,32 +34,27 @@ export function meta({ loaderData, matches }: Route.MetaArgs) {
       canonical: loaderData.canonical,
       siteName: loaderData.storeName,
     }),
-    // A search is not a page of its own for search engines.
-    ...(loaderData.q ? [{ name: "robots", content: "noindex, follow" }] : []),
+    ...(loaderData.indexable ? [] : [{ name: "robots", content: "noindex, follow" }]),
   ];
 }
 
 export default function Products({ loaderData }: Route.ComponentProps) {
   const t = useT();
-  const { q, page, currency } = loaderData;
+  const layout = useStoreTheme();
+  const { query, page, facets, currency } = loaderData;
   return (
     <>
-      <div className="mb-6 grid gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {q ? t("storefront.resultsFor", { q }) : t("storefront.allProducts")}
-        </h1>
-        <p className="text-muted-foreground" role="status">
-          {t("storefront.productCount", { count: page.total })}
-        </p>
-      </div>
-      {page.products.length > 0 ? (
-        <ProductGrid products={page.products} currency={currency} />
-      ) : (
-        <p className="py-10 text-center text-muted-foreground">
-          {q ? t("storefront.noResults", { q }) : t("storefront.noProducts")}
-        </p>
-      )}
-      <Pagination page={page.page} pages={page.pages} />
+      <h1 className="mb-4 font-heading text-2xl font-semibold tracking-tight md:text-3xl">
+        {query.q ? t("storefront.resultsFor", { q: query.q }) : t("storefront.allProducts")}
+      </h1>
+      <CatalogView
+        page={page}
+        facets={facets}
+        query={query}
+        currency={currency}
+        layout={layout?.productCard ?? "square"}
+        empty={query.q ? t("storefront.noResults", { q: query.q }) : t("storefront.noProducts")}
+      />
     </>
   );
 }

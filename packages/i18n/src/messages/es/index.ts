@@ -2,6 +2,7 @@ import type { Translation } from "../../translate";
 import type { en } from "../en";
 import { auth } from "./auth";
 import { common } from "./common";
+import { design } from "./design";
 import { email } from "./email";
 import { forms } from "./forms";
 import { home } from "./home";
@@ -15,6 +16,7 @@ import { workspace } from "./workspace";
 export const es = {
   auth,
   common,
+  design,
   email,
   forms,
   home,

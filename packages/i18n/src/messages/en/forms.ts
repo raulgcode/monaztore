@@ -33,4 +33,6 @@ export const forms = {
   pageSlugInvalid: "Use lowercase letters, numbers and dashes, like about-us",
   pageSlugReserved: "Your store already uses this address. Pick another one.",
   pageSlugTaken: "Another page already has this address",
+  themeRequired: "Pick a theme",
+  colorInvalid: "Write a color like #be185d",
 } as const;

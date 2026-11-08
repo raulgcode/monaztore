@@ -1,3 +1,5 @@
+import { storeThemeIds, storeThemeSchema } from "@monaztore/contracts";
+import { updateStoreTheme } from "@monaztore/core";
 import { expect, ownerTest, test } from "../support/fixtures";
 import { openStore, placeSampleOrder } from "../support/storefront";
 
@@ -5,7 +7,7 @@ const schemes = ["light", "dark"] as const;
 // Public pages, before signing in.
 const publicPages = ["/", "/login", "/login?with=link", "/sign-up", "/forgot-password"];
 // Sections inside the workspace, after /app/:workspace. A new section goes here.
-const workspaceSections = ["", "/orders", "/pages", "/store", "/settings"];
+const workspaceSections = ["", "/orders", "/pages", "/store", "/design", "/settings"];
 // Storefront pages, on a store's own domain. A new storefront page goes here.
 const storePages = [
   "/",
@@ -46,6 +48,28 @@ test.describe("Feature: accessibility (axe, WCAG 2.2 AA)", () => {
           }
         },
       );
+
+      test("Scenario: every store theme, with its filters on, has no violations", async ({
+        page,
+        baseURL,
+        signInWithWorkspace,
+        workspaceOf,
+        expectAccessible,
+      }) => {
+        await signInWithWorkspace(page);
+        const workspace = await workspaceOf(page);
+        const store = await openStore(workspace, baseURL);
+        for (const theme of storeThemeIds) {
+          await updateStoreTheme(
+            workspace.tenant,
+            storeThemeSchema.parse({ theme, announcement: "Free delivery over ₡25 000" }),
+          );
+          for (const path of ["/", "/products?stock=1&sort=price-asc"]) {
+            await page.goto(`${store}${path}`);
+            await expectAccessible(page);
+          }
+        }
+      });
 
       ownerTest(
         "Scenario: the workspace sections have no violations",

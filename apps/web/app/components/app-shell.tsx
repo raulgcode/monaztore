@@ -2,6 +2,7 @@ import {
   FileTextIcon,
   HomeIcon,
   type LucideIcon,
+  PaletteIcon,
   ReceiptIcon,
   SettingsIcon,
   StoreIcon,
@@ -55,6 +56,11 @@ export function AppShell({
       to: href("/app/:workspace/store", { workspace: workspace.slug }),
       label: t("workspace.navStore"),
       icon: StoreIcon,
+    },
+    {
+      to: href("/app/:workspace/design", { workspace: workspace.slug }),
+      label: t("workspace.navDesign"),
+      icon: PaletteIcon,
     },
     {
       to: href("/app/:workspace/settings", { workspace: workspace.slug }),

@@ -179,7 +179,7 @@ describe("storefront", () => {
       parent: { slug: "ropa", name: "Ropa" },
     });
     expect((await getStoreCollection(ctx, "ropa"))?.summary).toBe("Todo para vestir");
-    expect(await listTopCollections(ctx)).toEqual([{ slug: "ropa", name: "Ropa" }]);
+    expect(await listTopCollections(ctx)).toEqual([{ slug: "ropa", name: "Ropa", imageUrl: null }]);
   });
 
   it("finds where an old WordPress address moved, with or without its trailing slash", async () => {

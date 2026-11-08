@@ -40,4 +40,6 @@ export const forms = {
   pageSlugInvalid: "Usa minúsculas, números y guiones, como sobre-nosotros",
   pageSlugReserved: "Tu tienda ya usa esta dirección. Elige otra.",
   pageSlugTaken: "Otra página ya tiene esta dirección",
+  themeRequired: "Elige un tema",
+  colorInvalid: "Escribe un color como #be185d",
 } as const satisfies Translation<typeof en>["forms"];
