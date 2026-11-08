@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import type { CartLine, CheckoutInput, CheckoutPaymentMethod } from "@monaztore/contracts";
 import { and, asc, type Database, eq, inArray, schema, sql } from "@monaztore/db";
 import type { EinvoiceKind, OrderStatus, OrderTaxId, StorePayments } from "@monaztore/db/schema";
+import { digitalProductIds } from "./digital-products";
 import { storeIssuesInvoices } from "./einvoicing";
 import { DomainError } from "./errors";
 import type { StorefrontContext } from "./storefront";
@@ -63,6 +64,8 @@ export interface PricedLine {
   lineTotal: number;
   /** How many are left when the store counts stock; null when it doesn't. */
   stockQuantity: number | null;
+  /** A digital product: the buyer downloads its files once the order is paid. */
+  digital: boolean;
 }
 
 export interface PricedCart {
@@ -73,6 +76,8 @@ export interface PricedCart {
   removed: number;
   /** Lines asking for more than there is. */
   shortOfStock: number;
+  /** Something has to be shipped; false when every line is a download (no address asked). */
+  needsShipping: boolean;
 }
 
 const titleOf = (options: Record<string, string>) => Object.values(options).join(" / ") || null;
@@ -89,7 +94,7 @@ export async function priceCart(
   const { currency } = await storeSettingsOf(ctx.db, ctx.store.organizationId);
   const productIds = [...new Set(cart.map((line) => line.productId))];
   if (productIds.length === 0) {
-    return { lines: [], subtotal: 0, currency, removed: 0, shortOfStock: 0 };
+    return { lines: [], subtotal: 0, currency, removed: 0, shortOfStock: 0, needsShipping: false };
   }
   const productQuery = ctx.db
     .select({
@@ -118,6 +123,7 @@ export async function priceCart(
     .where(inArray(schema.productVariant.productId, ids));
   const variants =
     ids.length === 0 ? [] : lock ? await variantQuery.for("update") : await variantQuery;
+  const digital = await digitalProductIds(ctx.db, ctx.store.organizationId, ids);
   const images = ids.length
     ? await ctx.db
         .select({ productId: schema.productImage.productId, url: schema.productImage.url })
@@ -165,6 +171,7 @@ export async function priceCart(
       quantity,
       lineTotal: unitPrice * quantity,
       stockQuantity,
+      digital: digital.has(product.id),
     });
   }
   return {
@@ -173,6 +180,7 @@ export async function priceCart(
     currency,
     removed,
     shortOfStock,
+    needsShipping: lines.some((line) => !line.digital),
   };
 }
 
@@ -217,6 +225,9 @@ export async function placeOrder(
     if (priced.removed > 0 || priced.shortOfStock > 0) {
       throw new DomainError("cart_changed", "Prices or stock changed: review the cart");
     }
+    if (priced.needsShipping && !(checkout.line1 && checkout.city && checkout.province)) {
+      throw new DomainError("address_required", "Something has to be shipped: it needs an address");
+    }
 
     // The settings row holds the counter; the upsert locks it until the transaction ends.
     const [counter] = await tx
@@ -255,12 +266,15 @@ export async function placeOrder(
         email: checkout.email,
         name: checkout.name,
         phone: checkout.phone,
-        shippingAddress: {
-          line1: checkout.line1,
-          city: checkout.city,
-          province: checkout.province,
-          notes: checkout.notes,
-        },
+        shippingAddress: priced.needsShipping
+          ? {
+              line1: checkout.line1,
+              city: checkout.city,
+              province: checkout.province,
+              notes: checkout.notes,
+            }
+          : { line1: "", city: "", province: "", notes: checkout.notes },
+        needsShipping: priced.needsShipping,
         currency: priced.currency,
         subtotal: priced.subtotal,
         total: priced.subtotal,
@@ -270,19 +284,29 @@ export async function placeOrder(
       .returning({ id: schema.order.id });
     if (!created) throw new Error("Order not created");
 
-    await tx.insert(schema.orderLine).values(
-      priced.lines.map((line, position) => ({
-        orderId: created.id,
-        productId: line.productId,
-        variantId: line.variantId,
-        name: line.name,
-        variantTitle: line.variantTitle,
-        sku: line.sku,
-        unitPrice: line.unitPrice,
-        quantity: line.quantity,
-        lineTotal: line.lineTotal,
-        position,
-      })),
+    const orderLines = await tx
+      .insert(schema.orderLine)
+      .values(
+        priced.lines.map((line, position) => ({
+          orderId: created.id,
+          productId: line.productId,
+          variantId: line.variantId,
+          name: line.name,
+          variantTitle: line.variantTitle,
+          sku: line.sku,
+          unitPrice: line.unitPrice,
+          quantity: line.quantity,
+          lineTotal: line.lineTotal,
+          position,
+        })),
+      )
+      .returning({ id: schema.orderLine.id, position: schema.orderLine.position });
+    await copyDownloads(
+      tx as unknown as Database,
+      organizationId,
+      created.id,
+      priced.lines,
+      orderLines,
     );
 
     for (const line of priced.lines) {
@@ -304,6 +328,205 @@ export async function placeOrder(
   });
 }
 
+/**
+ * Each digital line's files, copied into the order as they are today, with the product's rules:
+ * the limit counts per unit bought.
+ */
+async function copyDownloads(
+  db: Database,
+  organizationId: string,
+  orderId: string,
+  lines: readonly PricedLine[],
+  orderLines: readonly { id: string; position: number }[],
+) {
+  const digital = lines.filter((line) => line.digital);
+  if (digital.length === 0) return;
+  const files = await db
+    .select({
+      productId: schema.productFile.productId,
+      key: schema.productFile.key,
+      fileName: schema.productFile.fileName,
+      contentType: schema.productFile.contentType,
+      size: schema.productFile.size,
+      downloadLimit: schema.product.downloadLimit,
+      downloadDays: schema.product.downloadDays,
+    })
+    .from(schema.productFile)
+    .innerJoin(schema.product, eq(schema.product.id, schema.productFile.productId))
+    .where(
+      and(
+        eq(schema.productFile.organizationId, organizationId),
+        inArray(
+          schema.productFile.productId,
+          digital.map((line) => line.productId),
+        ),
+      ),
+    )
+    .orderBy(asc(schema.productFile.position), asc(schema.productFile.createdAt));
+  const rows: (typeof schema.orderDownload.$inferInsert)[] = [];
+  for (const [position, line] of lines.entries()) {
+    const orderLine = orderLines.find((row) => row.position === position);
+    if (!line.digital || !orderLine) continue;
+    for (const file of files) {
+      if (file.productId !== line.productId) continue;
+      rows.push({
+        organizationId,
+        orderId,
+        orderLineId: orderLine.id,
+        key: file.key,
+        fileName: file.fileName,
+        contentType: file.contentType,
+        size: file.size,
+        downloadLimit: file.downloadLimit === null ? null : file.downloadLimit * line.quantity,
+        downloadDays: file.downloadDays,
+        position: rows.length,
+      });
+    }
+  }
+  if (rows.length > 0) await db.insert(schema.orderDownload).values(rows);
+}
+
+/** A file of an order, as the shopper sees it. */
+export interface ShopperDownload {
+  id: string;
+  fileName: string;
+  size: number;
+  /** Downloads left; null = no limit. */
+  remaining: number | null;
+  /** Until when it opens (set once paid); null = always, or not paid yet. */
+  expiresAt: Date | null;
+  /** Whether the button works now: paid, not expired and with downloads left. */
+  available: boolean;
+}
+
+async function orderDownloads(
+  db: Database,
+  order: { id: string; organizationId: string; status: OrderStatus },
+  now = new Date(),
+): Promise<ShopperDownload[]> {
+  const rows = await db
+    .select()
+    .from(schema.orderDownload)
+    .where(
+      and(
+        eq(schema.orderDownload.organizationId, order.organizationId),
+        eq(schema.orderDownload.orderId, order.id),
+      ),
+    )
+    .orderBy(asc(schema.orderDownload.position));
+  return rows.map((row) => {
+    const remaining =
+      row.downloadLimit === null ? null : Math.max(0, row.downloadLimit - row.downloads);
+    const expired = row.expiresAt !== null && row.expiresAt <= now;
+    return {
+      id: row.id,
+      fileName: row.fileName,
+      size: row.size,
+      remaining,
+      expiresAt: row.expiresAt,
+      available: order.status === "paid" && !expired && remaining !== 0,
+    };
+  });
+}
+
+/** Why a download didn't open. */
+export type DownloadRefusal = "not_found" | "not_paid" | "expired" | "used_up";
+
+export type DownloadResult =
+  | { ok: true; file: { key: string; fileName: string; contentType: string; size: number } }
+  | { ok: false; reason: DownloadRefusal };
+
+/**
+ * Counts one download and gives the file to serve, if the order is paid, the file hasn't
+ * expired and has downloads left. The count goes up in one statement, so two at once can't
+ * pass the limit.
+ */
+async function takeDownload(
+  db: Database,
+  order: { id: string; organizationId: string; status: OrderStatus } | undefined,
+  downloadId: string,
+  now = new Date(),
+): Promise<DownloadResult> {
+  if (!order || !/^[0-9a-f-]{36}$/i.test(downloadId)) return { ok: false, reason: "not_found" };
+  const mine = and(
+    eq(schema.orderDownload.id, downloadId),
+    eq(schema.orderDownload.orderId, order.id),
+    eq(schema.orderDownload.organizationId, order.organizationId),
+  );
+  const [row] = await db.select().from(schema.orderDownload).where(mine);
+  if (!row) return { ok: false, reason: "not_found" };
+  if (order.status !== "paid") return { ok: false, reason: "not_paid" };
+  const [taken] = await db
+    .update(schema.orderDownload)
+    .set({ downloads: sql`${schema.orderDownload.downloads} + 1`, lastDownloadAt: now })
+    .where(
+      and(
+        mine,
+        sql`(${schema.orderDownload.downloadLimit} is null or ${schema.orderDownload.downloads} < ${schema.orderDownload.downloadLimit})`,
+        sql`(${schema.orderDownload.expiresAt} is null or ${schema.orderDownload.expiresAt} > ${now})`,
+      ),
+    )
+    .returning({
+      key: schema.orderDownload.key,
+      fileName: schema.orderDownload.fileName,
+      contentType: schema.orderDownload.contentType,
+      size: schema.orderDownload.size,
+    });
+  if (taken) return { ok: true, file: taken };
+  return {
+    ok: false,
+    reason: row.expiresAt !== null && row.expiresAt <= now ? "expired" : "used_up",
+  };
+}
+
+/** A file of the order the link opens (`/orders/:token/downloads/:id`). */
+export async function openOrderDownload(
+  ctx: StorefrontContext,
+  token: string,
+  downloadId: string,
+  now = new Date(),
+): Promise<DownloadResult> {
+  return takeDownload(ctx.db, await orderByToken(ctx, token), downloadId, now);
+}
+
+async function orderByDownloadToken(ctx: StorefrontContext, token: string) {
+  const [found] = await ctx.db
+    .select()
+    .from(schema.order)
+    .where(
+      and(
+        eq(schema.order.organizationId, ctx.store.organizationId),
+        eq(schema.order.downloadTokenHash, hashToken(token)),
+      ),
+    );
+  return found;
+}
+
+/** What the downloads email opens (`/downloads/:token`): the order's files and little else. */
+export async function getDownloadsByLink(
+  ctx: StorefrontContext,
+  token: string,
+  now = new Date(),
+): Promise<{ number: number; name: string; downloads: ShopperDownload[] } | undefined> {
+  const found = await orderByDownloadToken(ctx, token);
+  if (!found) return undefined;
+  return {
+    number: found.number,
+    name: found.name,
+    downloads: await orderDownloads(ctx.db, found, now),
+  };
+}
+
+/** A file from the downloads email's link (`/downloads/:token/:id`). */
+export async function openLinkDownload(
+  ctx: StorefrontContext,
+  token: string,
+  downloadId: string,
+  now = new Date(),
+): Promise<DownloadResult> {
+  return takeDownload(ctx.db, await orderByDownloadToken(ctx, token), downloadId, now);
+}
+
 export interface ShopperOrder {
   number: number;
   status: OrderStatus;
@@ -316,6 +539,10 @@ export interface ShopperOrder {
   total: number;
   createdAt: Date;
   shippingAddress: { line1: string; city: string; province: string; notes: string };
+  /** False for an order of downloads only: nothing to deliver. */
+  needsShipping: boolean;
+  /** The files it delivers, once paid. */
+  downloads: ShopperDownload[];
   lines: {
     name: string;
     variantTitle: string | null;
@@ -401,9 +628,10 @@ export async function getOrderByToken(
     .from(schema.orderLine)
     .where(eq(schema.orderLine.orderId, found.id))
     .orderBy(asc(schema.orderLine.position));
-  const [options, einvoice] = await Promise.all([
+  const [options, einvoice, downloads] = await Promise.all([
     getPaymentOptions(ctx),
     orderEinvoice(ctx, found.id),
+    orderDownloads(ctx.db, found),
   ]);
   const method = found.paymentMethod as CheckoutPaymentMethod;
   return {
@@ -418,6 +646,8 @@ export async function getOrderByToken(
     total: found.total,
     createdAt: found.createdAt,
     shippingAddress: found.shippingAddress,
+    needsShipping: found.needsShipping,
+    downloads,
     lines,
     payTo: options[method] ? { [method]: options[method] } : {},
     einvoice: einvoice

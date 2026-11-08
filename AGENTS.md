@@ -250,6 +250,24 @@ and spend) or cancels an unpaid order (`cancelOrder`, which puts counted stock b
 (`/app/:workspace/store`) connects domains (one main domain: a new main one takes over) and sets
 the manual payments, owners only.
 
+Digital products (`core/src/digital-products.ts`, `contracts/src/digital-products.ts`): a product
+with files (`product_file`) is a download. The owner makes one in the workspace's Digital products
+(`/app/:workspace/downloads`, linked from Store, not a bar item), with its file (up to 50 MB: only
+that section's path takes bodies that big, `maxRequestBytes`), or adds a file to a product the
+store already sells; each product says how many downloads per file and unit and for how many days
+(5 and 30 by default; empty = no limit). The files live under `downloads/<organization>/…`, never
+under `organizations/…`, so `/media` can't serve them. A cart of downloads only asks for no address
+(`digitalCheckoutSchema`, `order.needsShipping`). `placeOrder` copies each file into the order
+(`order_download`), so changing the product never takes away what someone bought. Nothing opens
+until the store marks the order paid (manual payments: the store confirms the SINPE or transfer):
+then `markOrderPaid` dates each file (`expiresAt`) and makes the downloads email's secret link
+(`/downloads/:token`, only its SHA-256 in `order.downloadTokenHash`), which the web emails
+(`DownloadsEmail`); "Email the download link again" makes a new one (`renewDownloadsLink`, its own
+rate limit) and the old one stops. Two more public entries, each by a secret link: the order's page
+(`/orders/:token/downloads/:id`) and the email's (`/downloads/:token/:id`). Each download counts in
+one statement (`takeDownload`), so two at once can't pass the limit; with R2 the browser goes to a
+5-minute signed URL, on disk the web sends the file (attachment, `nosniff`, sandboxed).
+
 Pages (`core/src/pages.ts`, `contracts/src/pages.ts`): the store's own pages ("About us",
 "Questions"), built from blocks (heading, text, photo, button, questions, products) in the
 workspace's Pages (`/app/:workspace/pages/:pageId`, owners only), with the editor and its preview

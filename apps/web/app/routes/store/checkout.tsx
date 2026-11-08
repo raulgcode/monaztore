@@ -1,6 +1,12 @@
 import { getFormProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
-import { checkoutSchema, checkoutWithInvoiceSchema, taxIdFromForm } from "@monaztore/contracts";
+import {
+  checkoutSchema,
+  checkoutWithInvoiceSchema,
+  digitalCheckoutSchema,
+  digitalCheckoutWithInvoiceSchema,
+  taxIdFromForm,
+} from "@monaztore/contracts";
 import {
   DomainError,
   getPaymentOptions,
@@ -18,6 +24,12 @@ import { formatPrice } from "~/lib/money";
 import { requestAddress, withinRateLimits } from "~/lib/rate-limit.server";
 import { requireStore } from "~/middleware/store.server";
 import type { Route } from "./+types/checkout";
+
+/** The form's schema: no address for a cart of downloads, "invoice in my name" where it applies. */
+function schemaFor({ invoices, needsShipping }: { invoices: boolean; needsShipping: boolean }) {
+  if (needsShipping) return invoices ? checkoutWithInvoiceSchema : checkoutSchema;
+  return invoices ? digitalCheckoutWithInvoiceSchema : digitalCheckoutSchema;
+}
 
 export function meta({ matches }: Route.MetaArgs) {
   return [
@@ -45,9 +57,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 export async function action({ request, context }: Route.ActionArgs) {
   const store = requireStore(context);
-  const invoices = await storeIssuesInvoices(store.db, store.store.organizationId);
+  const [invoices, cart] = await Promise.all([
+    storeIssuesInvoices(store.db, store.store.organizationId),
+    readCart(request),
+  ]);
+  const { needsShipping } = await priceCart(store, cart);
   const submission = parseWithZod(await request.formData(), {
-    schema: invoices ? checkoutWithInvoiceSchema : checkoutSchema,
+    schema: schemaFor({ invoices, needsShipping }),
   });
   if (submission.status !== "success") {
     return data({ result: submission.reply(), cartChanged: false }, { status: 400 });
@@ -63,7 +79,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
   try {
     const placed = await placeOrder(store, {
-      cart: await readCart(request),
+      cart,
       checkout: submission.value,
       taxId: invoiceTo(submission.value),
       locale: localeOf(context),
@@ -73,7 +89,12 @@ export async function action({ request, context }: Route.ActionArgs) {
     });
   } catch (error) {
     if (!(error instanceof DomainError)) throw error;
-    if (error.code === "cart_changed" || error.code === "cart_empty") {
+    // The cart changed in another tab (a product to ship added): the page asks for the address.
+    if (
+      error.code === "cart_changed" ||
+      error.code === "cart_empty" ||
+      error.code === "address_required"
+    ) {
       return data({ result: submission.reply(), cartChanged: true }, { status: 409 });
     }
     if (error.code === "payment_method_unavailable") {
@@ -113,7 +134,9 @@ export default function Checkout({ loaderData, actionData }: Route.ComponentProp
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     onValidate: ({ formData }) =>
-      parseWithZod(formData, { schema: invoices ? checkoutWithInvoiceSchema : checkoutSchema }),
+      parseWithZod(formData, {
+        schema: schemaFor({ invoices, needsShipping: cart.needsShipping }),
+      }),
     defaultValue: { paymentMethod: methods[0] },
   });
 
@@ -157,28 +180,34 @@ export default function Checkout({ loaderData, actionData }: Route.ComponentProp
                 autoComplete="tel"
               />
             </fieldset>
-            <fieldset className="grid gap-4">
-              <legend className="mb-2 text-lg font-medium">
-                {t("storefront.shippingSection")}
-              </legend>
-              <TextField
-                field={fields.line1}
-                label={t("storefront.addressLabel")}
-                description={t("storefront.addressHint")}
-                autoComplete="street-address"
-              />
-              <TextField
-                field={fields.city}
-                label={t("storefront.cityLabel")}
-                autoComplete="address-level2"
-              />
-              <TextField
-                field={fields.province}
-                label={t("storefront.provinceLabel")}
-                autoComplete="address-level1"
-              />
-              <TextField field={fields.notes} label={t("storefront.notesLabel")} />
-            </fieldset>
+            {cart.needsShipping ? (
+              <fieldset className="grid gap-4">
+                <legend className="mb-2 text-lg font-medium">
+                  {t("storefront.shippingSection")}
+                </legend>
+                <TextField
+                  field={fields.line1}
+                  label={t("storefront.addressLabel")}
+                  description={t("storefront.addressHint")}
+                  autoComplete="street-address"
+                />
+                <TextField
+                  field={fields.city}
+                  label={t("storefront.cityLabel")}
+                  autoComplete="address-level2"
+                />
+                <TextField
+                  field={fields.province}
+                  label={t("storefront.provinceLabel")}
+                  autoComplete="address-level1"
+                />
+                <TextField field={fields.notes} label={t("storefront.notesLabel")} />
+              </fieldset>
+            ) : (
+              <p role="note" className="rounded-md border p-3 text-sm">
+                {t("storefront.digitalCheckout")}
+              </p>
+            )}
             {invoices ? <InvoiceTo fields={fields} /> : null}
             <fieldset
               className="grid gap-3"

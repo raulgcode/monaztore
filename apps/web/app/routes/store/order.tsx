@@ -2,7 +2,8 @@ import { getFormProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { paymentReferenceSchema } from "@monaztore/contracts";
 import { DomainError, getOrderByToken, submitPaymentReference } from "@monaztore/core";
-import { data, Form, href, useNavigation } from "react-router";
+import { data, Form, href, useNavigation, useSearchParams } from "react-router";
+import { DownloadList, RefusedDownload } from "~/components/storefront/download-list";
 import { FieldErrors, TextField } from "~/components/text-field";
 import { Button } from "~/components/ui/button";
 import { metaT, useLocale, useT } from "~/lib/i18n";
@@ -53,6 +54,7 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
   const t = useT();
   const locale = useLocale();
   const navigation = useNavigation();
+  const [search] = useSearchParams();
   const { order } = loaderData;
   const money = (minor: number) => formatPrice(minor, order.currency, locale);
   const open = order.status === "pending_payment" || order.status === "payment_submitted";
@@ -111,6 +113,30 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
         </Form>
       ) : null}
 
+      {order.downloads.length > 0 ? (
+        <section
+          id="downloads"
+          aria-labelledby="downloads-heading"
+          className="grid scroll-mt-24 gap-3 rounded-md border p-4"
+        >
+          <h2 id="downloads-heading" className="text-lg font-semibold">
+            {t("storefront.downloadsHeading")}
+          </h2>
+          <RefusedDownload reason={search.get("refused")} />
+          {order.status === "paid" ? (
+            <>
+              <p className="text-sm">{t("storefront.downloadsReady")}</p>
+              <DownloadList
+                downloads={order.downloads}
+                href={(id) => href("/orders/:token/downloads/:id", { token: params.token, id })}
+              />
+            </>
+          ) : order.status === "cancelled" ? null : (
+            <p className="text-sm text-muted-foreground">{t("storefront.downloadsWaiting")}</p>
+          )}
+        </section>
+      ) : null}
+
       <section aria-labelledby="summary" className="grid gap-3">
         <h2 id="summary" className="font-medium">
           {t("storefront.orderSummary")}
@@ -132,15 +158,17 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
         </p>
       </section>
 
-      <section aria-labelledby="deliver" className="grid gap-1 text-sm">
-        <h2 id="deliver" className="font-medium">
-          {t("storefront.deliverTo")}
-        </h2>
-        <p>{order.shippingAddress.line1}</p>
-        <p>
-          {order.shippingAddress.city}, {order.shippingAddress.province}
-        </p>
-      </section>
+      {order.needsShipping ? (
+        <section aria-labelledby="deliver" className="grid gap-1 text-sm">
+          <h2 id="deliver" className="font-medium">
+            {t("storefront.deliverTo")}
+          </h2>
+          <p>{order.shippingAddress.line1}</p>
+          <p>
+            {order.shippingAddress.city}, {order.shippingAddress.province}
+          </p>
+        </section>
+      ) : null}
       {order.einvoice ? (
         <section aria-labelledby="einvoice" className="grid gap-1 rounded-md border p-4 text-sm">
           <h2 id="einvoice" className="font-medium">

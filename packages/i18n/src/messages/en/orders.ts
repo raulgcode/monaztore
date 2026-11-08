@@ -36,4 +36,15 @@ export const orders = {
   pagination: "Pages",
   previous: "Previous",
   next: "Next",
+  noShipping: "Digital products only: nothing to ship.",
+  downloadsHeading: "Downloads",
+  downloadsWaiting:
+    "They open for the customer when you confirm the payment, and we email them the link.",
+  downloadsCount: "{name}: {used} of {limit} downloads",
+  downloadsCountUnlimited: "{name}: {used} downloads",
+  downloadsUntil: "Until {date}",
+  resendDownloads: "Email the download link again",
+  resendDownloadsHint: "A new link: the one before stops working.",
+  downloadsSent: "We emailed the download link to {email}.",
+  downloadsNotSent: "We couldn't send the email. Try again in a while.",
 } as const;

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { bodySizeProblem, MAX_REQUEST_BYTES } from "./request-limits";
+import {
+  bodySizeProblem,
+  DIGITAL_UPLOAD_REQUEST_BYTES,
+  MAX_REQUEST_BYTES,
+  maxRequestBytes,
+} from "./request-limits";
 
 const request = (method: string, headers: Record<string, string>) => ({
   method,
@@ -28,5 +33,15 @@ describe("bodySizeProblem", () => {
 
   it("doesn't look at reads", () => {
     expect(bodySizeProblem(request("GET", { "Transfer-Encoding": "chunked" }))).toBeUndefined();
+  });
+});
+
+describe("maxRequestBytes", () => {
+  it("takes a digital product's file only in its section of the workspace", () => {
+    expect(maxRequestBytes("/app/tienda-a1b2c3/downloads/new")).toBe(DIGITAL_UPLOAD_REQUEST_BYTES);
+    expect(maxRequestBytes("/app/tienda-a1b2c3/downloads")).toBe(DIGITAL_UPLOAD_REQUEST_BYTES);
+    expect(maxRequestBytes("/app/tienda-a1b2c3/pages/x")).toBe(MAX_REQUEST_BYTES);
+    expect(maxRequestBytes("/downloads/token")).toBe(MAX_REQUEST_BYTES);
+    expect(maxRequestBytes("/app/tienda/downloadsx")).toBe(MAX_REQUEST_BYTES);
   });
 });

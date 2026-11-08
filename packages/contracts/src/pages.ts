@@ -114,6 +114,7 @@ export const reservedPageSlugs = [
   "cart",
   "checkout",
   "orders",
+  "downloads",
   "sitemap.xml",
   "robots.txt",
   "media",

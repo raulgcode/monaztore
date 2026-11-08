@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { emailPalette } from "../brand";
 import { renderEmail } from "../render";
 import { AccountEmail, accountEmailSubject } from "./account";
+import { DownloadsEmail, downloadsMessage } from "./downloads";
 import { einvoiceMessage } from "./einvoice";
 import { MagicLinkEmail, magicLinkSubject } from "./magic-link";
 
@@ -13,6 +14,13 @@ describe("brand in every email", () => {
     createElement(MagicLinkEmail, { url }),
     createElement(AccountEmail, { kind: "verify", name: "Ana", url }),
     createElement(AccountEmail, { kind: "reset", name: "Ana", url }),
+    createElement(DownloadsEmail, {
+      storeName: "Tienda",
+      orderNumber: 1001,
+      name: "Ana",
+      url,
+      files: ["guide.pdf"],
+    }),
   ])("$type.name carries the brand color, dark mode and the link spelled out", async (email) => {
     const { html, text } = await renderEmail(email);
     expect(html).toContain(`background-color:${emailPalette.primary.light}`);
@@ -82,5 +90,24 @@ describe("the buyer's electronic invoice", () => {
       clave: "2",
     });
     expect(message.subject).toBe("Shop: your electronic receipt for order #7");
+  });
+});
+
+describe("the downloads of a paid order", () => {
+  it("names the store, the order and each file, in the buyer's language", async () => {
+    const message = downloadsMessage({
+      locale: "es",
+      storeName: "Super Chiva",
+      orderNumber: 1004,
+      name: "Ana",
+      url: "https://superchiva.cr/downloads/abc",
+      files: ["Guía.pdf", "Plantillas.zip"],
+    });
+    const { text } = await renderEmail(message.react);
+    expect(message.subject).toBe("Super Chiva: tus descargas del pedido #1004");
+    expect(text).toContain("Hola, Ana: tus archivos están listos");
+    expect(text).toContain("Guía.pdf");
+    expect(text).toContain("Plantillas.zip");
+    expect(text).toContain("https://superchiva.cr/downloads/abc");
   });
 });

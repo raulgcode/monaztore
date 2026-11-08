@@ -138,6 +138,13 @@ export const order = pgTable(
     name: text().notNull(),
     phone: text().notNull(),
     shippingAddress: jsonb().$type<ShippingAddress>().notNull(),
+    /** False when every line is a digital download: nothing to ship, the address is empty. */
+    needsShipping: boolean().notNull().default(true),
+    /**
+     * The downloads email's link (`/downloads/:token`), set when the order is paid: only its
+     * SHA-256. Sending the email again makes a new one and the old link stops working.
+     */
+    downloadTokenHash: text(),
     /** "Invoice in my name": only where the store issues electronic invoices. */
     taxId: jsonb().$type<OrderTaxId>(),
     currency: text().notNull(),
@@ -150,6 +157,7 @@ export const order = pgTable(
   (table) => [
     uniqueIndex("order_number_idx").on(table.organizationId, table.number),
     uniqueIndex("order_token_idx").on(table.tokenHash),
+    uniqueIndex("order_download_token_idx").on(table.downloadTokenHash),
     index("order_status_idx").on(table.organizationId, table.status, table.createdAt),
   ],
 );
@@ -230,6 +238,12 @@ export const product = pgTable(
     weightGrams: integer(),
     seoTitle: text(),
     seoDescription: text(),
+    /**
+     * A digital product (one with `product_file`s): how many times each file can be downloaded
+     * per unit bought, and for how many days after the payment. null = no limit.
+     */
+    downloadLimit: integer().default(5),
+    downloadDays: integer().default(30),
     ...externalRef,
     ...timestamps,
   },
@@ -409,4 +423,62 @@ export const customer = pgTable(
       table.externalId,
     ),
   ],
+);
+
+/**
+ * A file a digital product delivers (an e-book, a template, a course in a .zip). It lives in the
+ * store's files under `downloads/<organization>/…`, never under `organizations/…`, so `/media`
+ * never serves it: only a paid order's download does.
+ */
+export const productFile = pgTable(
+  "product_file",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: organizationId(),
+    productId: uuid()
+      .notNull()
+      .references(() => product.id, { onDelete: "cascade" }),
+    /** The key in the file store, named after its contents. */
+    key: text().notNull(),
+    /** The name the shopper's browser saves it with. */
+    fileName: text().notNull(),
+    contentType: text().notNull(),
+    size: bigint({ mode: "number" }).notNull(),
+    position: integer().notNull().default(0),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("product_file_product_idx").on(table.productId, table.position)],
+);
+
+/**
+ * A file an order delivers, copied when the order is placed: changing or removing the product's
+ * file never takes away what someone bought. It opens once the order is paid, until
+ * `expiresAt` and up to `downloadLimit` times.
+ */
+export const orderDownload = pgTable(
+  "order_download",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: organizationId(),
+    orderId: uuid()
+      .notNull()
+      .references(() => order.id, { onDelete: "cascade" }),
+    orderLineId: uuid()
+      .notNull()
+      .references(() => orderLine.id, { onDelete: "cascade" }),
+    key: text().notNull(),
+    fileName: text().notNull(),
+    contentType: text().notNull(),
+    size: bigint({ mode: "number" }).notNull(),
+    /** null = as many times as they want. Already multiplied by the quantity bought. */
+    downloadLimit: integer(),
+    /** Days it stays open after the payment; null = always. */
+    downloadDays: integer(),
+    /** Set when the order is paid (`paidAt` + `downloadDays`). */
+    expiresAt: timestamp({ withTimezone: true }),
+    downloads: integer().notNull().default(0),
+    lastDownloadAt: timestamp({ withTimezone: true }),
+    position: integer().notNull().default(0),
+  },
+  (table) => [index("order_download_order_idx").on(table.orderId, table.position)],
 );

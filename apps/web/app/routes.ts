@@ -13,6 +13,10 @@ export default [
     route("checkout", "routes/store/checkout.tsx"),
     route("orders/:token", "routes/store/order.tsx"),
     route("orders/:token/:file", "routes/store/order-file.ts"),
+    // A paid order's digital products: from its page, and from the downloads email's own link.
+    route("orders/:token/downloads/:id", "routes/store/order-download.ts"),
+    route("downloads/:token", "routes/store/downloads.tsx"),
+    route("downloads/:token/:id", "routes/store/link-download.ts"),
     route("sitemap.xml", "routes/store/sitemap.ts"),
     route("robots.txt", "routes/store/robots.ts"),
     // Last: old addresses of a migrated shop (301) and every other 404.
@@ -61,6 +65,10 @@ export default [
         route("pages", "routes/app/pages.tsx"),
         route("pages/:pageId", "routes/app/page-editor.tsx"),
         route("store", "routes/app/store.tsx"),
+        // Digital products: files buyers download once paid (linked from Store, not a bar item).
+        route("downloads", "routes/app/digital-products.tsx"),
+        route("downloads/new", "routes/app/digital-product-new.tsx"),
+        route("downloads/:productId", "routes/app/digital-product.tsx"),
         route("design", "routes/app/design.tsx"),
         // Costa Rica's electronic invoicing (Hacienda): 404 for stores anywhere else.
         route("invoicing", "routes/app/invoicing.tsx"),

@@ -8,6 +8,7 @@ import {
   getOrderEinvoices,
   issueOrderEinvoice,
   markOrderPaid,
+  renewDownloadsLink,
   retryEinvoice,
 } from "@monaztore/core";
 import { data, Form, href, Link, useNavigation } from "react-router";
@@ -16,9 +17,11 @@ import { OrderStatusBadge } from "~/components/orders/order-status";
 import { PageHeader } from "~/components/page-header";
 import { Button } from "~/components/ui/button";
 import { tenantContext } from "~/context";
+import { sendDownloadsEmail } from "~/lib/downloads.server";
 import { metaT, useLocale, useT } from "~/lib/i18n";
 import { translations } from "~/lib/locale.server";
 import { formatPrice } from "~/lib/money";
+import { withinRateLimits } from "~/lib/rate-limit.server";
 import type { Route } from "./+types/order";
 
 export function meta({ matches, params }: Route.MetaArgs) {
@@ -79,14 +82,32 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     }
     return { done: "einvoiceRetried" as const, result: undefined };
   }
-  try {
-    if (intent === "paid") await markOrderPaid(tenant, number);
-    else if (intent === "cancel") await cancelOrder(tenant, number);
-    else throw data("Unknown intent", { status: 400 });
+  if (intent === "resendDownloads") {
+    if (!(await withinRateLimits([["downloadsEmail", `${tenant.organizationId}:${number}`]]))) {
+      return data({ done: "downloadsNotSent" as const, result: undefined }, { status: 429 });
+    }
+    const link = await renewDownloadsLink(tenant, number);
+    const sent = link ? await sendDownloadsEmail(tenant, link, request.url) : false;
     return {
-      done: intent === "paid" ? ("paid" as const) : ("cancelled" as const),
+      done: sent ? ("downloadsSent" as const) : ("downloadsNotSent" as const),
       result: undefined,
     };
+  }
+  try {
+    if (intent === "paid") {
+      const { downloads } = await markOrderPaid(tenant, number);
+      // A digital order: the buyer gets the link by email. Paid all the same if it fails;
+      // "Email the download link again" sends it later.
+      if (downloads && !(await sendDownloadsEmail(tenant, downloads, request.url))) {
+        return { done: "paidNotSent" as const, result: undefined };
+      }
+      return { done: downloads ? ("paidSent" as const) : ("paid" as const), result: undefined };
+    }
+    if (intent === "cancel") {
+      await cancelOrder(tenant, number);
+      return { done: "cancelled" as const, result: undefined };
+    }
+    throw data("Unknown intent", { status: 400 });
   } catch (error) {
     if (error instanceof DomainError && error.code === "order_closed") {
       return data({ done: "closed" as const, result: undefined }, { status: 409 });
@@ -105,6 +126,10 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
   const open = order.status === "pending_payment" || order.status === "payment_submitted";
   const notice = {
     paid: t("orders.paidDone"),
+    paidSent: `${t("orders.paidDone")} ${t("orders.downloadsSent", { email: order.email })}`,
+    paidNotSent: `${t("orders.paidDone")} ${t("orders.downloadsNotSent")}`,
+    downloadsSent: t("orders.downloadsSent", { email: order.email }),
+    downloadsNotSent: t("orders.downloadsNotSent"),
     cancelled: t("orders.cancelledDone"),
     closed: t("orders.closed"),
     einvoiceIssued: loaderData.einvoicing ? t("einvoicing.issued") : "",
@@ -112,7 +137,14 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
     einvoiceExists: loaderData.einvoicing ? t("einvoicing.orderExists") : "",
     einvoiceOff: loaderData.einvoicing ? t("einvoicing.orderOff") : "",
   };
-  const alerts = new Set(["closed", "einvoiceExists", "einvoiceOff"]);
+  const alerts = new Set([
+    "closed",
+    "einvoiceExists",
+    "einvoiceOff",
+    "paidNotSent",
+    "downloadsNotSent",
+  ]);
+  const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
 
   return (
     <>
@@ -193,10 +225,16 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
             </a>
           </p>
           <h2 className="mt-3 mb-1 font-medium">{t("orders.delivery")}</h2>
-          <p className="text-sm">{order.shippingAddress.line1}</p>
-          <p className="text-sm">
-            {order.shippingAddress.city}, {order.shippingAddress.province}
-          </p>
+          {order.needsShipping ? (
+            <>
+              <p className="text-sm">{order.shippingAddress.line1}</p>
+              <p className="text-sm">
+                {order.shippingAddress.city}, {order.shippingAddress.province}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm">{t("orders.noShipping")}</p>
+          )}
           {order.shippingAddress.notes ? (
             <p className="text-sm text-muted-foreground">{order.shippingAddress.notes}</p>
           ) : null}
@@ -222,6 +260,58 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
             <span>{money(order.total)}</span>
           </p>
         </section>
+        {order.downloads.length > 0 ? (
+          <section
+            aria-labelledby="downloads"
+            className="grid content-start gap-2 rounded-md border p-4 md:col-span-2"
+          >
+            <h2 id="downloads" className="font-medium">
+              {t("orders.downloadsHeading")}
+            </h2>
+            <ul className="grid gap-1 text-sm">
+              {order.downloads.map((download, index) => (
+                <li key={`${index}:${download.fileName}`} className="break-all">
+                  {download.downloadLimit === null
+                    ? t("orders.downloadsCountUnlimited", {
+                        name: download.fileName,
+                        used: String(download.downloads),
+                      })
+                    : t("orders.downloadsCount", {
+                        name: download.fileName,
+                        used: String(download.downloads),
+                        limit: String(download.downloadLimit),
+                      })}
+                  {download.expiresAt ? (
+                    <span className="text-muted-foreground">
+                      {" "}
+                      ·{" "}
+                      {t("orders.downloadsUntil", {
+                        date: date.format(new Date(download.expiresAt)),
+                      })}
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            {order.status === "paid" ? (
+              <Form method="post" className="mt-2 grid gap-1">
+                <Button
+                  type="submit"
+                  name="intent"
+                  value="resendDownloads"
+                  variant="outline"
+                  className="w-full sm:w-auto sm:justify-self-start"
+                  disabled={busy}
+                >
+                  {t("orders.resendDownloads")}
+                </Button>
+                <p className="text-sm text-muted-foreground">{t("orders.resendDownloadsHint")}</p>
+              </Form>
+            ) : order.status === "cancelled" ? null : (
+              <p className="text-sm text-muted-foreground">{t("orders.downloadsWaiting")}</p>
+            )}
+          </section>
+        ) : null}
         {loaderData.einvoicing ? (
           <OrderEinvoice
             workspace={params.workspace}

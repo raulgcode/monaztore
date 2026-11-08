@@ -57,6 +57,13 @@
       "when": 1794143868645,
       "tag": "0007_support_visits",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794148812914,
+      "tag": "0008_digital_downloads",
+      "breakpoints": true
     }
   ]
 }
