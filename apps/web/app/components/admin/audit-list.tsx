@@ -38,6 +38,14 @@ export function AuditList({ rows, showStore = true }: { rows: Row[]; showStore?:
               </Link>
             </p>
           ) : null}
+          {row.details?.readOnly === true ? (
+            <p className="text-muted-foreground">{t("admin.logReadOnly")}</p>
+          ) : null}
+          {row.action === "support_change" && typeof row.details?.path === "string" ? (
+            <p className="break-all font-mono text-xs text-muted-foreground">
+              {String(row.details.method)} {row.details.path}
+            </p>
+          ) : null}
           {row.targetEmail && row.targetEmail !== row.actorEmail ? (
             <p className="text-muted-foreground">
               {t("admin.logTarget", { email: row.targetEmail })}

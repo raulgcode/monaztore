@@ -50,6 +50,13 @@
       "when": 1794142310276,
       "tag": "0006_dazzling_scrambler",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794143868645,
+      "tag": "0007_support_visits",
+      "breakpoints": true
     }
   ]
 }

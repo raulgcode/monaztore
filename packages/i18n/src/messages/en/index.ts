@@ -8,6 +8,7 @@ import { forms } from "./forms";
 import { home } from "./home";
 import { orders } from "./orders";
 import { pages } from "./pages";
+import { security } from "./security";
 import { settings } from "./settings";
 import { store } from "./store";
 import { storefront } from "./storefront";
@@ -25,6 +26,7 @@ export const en = {
   home,
   orders,
   pages,
+  security,
   settings,
   store,
   storefront,

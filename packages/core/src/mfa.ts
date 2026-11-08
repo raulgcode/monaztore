@@ -6,14 +6,19 @@ import { openSecret, sealSecret } from "./sealed";
 import { generateTotpSecret, matchTotp, totpUri } from "./totp";
 
 // The second sign-in step: a code from an authenticator app (or a passkey, `passkeys.ts`).
-// The platform's super admins pass it to open /admin; a stolen password or email link alone
-// opens nothing.
+// The platform's super admins pass it to open /admin, and every store's team to open /app: a
+// stolen password or email link alone opens nothing.
 
 /**
  * /admin asks for the code again after this long, even in the same session: a stolen session
  * cookie is worth half a day at most.
  */
 export const ADMIN_MFA_TTL_MS = 12 * 60 * 60 * 1000;
+/**
+ * A store's team passes the second step once per session (Better Auth's sessions last a week):
+ * a stolen password or email link alone never opens a store.
+ */
+export const TEAM_MFA_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const RECOVERY_CODES = 8;
 
 /** Who passes the second step: the signed-in person, nobody else's rows. */

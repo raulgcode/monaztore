@@ -18,4 +18,7 @@ export const workspace = {
   homeTitle: "Home",
   homeHeading: "Hi, {name}",
   homeIntro: "This is the home of {workspace}. Your project's first screen goes here.",
+  supportVisit: "Our support team entered your store on {date} to help you.",
+  supportVisitReadOnly:
+    "Our support team looked at your store on {date}, without changing anything.",
 } as const;

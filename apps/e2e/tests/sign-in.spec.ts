@@ -1,8 +1,8 @@
-import { expect, test } from "../support/fixtures";
+import { expect, passSecondStep, setUpAuthenticator, test } from "../support/fixtures";
 import { getLinkFromEmail, uniqueEmail } from "../support/mailpit";
 
 test.describe("Feature: sign in with an email link", () => {
-  test("Scenario: someone new asks for the link, opens it and lands on creating their workspace", async ({
+  test("Scenario: someone new asks for the link, opens it, protects the account and lands on creating their workspace", async ({
     page,
     baseURL,
   }) => {
@@ -25,8 +25,13 @@ test.describe("Feature: sign in with an email link", () => {
       );
     });
 
-    await test.step("And opening it signs them in, on the onboarding", async () => {
+    await test.step("And opening it signs them in, asking first for the authenticator app", async () => {
       await page.goto(await getLinkFromEmail(email, baseURL, "Your sign-in link"));
+      await expect(page).toHaveURL(/\/app\/mfa\?redirectTo=%2Fapp$/);
+    });
+
+    await test.step("And once it is set up, they land on the onboarding", async () => {
+      await setUpAuthenticator(page);
       await expect(page).toHaveURL(/\/app\/onboarding$/);
       await expect(
         page.getByRole("heading", { level: 1, name: "Create your workspace" }),
@@ -73,8 +78,9 @@ test.describe("Feature: account with email and password", () => {
       );
     });
 
-    await test.step("And the confirmation link signs them in", async () => {
+    await test.step("And the confirmation link signs them in, past the second step", async () => {
       await page.goto(await getLinkFromEmail(email, baseURL, "Confirm your email"));
+      await passSecondStep(page, email);
       await expect(page).toHaveURL(/\/app\/onboarding$/);
     });
   });
@@ -88,6 +94,7 @@ test.describe("Feature: account with email and password", () => {
       await page.getByLabel("Password").fill(password);
       await page.getByRole("button", { name: "Create account" }).click();
       await page.goto(await getLinkFromEmail(email, baseURL, "Confirm your email"));
+      await passSecondStep(page, email);
       await page.context().clearCookies();
       return email;
     });
@@ -104,9 +111,10 @@ test.describe("Feature: account with email and password", () => {
       await expect(page).toHaveURL(/\/login/);
     });
 
-    await test.step("And with the right one they get in", async () => {
+    await test.step("And with the right one and the app's code they get in", async () => {
       await page.getByLabel("Password").fill(password);
       await page.getByRole("button", { name: "Sign in", exact: true }).click();
+      await passSecondStep(page, email);
       await expect(page).toHaveURL(/\/app\/onboarding$/);
     });
   });
@@ -124,6 +132,7 @@ test.describe("Feature: account with email and password", () => {
       await page.getByLabel("Password").fill(password);
       await page.getByRole("button", { name: "Create account" }).click();
       await page.goto(await getLinkFromEmail(email, baseURL, "Confirm your email"));
+      await passSecondStep(page, email);
       await page.context().clearCookies();
     });
 
@@ -152,6 +161,7 @@ test.describe("Feature: account with email and password", () => {
       await page.getByLabel("Email").fill(email);
       await page.getByLabel("Password").fill("my-new-password");
       await page.getByRole("button", { name: "Sign in", exact: true }).click();
+      await passSecondStep(page, email);
       await expect(page).toHaveURL(/\/app\/onboarding$/);
     });
   });

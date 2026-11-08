@@ -53,6 +53,7 @@ export {
   mfaState,
   pendingTotpEnrollment,
   resetMfa,
+  TEAM_MFA_TTL_MS,
   verifyMfaCode,
 } from "./mfa";
 export {
@@ -178,6 +179,17 @@ export {
   type StorefrontStore,
   type StoreMode,
 } from "./stores";
+export {
+  endSupportVisit,
+  recentSupportVisits,
+  recordSupportChange,
+  SUPPORT_NOTICE_DAYS,
+  type SupportTarget,
+  type SupportVisit,
+  startSupportVisit,
+  supportTarget,
+  supportVisitOf,
+} from "./support";
 export type { TenantContext } from "./tenant";
 export {
   brandColors,

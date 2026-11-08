@@ -1,9 +1,19 @@
 import { getFormProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { bpsToPercent, percentToBps, storeCommissionSchema } from "@monaztore/contracts";
-import { getStore, listAuditLog, NotFoundError, setStoreCommission } from "@monaztore/core";
-import { ArrowLeftIcon, ExternalLinkIcon } from "lucide-react";
-import { data, href, Link, useFetcher } from "react-router";
+import {
+  DomainError,
+  getPlatformSettings,
+  getStore,
+  listAuditLog,
+  NotFoundError,
+  type PlatformAdminContext,
+  setStoreCommission,
+  startSupportVisit,
+  supportTarget,
+} from "@monaztore/core";
+import { ArrowLeftIcon, ExternalLinkIcon, EyeIcon, LogInIcon } from "lucide-react";
+import { data, Form, href, Link, redirect, useFetcher } from "react-router";
 import { AuditList } from "~/components/admin/audit-list";
 import { PageHeader } from "~/components/page-header";
 import { TextField } from "~/components/text-field";
@@ -12,6 +22,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/com
 import { superAdminContext } from "~/context";
 import { metaT, useLocale, useT } from "~/lib/i18n";
 import { formatPrice } from "~/lib/money";
+import { auth } from "~/lib/services.server";
 import type { Route } from "./+types/store";
 
 export function meta({ matches, loaderData }: Route.MetaArgs) {
@@ -34,13 +45,34 @@ async function storeOr404(promise: ReturnType<typeof getStore>) {
 export async function loader({ params, context }: Route.LoaderArgs) {
   const admin = context.get(superAdminContext);
   const store = await storeOr404(getStore(admin, params.storeId));
-  const log = await listAuditLog(admin, { organizationId: store.id });
-  return { store, log: log.rows };
+  const [log, settings, owner] = await Promise.all([
+    listAuditLog(admin, { organizationId: store.id }),
+    getPlatformSettings(admin),
+    ownerOrNull(supportTarget(admin, store.id)),
+  ]);
+  return {
+    store,
+    log: log.rows,
+    support: { ownerEmail: owner?.email ?? null, notified: settings.notifySupportAccess },
+  };
+}
+
+async function ownerOrNull(promise: ReturnType<typeof supportTarget>) {
+  try {
+    return await promise;
+  } catch (error) {
+    if (error instanceof NotFoundError || error instanceof DomainError) return null;
+    throw error;
+  }
 }
 
 export async function action({ request, params, context }: Route.ActionArgs) {
   const admin = context.get(superAdminContext);
-  const submission = parseWithZod(await request.formData(), { schema: storeCommissionSchema });
+  const formData = await request.formData();
+  if (formData.get("intent") === "support") {
+    return enterAsOwner(request, admin, params.storeId, formData.get("mode") === "view");
+  }
+  const submission = parseWithZod(formData, { schema: storeCommissionSchema });
   if (submission.status !== "success") {
     return data({ result: submission.reply(), saved: false }, { status: 400 });
   }
@@ -57,10 +89,36 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   return { result: submission.reply(), saved: true };
 }
 
+/**
+ * "Entrar como dueño": Better Auth's impersonation opens the owner's account for an hour, and
+ * the visit is kept so every change inside goes to the log ("Solo mirar" refuses them).
+ */
+async function enterAsOwner(
+  request: Request,
+  admin: PlatformAdminContext,
+  storeId: string,
+  readOnly: boolean,
+) {
+  const owner = await ownerOrNull(supportTarget(admin, storeId));
+  if (!owner) throw data("No owner to enter as", { status: 409 });
+  const { headers, response } = await auth.api.impersonateUser({
+    body: { userId: owner.userId },
+    headers: request.headers,
+    returnHeaders: true,
+  });
+  await startSupportVisit(admin, {
+    organizationId: storeId,
+    targetUserId: owner.userId,
+    sessionId: response.session.id,
+    readOnly,
+  });
+  return redirect(href("/app/:workspace", { workspace: owner.slug }), { headers });
+}
+
 export default function AdminStore({ loaderData }: Route.ComponentProps) {
   const t = useT();
   const locale = useLocale();
-  const { store, log } = loaderData;
+  const { store, log, support } = loaderData;
   const date = new Intl.DateTimeFormat(locale, { dateStyle: "long" });
   const primary = store.domains.find((domain) => domain.primary) ?? store.domains[0];
 
@@ -120,6 +178,39 @@ export default function AdminStore({ loaderData }: Route.ComponentProps) {
           </CardContent>
         </Card>
         <CommissionCard commission={store.commission} />
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <h2>{t("admin.storeSupport")}</h2>
+            </CardTitle>
+            <CardDescription>
+              {support.ownerEmail
+                ? t("admin.storeSupportIntro", { email: support.ownerEmail })
+                : t("admin.storeSupportNoOwner")}
+            </CardDescription>
+          </CardHeader>
+          {support.ownerEmail ? (
+            <CardContent className="grid gap-4">
+              <p className="text-sm">
+                {support.notified
+                  ? t("admin.storeSupportNotified")
+                  : t("admin.storeSupportNotNotified")}
+              </p>
+              {/* A whole document: the cookies change to the owner's session. */}
+              <Form method="post" reloadDocument className="grid gap-2 sm:grid-cols-2">
+                <input type="hidden" name="intent" value="support" />
+                <Button type="submit" name="mode" value="edit">
+                  <LogInIcon aria-hidden className="size-4" />
+                  {t("admin.storeSupportEdit")}
+                </Button>
+                <Button type="submit" name="mode" value="view" variant="outline">
+                  <EyeIcon aria-hidden className="size-4" />
+                  {t("admin.storeSupportView")}
+                </Button>
+              </Form>
+            </CardContent>
+          ) : null}
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle>

@@ -7,14 +7,23 @@ import {
   setUpAuthenticator,
   test,
 } from "../support/fixtures";
-import { uniqueEmail } from "../support/mailpit";
+import { getLinkFromEmail, uniqueEmail } from "../support/mailpit";
 import { openStore, placeSampleOrder } from "../support/storefront";
 
 const schemes = ["light", "dark"] as const;
 // Public pages, before signing in.
 const publicPages = ["/", "/login", "/login?with=link", "/sign-up", "/forgot-password"];
 // Sections inside the workspace, after /app/:workspace. A new section goes here.
-const workspaceSections = ["", "/orders", "/pages", "/store", "/design", "/invoicing", "/settings"];
+const workspaceSections = [
+  "",
+  "/orders",
+  "/pages",
+  "/store",
+  "/design",
+  "/invoicing",
+  "/settings",
+  "/settings/security",
+];
 // The platform's /admin, after its second step. A new admin section goes here.
 const adminSections = ["", "/commission", "/log", "/security"];
 // Storefront pages, on a store's own domain. A new storefront page goes here.
@@ -58,6 +67,21 @@ test.describe("Feature: accessibility (axe, WCAG 2.2 AA)", () => {
         await page.goto("/admin");
         await page.getByRole("main").getByRole("listitem").first().getByRole("link").click();
         await expect(page).toHaveURL(/\/admin\/stores\//);
+        await expectAccessible(page);
+      });
+
+      test("Scenario: the team's second step has no violations", async ({
+        page,
+        baseURL,
+        expectAccessible,
+      }) => {
+        const email = uniqueEmail("team");
+        await page.goto("/login?with=link");
+        await page.getByLabel("Email").fill(email);
+        await page.getByRole("button", { name: "Email me the link" }).click();
+        await expect(page.getByRole("main").getByRole("status")).toContainText(email);
+        await page.goto(await getLinkFromEmail(email, baseURL));
+        await expect(page).toHaveURL(/\/app\/mfa\?redirectTo=/);
         await expectAccessible(page);
       });
 

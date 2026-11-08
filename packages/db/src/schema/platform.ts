@@ -9,7 +9,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import { organization, user } from "./auth";
+import { organization, session, user } from "./auth";
 
 // The platform operator's own data (super admins in /admin): it spans every store, so only
 // `PlatformAdminContext` in core reads it.
@@ -52,6 +52,9 @@ export const platformAuditAction = pgEnum("platform_audit_action", [
   "commission_store_changed",
   "support_notice_changed",
   "super_admin_added",
+  "support_started",
+  "support_ended",
+  "support_change",
 ]);
 
 /**
@@ -72,5 +75,30 @@ export const platformAuditLog = pgTable(
   (table) => [
     index("platform_audit_log_created_idx").on(table.createdAt),
     index("platform_audit_log_organization_idx").on(table.organizationId, table.createdAt),
+  ],
+);
+
+/**
+ * A super admin inside a store's account for support ("Entrar como dueño"): Better Auth's
+ * impersonation session, what it may do and when it ended. `readOnly` refuses every change.
+ * A store sees its visits only while `platform_settings.notifySupportAccess` is on.
+ */
+export const supportVisit = pgTable(
+  "support_visit",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    sessionId: uuid().references(() => session.id, { onDelete: "set null" }),
+    adminUserId: uuid().references(() => user.id, { onDelete: "set null" }),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    targetUserId: uuid().references(() => user.id, { onDelete: "set null" }),
+    readOnly: boolean().notNull().default(false),
+    startedAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
+    endedAt: timestamp({ withTimezone: true }),
+  },
+  (table) => [
+    index("support_visit_session_idx").on(table.sessionId),
+    index("support_visit_organization_idx").on(table.organizationId, table.startedAt),
   ],
 );

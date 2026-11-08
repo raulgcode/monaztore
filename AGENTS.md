@@ -304,6 +304,20 @@ SINPE Móvil and transfers never pay one. Every change and security event goes t
 `platform_audit_log` (`recordAudit`), which stores never see; `notifySupportAccess` (off at
 first) decides whether a store is told when support enters its account.
 
+Support and the teams' second step (`core/src/support.ts`, `middleware/auth.server.ts`): from a
+store's detail, "Enter as the owner" or "Only look" opens its panel as its first owner for an
+hour (Better Auth's `impersonateUser`; never another super admin). `support_visit` ties the
+session to the visit: `requireSession` refuses every change in "only look" (403), logs each
+other change (`support_change`, method and path), and `requireTenant` keeps support inside that
+store. A banner stays on top with "Back to admin" (`/admin/support/stop`, which logs the end and
+puts the admin's own session back). The store sees the visits on its home only with
+`notifySupportAccess` on (`recentSupportVisits`). Every store's team passes the second step once
+per session (`requireSecondStep`, `TEAM_MFA_TTL_MS`) at `/app/mfa`, with the same authenticator
+app or passkey as /admin (`SecondStep`, `PasskeysManager`), and adds fingerprints in Settings →
+Security (`/app/:workspace/settings/security`); support never sets them up on the owner's
+account. In e2e, `passSecondStep` (fixtures) sets the app up the first time and types the next
+code after.
+
 Every `core` use case takes a `TenantContext` and filters by `organizationId`.
 - The workspace goes in the URL (`/app/:workspace/…`) and `requireTenant` resolves it with
   `resolveTenant`, which checks the membership; never take the workspace from the session or from
