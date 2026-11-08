@@ -14,6 +14,7 @@ import {
   sql,
 } from "@monaztore/db";
 import sanitizeHtml from "sanitize-html";
+import { digitalProductIds } from "./digital-products";
 import type { StorefrontStore } from "./stores";
 
 /**
@@ -407,6 +408,8 @@ export interface StoreProduct {
   price: number | null;
   compareAtPrice: number | null;
   inStock: boolean;
+  /** Delivered as files the shopper downloads once paid: nothing to ship. */
+  digital: boolean;
   seoTitle: string | null;
   seoDescription: string | null;
   images: { url: string; alt: string }[];
@@ -432,7 +435,7 @@ export async function getStoreProduct(
     .from(schema.product)
     .where(and(visible(ctx.store.organizationId), eq(schema.product.slug, slug)));
   if (!product) return undefined;
-  const [images, options, variants, collections] = await Promise.all([
+  const [images, options, variants, collections, digital] = await Promise.all([
     ctx.db
       .select({ url: schema.productImage.url, alt: schema.productImage.alt })
       .from(schema.productImage)
@@ -461,6 +464,7 @@ export async function getStoreProduct(
       .innerJoin(schema.category, eq(schema.category.id, schema.productCategory.categoryId))
       .where(eq(schema.productCategory.productId, product.id))
       .orderBy(asc(schema.category.position), asc(schema.category.name)),
+    digitalProductIds(ctx.db, ctx.store.organizationId, [product.id]),
   ]);
   const prices = variants.map((v) => v.price).filter((p): p is number => p !== null);
   return {
@@ -473,6 +477,7 @@ export async function getStoreProduct(
     price: prices.length > 0 ? Math.min(...prices) : product.price,
     compareAtPrice: product.compareAtPrice,
     inStock: variants.length > 0 ? variants.some((v) => v.inStock) : product.inStock,
+    digital: digital.has(product.id),
     seoTitle: product.seoTitle,
     seoDescription: product.seoDescription,
     images: images.map((image) => ({ url: image.url, alt: image.alt || product.name })),

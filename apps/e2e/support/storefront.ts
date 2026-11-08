@@ -3,6 +3,8 @@ import type { ImportedCatalog } from "@monaztore/contracts";
 import {
   addStoreDomain,
   copyCatalogImages,
+  createDigitalProduct,
+  getDigitalProduct,
   importCatalog,
   listImportedProducts,
   placeOrder,
@@ -239,4 +241,37 @@ export async function placeSampleOrder(
   });
   if (reference) await submitPaymentReference(store, placed.token, reference);
   return placed.number;
+}
+
+/** What the sample e-book's file holds: the scenario checks the download brings these bytes. */
+export const ebookContents = "%PDF-1.7 The Pura Vida brewing handbook";
+
+/**
+ * A digital product made in the workspace, as "New digital product" does: the brewing handbook,
+ * ₡4,500,
+ * with its PDF in the store's files (the web server reads the same `.data/files`). The worker's
+ * workspace is shared, so a second one gets its own address (`brewing-handbook-2`): use `slug`.
+ */
+export async function sellEbook(
+  workspace: Workspace,
+  rules: { downloadLimit?: number | null; downloadDays?: number | null } = {},
+): Promise<{ id: string; slug: string }> {
+  const id = await createDigitalProduct(
+    workspace.tenant,
+    { files: diskFileStore(defaultFilesDir()) },
+    {
+      name: "Brewing handbook",
+      price: 450_000,
+      description: "Forty pages, step by step.",
+      file: {
+        bytes: new TextEncoder().encode(ebookContents),
+        fileName: "Brewing handbook.pdf",
+        contentType: "application/pdf",
+      },
+      ...rules,
+    },
+  );
+  const product = await getDigitalProduct(workspace.tenant, id);
+  if (!product) throw new Error("The e-book wasn't created");
+  return { id, slug: product.slug };
 }

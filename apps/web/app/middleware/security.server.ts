@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { data, type MiddlewareFunction } from "react-router";
 import { nonceContext } from "~/context";
-import { bodySizeProblem } from "~/lib/request-limits";
+import { bodySizeProblem, maxRequestBytes } from "~/lib/request-limits";
 import { securityHeaders } from "~/lib/security-headers";
 import { env } from "~/lib/services.server";
 
@@ -16,7 +16,7 @@ export const securityMiddleware: MiddlewareFunction<Response> = async (
   { request, context },
   next,
 ) => {
-  const problem = bodySizeProblem(request);
+  const problem = bodySizeProblem(request, maxRequestBytes(new URL(request.url).pathname));
   if (problem === 411) throw data("Send the body with a Content-Length", { status: 411 });
   if (problem === 413) throw data("The request is too big", { status: 413 });
 

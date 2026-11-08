@@ -22,6 +22,12 @@ export {
   accountEmailSubject,
 } from "./templates/account";
 export {
+  DownloadsEmail,
+  type DownloadsEmailProps,
+  downloadsMessage,
+  downloadsSubject,
+} from "./templates/downloads";
+export {
   EinvoiceEmail,
   type EinvoiceEmailProps,
   einvoiceMessage,

@@ -1,6 +1,19 @@
 /** The biggest body we take: a 5 MB upload plus its form envelope. Raise it only with a reason. */
 export const MAX_REQUEST_BYTES = 6 * 1024 * 1024;
 
+/**
+ * A digital product's file (`/app/<workspace>/downloads/…`): up to 50 MB plus a cover photo and
+ * the form. Only there, for an owner signed in; everything else keeps the 6 MB.
+ */
+export const DIGITAL_UPLOAD_REQUEST_BYTES = 56 * 1024 * 1024;
+
+/** The biggest body a path takes. */
+export function maxRequestBytes(pathname: string): number {
+  return /^\/app\/[^/]+\/downloads(\/|$)/.test(pathname)
+    ? DIGITAL_UPLOAD_REQUEST_BYTES
+    : MAX_REQUEST_BYTES;
+}
+
 const withBody = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 /**

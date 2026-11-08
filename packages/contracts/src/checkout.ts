@@ -67,8 +67,7 @@ const email = z.pipe(
   z.email({ error: message("forms.emailInvalid") }),
 );
 
-/** The checkout form: who buys, where it goes and how they pay. */
-export const checkoutSchema = z.object({
+const contactFields = {
   email,
   name: text("forms.nameRequired", 80),
   phone: z
@@ -78,11 +77,29 @@ export const checkoutSchema = z.object({
       z.minLength(1, message("forms.phoneRequired")),
       z.regex(/^\+?[\d\s()-]{7,20}$/, message("forms.phoneInvalid")),
     ),
+  notes: z._default(z.string().check(z.trim(), z.maxLength(500, message("forms.textTooLong"))), ""),
+  paymentMethod: z.enum(paymentMethods, { error: message("forms.paymentMethodRequired") }),
+};
+
+/** The checkout form: who buys, where it goes and how they pay. */
+export const checkoutSchema = z.object({
+  ...contactFields,
   line1: text("forms.addressRequired", 200),
   city: text("forms.cityRequired", 80),
   province: text("forms.provinceRequired", 80),
-  notes: z._default(z.string().check(z.trim(), z.maxLength(500, message("forms.textTooLong"))), ""),
-  paymentMethod: z.enum(paymentMethods, { error: message("forms.paymentMethodRequired") }),
+});
+
+const noAddress = z._default(z.literal(""), "");
+
+/**
+ * The checkout of a cart with only digital downloads: nothing to ship, so no address. The
+ * values have the same shape, with the address empty.
+ */
+export const digitalCheckoutSchema = z.object({
+  ...contactFields,
+  line1: noAddress,
+  city: noAddress,
+  province: noAddress,
 });
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
 

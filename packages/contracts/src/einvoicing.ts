@@ -1,5 +1,5 @@
 import { z } from "zod/mini";
-import { checkoutSchema } from "./checkout";
+import { checkoutSchema, digitalCheckoutSchema } from "./checkout";
 import { message } from "./message";
 
 /**
@@ -174,6 +174,11 @@ export type InvoiceToInput = z.infer<typeof invoiceToSchema>;
 /** The checkout of a store that issues invoices: the usual form plus "invoice in my name". */
 export const checkoutWithInvoiceSchema = z
   .extend(checkoutSchema, invoiceToFields)
+  .check(invoiceToCheck);
+
+/** The same for a cart with only digital downloads (no address). */
+export const digitalCheckoutWithInvoiceSchema = z
+  .extend(digitalCheckoutSchema, invoiceToFields)
   .check(invoiceToCheck);
 
 /** The form's values as the order's `taxId`, or null for a ticket. */

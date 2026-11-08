@@ -1,4 +1,5 @@
-import { and, asc, count, desc, eq, inArray, schema, sql } from "@monaztore/db";
+import { createHash, randomBytes } from "node:crypto";
+import { and, asc, count, type Database, desc, eq, inArray, schema, sql } from "@monaztore/db";
 import type { OrderStatus, StorePayments } from "@monaztore/db/schema";
 import { queueOrderEinvoice } from "./einvoicing";
 import { DomainError } from "./errors";
@@ -89,19 +90,90 @@ export async function getOrder(ctx: TenantContext, number: number) {
     .from(schema.orderLine)
     .where(eq(schema.orderLine.orderId, found.id))
     .orderBy(asc(schema.orderLine.position));
-  const { tokenHash: _secret, ...order } = found;
-  return { ...order, lines };
+  const downloads = await ctx.db
+    .select({
+      fileName: schema.orderDownload.fileName,
+      downloads: schema.orderDownload.downloads,
+      downloadLimit: schema.orderDownload.downloadLimit,
+      expiresAt: schema.orderDownload.expiresAt,
+    })
+    .from(schema.orderDownload)
+    .where(
+      and(
+        eq(schema.orderDownload.organizationId, ctx.organizationId),
+        eq(schema.orderDownload.orderId, found.id),
+      ),
+    )
+    .orderBy(asc(schema.orderDownload.position));
+  const { tokenHash: _secret, downloadTokenHash: _link, ...order } = found;
+  return { ...order, lines, downloads };
+}
+
+/**
+ * Where the downloads email goes, with the link's secret (`/downloads/:token`): only its SHA-256
+ * is kept, so this is the one moment it exists.
+ */
+export interface DownloadsLink {
+  token: string;
+  number: number;
+  email: string;
+  name: string;
+  locale: string;
+  files: string[];
+}
+
+/** A new secret for the order's downloads email; the one before stops working. */
+async function newDownloadsLink(
+  db: Database,
+  order: { id: string; number: number; email: string; name: string; locale: string },
+): Promise<DownloadsLink | null> {
+  const files = await db
+    .select({ fileName: schema.orderDownload.fileName })
+    .from(schema.orderDownload)
+    .where(eq(schema.orderDownload.orderId, order.id))
+    .orderBy(asc(schema.orderDownload.position));
+  if (files.length === 0) return null;
+  const token = randomBytes(24).toString("base64url");
+  await db
+    .update(schema.order)
+    .set({ downloadTokenHash: createHash("sha256").update(token).digest("hex") })
+    .where(eq(schema.order.id, order.id));
+  return {
+    token,
+    number: order.number,
+    email: order.email,
+    name: order.name,
+    locale: order.locale,
+    files: files.map((file) => file.fileName),
+  };
+}
+
+/**
+ * The downloads email's link again (the shopper lost it, or it didn't arrive): a new one, for a
+ * paid order with files. Undefined otherwise.
+ */
+export async function renewDownloadsLink(
+  ctx: TenantContext,
+  number: number,
+): Promise<DownloadsLink | undefined> {
+  const found = await findOrder(ctx, number);
+  if (found?.status !== "paid") return undefined;
+  return (await newDownloadsLink(ctx.db, found)) ?? undefined;
 }
 
 /**
  * The store saw the money: the order is paid, and the customer's orders and spend go up. Works
  * from "waiting" too, for a payment the shopper never reported.
  */
-export async function markOrderPaid(ctx: TenantContext, number: number): Promise<void> {
-  await ctx.db.transaction(async (tx) => {
+export async function markOrderPaid(
+  ctx: TenantContext,
+  number: number,
+  now = new Date(),
+): Promise<{ downloads: DownloadsLink | null }> {
+  return ctx.db.transaction(async (tx) => {
     const [updated] = await tx
       .update(schema.order)
-      .set({ status: "paid", paidAt: new Date() })
+      .set({ status: "paid", paidAt: now })
       .where(
         and(
           eq(schema.order.organizationId, ctx.organizationId),
@@ -113,8 +185,20 @@ export async function markOrderPaid(ctx: TenantContext, number: number): Promise
         id: schema.order.id,
         customerId: schema.order.customerId,
         total: schema.order.total,
+        number: schema.order.number,
+        email: schema.order.email,
+        name: schema.order.name,
+        locale: schema.order.locale,
       });
     if (!updated) throw new DomainError("order_closed", "Only an open order can be paid");
+    // Digital products open now, for as many days as each one gives from today.
+    await tx
+      .update(schema.orderDownload)
+      .set({
+        expiresAt: sql`case when ${schema.orderDownload.downloadDays} is null then null else ${now}::timestamptz + make_interval(days => ${schema.orderDownload.downloadDays}) end`,
+      })
+      .where(eq(schema.orderDownload.orderId, updated.id));
+    const downloads = await newDownloadsLink(tx as unknown as Database, updated);
     // Costa Rica: the order's invoice or ticket goes to Hacienda's queue, if the store issues
     // them on payment. Paid without it all the same if something stops it.
     await queueOrderEinvoice(tx, {
@@ -133,6 +217,7 @@ export async function markOrderPaid(ctx: TenantContext, number: number): Promise
         })
         .where(eq(schema.customer.id, updated.customerId));
     }
+    return { downloads };
   });
 }
 

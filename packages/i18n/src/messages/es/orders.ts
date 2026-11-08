@@ -38,4 +38,15 @@ export const orders = {
   pagination: "Páginas",
   previous: "Anterior",
   next: "Siguiente",
+  noShipping: "Solo productos digitales: nada que enviar.",
+  downloadsHeading: "Descargas",
+  downloadsWaiting:
+    "Se abren para el cliente cuando confirmas el pago, y le mandamos el enlace por correo.",
+  downloadsCount: "{name}: {used} de {limit} descargas",
+  downloadsCountUnlimited: "{name}: {used} descargas",
+  downloadsUntil: "Hasta el {date}",
+  resendDownloads: "Mandar de nuevo el enlace de descarga",
+  resendDownloadsHint: "Es un enlace nuevo: el anterior deja de funcionar.",
+  downloadsSent: "Mandamos el enlace de descarga a {email}.",
+  downloadsNotSent: "No pudimos mandar el correo. Inténtalo de nuevo en un rato.",
 } as const satisfies Translation<typeof en>["orders"];
