@@ -4,6 +4,7 @@ import sensible from "@fastify/sensible";
 import swagger from "@fastify/swagger";
 import { DomainError, NotFoundError } from "@monaztore/core";
 import type { Database } from "@monaztore/db";
+import { project } from "@monaztore/env/project";
 import Fastify, { type FastifyServerOptions } from "fastify";
 import {
   hasZodFastifySchemaValidationErrors,
@@ -50,7 +51,7 @@ export async function buildApp({
   await app.register(cors, { origin: [appUrl] });
   await app.register(sensible);
   await app.register(swagger, {
-    openapi: { info: { title: "Monaztore API", version: "1.0.0" } },
+    openapi: { info: { title: `${project.name} API`, version: "1.0.0" } },
     transform: jsonSchemaTransform,
   });
 

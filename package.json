@@ -25,7 +25,10 @@
     "db:migrate": "pnpm --filter @monaztore/db migrate",
     "db:studio": "pnpm --filter @monaztore/db studio",
     "auth:generate": "pnpm --filter @monaztore/auth auth:generate",
-    "import:woocommerce": "tsx tooling/import-woocommerce/index.ts"
+    "import:woocommerce": "tsx tooling/import-woocommerce/index.ts",
+    "new": "node packages/create/src/index.ts --template .",
+    "rename": "node packages/create/src/rename-cli.ts",
+    "template:update": "node packages/create/src/update.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",

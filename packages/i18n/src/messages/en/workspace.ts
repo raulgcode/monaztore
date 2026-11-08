@@ -2,6 +2,8 @@ export const workspace = {
   onboardingTitle: "Create your workspace",
   onboardingHeading: "Create your workspace",
   onboardingIntro: "It's where everything of your team lives. You can rename it later.",
+  onboardingClosed:
+    "This store already has its workspace. Ask its owner to invite you with this email.",
   nameLabel: "Workspace name",
   namePlaceholder: "My company",
   create: "Continue",

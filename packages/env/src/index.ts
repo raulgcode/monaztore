@@ -79,6 +79,9 @@ export const serverEnvSchema = z
     // sets Fly-Client-IP and overwrites whatever the client sent; without it every caller
     // shares one bucket.
     CLIENT_IP_HEADER: z.string().trim().toLowerCase().default("fly-client-ip"),
+    // multi: many stores, each on its own domain, and the platform's landing on APP_URL.
+    // single: a standalone store, the only one of this instance, on every host.
+    STORE_MODE: z.enum(["multi", "single"]).default("multi"),
     GOOGLE_CLIENT_ID: optionalString,
     GOOGLE_CLIENT_SECRET: optionalString,
     ...databaseEnvSchema.shape,

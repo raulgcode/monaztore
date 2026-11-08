@@ -63,10 +63,13 @@ export {
 } from "./storefront";
 export {
   addStoreDomain,
+  canOpenWorkspace,
   normalizeHostname,
   ownerContextForStore,
+  resolveOnlyStore,
   resolveStoreByHost,
   type StorefrontStore,
+  type StoreMode,
 } from "./stores";
 export type { TenantContext } from "./tenant";
 export {

@@ -7,6 +7,7 @@ import {
   magicLinkSubject,
 } from "@monaztore/email";
 import type { AuthMethod } from "@monaztore/env";
+import { project } from "@monaztore/env/project";
 import { defaultLocale, parseLocale } from "@monaztore/i18n";
 import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -130,7 +131,7 @@ export function createAuth({
   };
 
   return betterAuth({
-    appName: "Monaztore",
+    appName: project.name,
     baseURL,
     secret,
     trustedOrigins: [baseURL, ...trustedOrigins],
