@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { ImportedCatalog } from "@monaztore/contracts";
-import { addStoreDomain, importCatalog } from "@monaztore/core";
+import { addStoreDomain, importCatalog, updateStorePayments } from "@monaztore/core";
+import type { APIRequestContext } from "@playwright/test";
 import type { Workspace } from "./database";
 
 /** A small shop, like one brought over from WooCommerce: two collections, three products. */
@@ -90,7 +91,7 @@ export const sampleCatalog: ImportedCatalog = {
 };
 
 /**
- * Puts the catalog in the workspace's store and connects a domain of its own, `*.localhost`
+ * Puts the catalog in the workspace's store, takes SINPE and transfers, and connects a domain of its own, `*.localhost`
  * (which the browser sends to this machine). Returns the store's address.
  */
 export async function openStore(
@@ -99,8 +100,34 @@ export async function openStore(
   catalog: ImportedCatalog = sampleCatalog,
 ): Promise<string> {
   await importCatalog(workspace.tenant, catalog);
+  await updateStorePayments(workspace.tenant, {
+    sinpe: { enabled: true, phone: "8888-1234", holder: "My company S.A." },
+    transfer: {
+      enabled: true,
+      bank: "Banco Nacional",
+      iban: "CR05015202001026284066",
+      holder: "My company S.A.",
+    },
+  });
   const hostname = `store-${randomUUID().slice(0, 8)}.localhost`;
   await addStoreDomain(workspace.tenant, hostname, { primary: true });
   const port = new URL(baseURL ?? "http://localhost:4173").port;
   return `http://${hostname}:${port}`;
+}
+
+/**
+ * A request to the store without a browser (a crawler, a link checker). Node doesn't resolve
+ * `*.localhost` like the browser does, so it goes to this machine with the store's Host.
+ */
+export function requestStore(
+  request: APIRequestContext,
+  store: string,
+  path: string,
+  options: { maxRedirects?: number } = {},
+) {
+  const url = new URL(path, store);
+  return request.get(`http://127.0.0.1:${url.port}${url.pathname}${url.search}`, {
+    ...options,
+    headers: { Host: url.host },
+  });
 }

@@ -15,6 +15,13 @@
       "when": 1794096854074,
       "tag": "0001_commerce",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794099880552,
+      "tag": "0002_yielding_malcolm_colcord",
+      "breakpoints": true
     }
   ]
 }

@@ -9,6 +9,9 @@ export default [
     route("products/:slug", "routes/store/product.tsx"),
     route("collections", "routes/store/collections.tsx"),
     route("collections/:slug", "routes/store/collection.tsx"),
+    route("cart", "routes/store/cart.tsx"),
+    route("checkout", "routes/store/checkout.tsx"),
+    route("orders/:token", "routes/store/order.tsx"),
     route("sitemap.xml", "routes/store/sitemap.ts"),
     route("robots.txt", "routes/store/robots.ts"),
     // Last: old addresses of a migrated shop (301) and every other 404.

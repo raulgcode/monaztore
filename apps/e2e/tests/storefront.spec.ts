@@ -1,5 +1,5 @@
 import { expect, ownerTest as test } from "../support/fixtures";
-import { openStore } from "../support/storefront";
+import { openStore, requestStore } from "../support/storefront";
 
 test.describe("Feature: the store on its own domain", () => {
   test("Scenario: a shopper opens the store, sees only what is for sale and opens a product with its price and stock", async ({
@@ -45,7 +45,7 @@ test.describe("Feature: the store on its own domain", () => {
     const store = await openStore(workspace, baseURL);
 
     const response = await test.step("When a shopper follows an old WooCommerce link", () =>
-      page.request.get(`${store}/product/pura-vida-mug/`, { maxRedirects: 0 }));
+      requestStore(page.request, store, "/product/pura-vida-mug/", { maxRedirects: 0 }));
 
     await test.step("Then it answers 301 to the product's new address", async () => {
       expect(response.status()).toBe(301);
@@ -96,8 +96,8 @@ test.describe("Feature: the store on its own domain", () => {
   }) => {
     const store = await openStore(workspace, baseURL);
 
-    const sitemap = await (await page.request.get(`${store}/sitemap.xml`)).text();
-    const robots = await (await page.request.get(`${store}/robots.txt`)).text();
+    const sitemap = await (await requestStore(page.request, store, "/sitemap.xml")).text();
+    const robots = await (await requestStore(page.request, store, "/robots.txt")).text();
 
     expect(sitemap).toContain(`<loc>${store}/products/pura-vida-mug</loc>`);
     expect(sitemap).not.toContain("secret-draft");

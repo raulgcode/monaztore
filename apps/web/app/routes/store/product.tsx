@@ -1,6 +1,7 @@
 import { getStoreInfo, getStoreProduct } from "@monaztore/core";
 import { ImageIcon } from "lucide-react";
 import { data, href, Link } from "react-router";
+import { AddToCart } from "~/components/storefront/add-to-cart";
 import { Price } from "~/components/storefront/price";
 import { ScrollShadow } from "~/components/ui/scroll-shadow";
 import { useT } from "~/lib/i18n";
@@ -97,16 +98,13 @@ export default function Product({ loaderData }: Route.ComponentProps) {
           >
             {product.inStock ? t("storefront.inStock") : t("storefront.soldOut")}
           </p>
-          {product.options.length > 0 ? (
-            <dl className="grid gap-2 text-sm">
-              {product.options.map((option) => (
-                <div key={option.name} className="flex flex-wrap gap-x-2">
-                  <dt className="font-medium">{option.name}:</dt>
-                  <dd>{option.values.join(", ")}</dd>
-                </div>
-              ))}
-            </dl>
-          ) : null}
+          <AddToCart
+            productId={product.id}
+            variants={product.variants}
+            optionNames={product.options.map((option) => option.name)}
+            currency={currency}
+            inStock={product.inStock}
+          />
           {product.descriptionHtml ? (
             <div
               className="store-prose"

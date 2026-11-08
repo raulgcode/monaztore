@@ -1,4 +1,4 @@
-import { SearchIcon } from "lucide-react";
+import { SearchIcon, ShoppingBagIcon } from "lucide-react";
 import type * as React from "react";
 import { Form, href, Link, NavLink } from "react-router";
 import { ThemeToggle } from "~/components/theme-toggle";
@@ -11,6 +11,7 @@ import { cn } from "~/lib/utils";
 export interface StoreShellProps {
   name: string;
   collections: { slug: string; name: string }[];
+  cartCount: number;
   children: React.ReactNode;
 }
 
@@ -21,7 +22,7 @@ const chip =
  * The frame of every storefront page: the store's name, search, its collections as chips that
  * scroll sideways on a phone, and the footer.
  */
-export function StoreShell({ name, collections, children }: StoreShellProps) {
+export function StoreShell({ name, collections, cartCount, children }: StoreShellProps) {
   const t = useT();
   return (
     <div className="flex min-h-dvh flex-col">
@@ -34,6 +35,21 @@ export function StoreShell({ name, collections, children }: StoreShellProps) {
             {name}
           </Link>
           <ThemeToggle />
+          <Link
+            to={href("/cart")}
+            aria-label={t("storefront.cartWithCount", { count: cartCount })}
+            className="relative inline-flex size-11 items-center justify-center rounded-md outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          >
+            <ShoppingBagIcon aria-hidden className="size-5" />
+            {cartCount > 0 ? (
+              <span
+                aria-hidden
+                className="absolute top-1 right-1 grid min-w-5 place-items-center rounded-full bg-primary px-1 text-xs font-medium text-primary-foreground"
+              >
+                {cartCount}
+              </span>
+            ) : null}
+          </Link>
         </div>
         <div className="mx-auto max-w-6xl px-4 pb-3">
           <Form method="get" action={href("/products")} role="search" className="flex gap-2">

@@ -202,7 +202,15 @@ pages answer 404). Its use cases take a `StorefrontContext` and only read what a
 (`status = "active"`; descriptions cleaned with `cleanHtml`). Every page has its canonical on the
 store's primary domain (`storeOrigin`), Open Graph and, for a product, JSON-LD; `sitemap.xml` and
 `robots.txt` are per store, and the `*` route sends a migrated shop's old addresses (`redirect`)
-with a 301. e2e opens a store on its own `*.localhost` domain (`support/storefront.ts`).
+with a 301. e2e opens a store on its own `*.localhost` domain (`support/storefront.ts`; requests
+without a browser go through `requestStore`, since Node doesn't resolve `*.localhost`).
+
+Buying (`core/src/orders.ts`): the cart is a signed, host-only cookie with ids and quantities,
+never prices (`lib/cart.server.ts`); `priceCart` reads prices and stock from the database every
+time. `placeOrder` prices again under lock, numbers the order from `store_settings` (#1001…),
+lowers the stock it counts and keeps only the SHA-256 of the order link's token
+(`/orders/:token`, a secret path). Manual payments (SINPE Móvil, transfer) live in
+`store_settings.payments`; the shopper sends the reference and the store confirms it.
 
 Every `core` use case takes a `TenantContext` and filters by `organizationId`.
 - The workspace goes in the URL (`/app/:workspace/…`) and `requireTenant` resolves it with

@@ -21,4 +21,12 @@ export const forms = {
   workspaceNameTooShort: "El nombre debe tener al menos 2 caracteres",
   workspaceNameTooLong: "El nombre puede tener hasta 80 caracteres",
   tooManyAttempts: "Demasiados intentos. Espera unos minutos y vuelve a probar.",
+  phoneRequired: "Escribe un teléfono donde podamos contactarte",
+  phoneInvalid: "Escribe un teléfono válido",
+  addressRequired: "Escribe la dirección",
+  cityRequired: "Escribe la ciudad o el pueblo",
+  provinceRequired: "Escribe la provincia",
+  textTooLong: "Es demasiado largo",
+  paymentMethodRequired: "Elige cómo vas a pagar",
+  referenceRequired: "Escribe el número de referencia del pago",
 } as const satisfies Translation<typeof en>["forms"];

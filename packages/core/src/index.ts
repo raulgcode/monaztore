@@ -8,6 +8,19 @@ export {
 } from "./catalog-import";
 export { DomainError, NotFoundError } from "./errors";
 export {
+  getOrderByToken,
+  getPaymentOptions,
+  type PaymentOptions,
+  type PlacedOrder,
+  type PricedCart,
+  type PricedLine,
+  placeOrder,
+  priceCart,
+  type ShopperOrder,
+  submitPaymentReference,
+  updateStorePayments,
+} from "./orders";
+export {
   clientAddress,
   hitRateLimit,
   pruneRateLimits,
