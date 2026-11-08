@@ -1,8 +1,15 @@
 import { randomUUID } from "node:crypto";
+import { and, asc, eq, schema } from "@monaztore/db";
 import { createTestDatabase, createTestTenant } from "@monaztore/db/testing";
 import { afterAll, describe, expect, it } from "vitest";
 import { listStoreDomains } from "./store-admin";
-import { addStoreDomain, normalizeHostname, resolveStoreByHost } from "./stores";
+import {
+  addStoreDomain,
+  canOpenWorkspace,
+  normalizeHostname,
+  resolveOnlyStore,
+  resolveStoreByHost,
+} from "./stores";
 import { resolveTenant } from "./workspaces";
 
 const connection = createTestDatabase();
@@ -98,5 +105,41 @@ describe("addStoreDomain", () => {
     ).rejects.toMatchObject({
       code: "forbidden",
     });
+  });
+});
+
+describe("one store per instance (STORE_MODE=single)", () => {
+  it("answers on any host with the instance's first store, on its main domain if it has one", async () => {
+    const { ctx } = await ownerOf();
+    await addStoreDomain(ctx, uniqueDomain("unica"), { primary: true });
+
+    // The test database holds many workspaces: the oldest one is "the" store.
+    const only = await resolveOnlyStore(db, "Shop.Example:443");
+    const [first] = await db
+      .select({ id: schema.organization.id })
+      .from(schema.organization)
+      .orderBy(asc(schema.organization.createdAt), asc(schema.organization.id))
+      .limit(1);
+    const [main] = await db
+      .select({ hostname: schema.storeDomain.hostname })
+      .from(schema.storeDomain)
+      .where(
+        and(
+          eq(schema.storeDomain.organizationId, first?.id ?? ""),
+          eq(schema.storeDomain.primary, true),
+        ),
+      );
+
+    expect(only).toMatchObject({
+      organizationId: first?.id,
+      hostname: main?.hostname ?? "shop.example",
+    });
+    expect(await resolveOnlyStore(db, "not a host")).toBeUndefined();
+  });
+
+  it("lets anyone open a workspace in multistore, and in single only while there is none", async () => {
+    expect(await canOpenWorkspace(db, "multi")).toBe(true);
+    await ownerOf();
+    expect(await canOpenWorkspace(db, "single")).toBe(false);
   });
 });

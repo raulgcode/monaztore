@@ -8,6 +8,7 @@ import {
 } from "react-router";
 import type { Route } from "./+types/root";
 import "./app.css";
+import { project } from "@monaztore/env/project";
 import { DevToolsLink } from "./components/dev-tools-link";
 import { ErrorPage } from "./components/error-page";
 import { NavigationProgress } from "./components/navigation-progress";
@@ -82,7 +83,7 @@ export default function App() {
 // without loader data, and so without `common`: these few texts stay in the bundle, in English.
 const errorTexts = {
   common: {
-    appName: "Monaztore",
+    appName: project.name,
     errorTitle: "Oops, something went wrong",
     errorDetails: "It wasn't your fault. Try again in a moment.",
     errorStatus: "Error {status}",

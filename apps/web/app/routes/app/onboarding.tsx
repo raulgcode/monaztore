@@ -1,7 +1,7 @@
 import { getFormProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { createWorkspaceSchema } from "@monaztore/contracts";
-import { uniqueSlug } from "@monaztore/core";
+import { canOpenWorkspace, uniqueSlug } from "@monaztore/core";
 import { data, Form, href, redirect, useNavigation } from "react-router";
 import { StandalonePage } from "~/components/standalone-page";
 import { TextField } from "~/components/text-field";
@@ -9,7 +9,7 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { metaT, useT } from "~/lib/i18n";
 import { translations } from "~/lib/locale.server";
-import { auth } from "~/lib/services.server";
+import { auth, db, env } from "~/lib/services.server";
 import type { Route } from "./+types/onboarding";
 
 export function meta({ matches }: Route.MetaArgs) {
@@ -17,10 +17,17 @@ export function meta({ matches }: Route.MetaArgs) {
 }
 
 export async function loader({ context }: Route.LoaderArgs) {
-  return { i18n: translations(context, "workspace", "forms") };
+  return {
+    open: await canOpenWorkspace(db, env.STORE_MODE),
+    i18n: translations(context, "workspace", "forms"),
+  };
 }
 
 export async function action({ request }: Route.ActionArgs) {
+  // A standalone store has one workspace: once it exists, the rest join it by invitation.
+  if (!(await canOpenWorkspace(db, env.STORE_MODE))) {
+    throw data("This instance already has its store", { status: 403 });
+  }
   const submission = parseWithZod(await request.formData(), { schema: createWorkspaceSchema });
   if (submission.status !== "success") {
     return data({ result: submission.reply() }, { status: 400 });
@@ -34,7 +41,7 @@ export async function action({ request }: Route.ActionArgs) {
   throw redirect(href("/app/:workspace", { workspace: slug }));
 }
 
-export default function Onboarding({ actionData }: Route.ComponentProps) {
+export default function Onboarding({ loaderData, actionData }: Route.ComponentProps) {
   const t = useT();
   const navigation = useNavigation();
   const [form, fields] = useForm({
@@ -52,10 +59,18 @@ export default function Onboarding({ actionData }: Route.ComponentProps) {
           <CardTitle>
             <h1 className="text-xl">{t("workspace.onboardingHeading")}</h1>
           </CardTitle>
-          <CardDescription>{t("workspace.onboardingIntro")}</CardDescription>
+          <CardDescription>
+            {loaderData.open ? t("workspace.onboardingIntro") : null}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Form method="post" className="grid gap-4" {...getFormProps(form)}>
+          {loaderData.open ? null : <p role="status">{t("workspace.onboardingClosed")}</p>}
+          <Form
+            method="post"
+            className="grid gap-4"
+            hidden={!loaderData.open}
+            {...getFormProps(form)}
+          >
             <TextField
               field={fields.name}
               label={t("workspace.nameLabel")}

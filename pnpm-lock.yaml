@@ -470,6 +470,15 @@ importers:
         specifier: 'catalog:'
         version: 2.16.2
 
+  packages/create:
+    devDependencies:
+      '@monaztore/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+
   packages/db:
     dependencies:
       '@monaztore/env':

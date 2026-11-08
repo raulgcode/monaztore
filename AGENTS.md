@@ -20,7 +20,26 @@ following these rules. If a rule doesn't apply, change it here first and then th
 | `packages/i18n`                 | Languages (en, es): typed dictionaries, `t()`, language choice                   |
 | `packages/env`                  | Environment variable validation with Zod                                         |
 | `packages/importer-woocommerce` | Reads a WooCommerce shop (REST v3 or Store API) into Monaztore's shape           |
+| `packages/create`               | `create-monaztore`: a new project from this template, `rename`, template updates |
 | `tooling/*`                     | Repo scripts: setup, release, Fly secrets, remote e2e                            |
+
+## A template: one instance per client
+
+Monaztore is also the template of every client's project: each client gets an instance of their
+own (their repo, database, Fly apps and domain), multistore or a standalone store.
+- Who the project is lives in `packages/env/src/project.ts` (`name`, `slug`, `domain`); the code
+  reads it (`@monaztore/env/project`) where the name or a host shows. Anything else that names
+  the project is plain text that `rename` rewrites, so never build the name from pieces.
+- `pnpm create monaztore <slug> [--name "Super Chiva"] [--domain superchiva.cr] [--single]`
+  (`packages/create`, published as `create-monaztore`) clones the template, renames it (scope
+  `@<slug>/*`, texts, databases, Fly apps, domain), sets `STORE_MODE`, installs, formats and
+  commits; from this repo, `pnpm new <slug>` does the same next to it.
+- `pnpm template:update [ref]` in a client's project brings the template's changes: the
+  template, renamed to the project, is committed on its `template` branch and merged, so git
+  only stops where the client changed the same lines. `pnpm rename <slug>` renames in place.
+- `STORE_MODE` (`.env`): `multi`, many stores on their own domains and the landing on
+  `APP_URL`; `single`, one store on every host (`resolveOnlyStore`) and onboarding closed once
+  it exists (`canOpenWorkspace`). A feature works in both modes.
 
 ## Rules
 

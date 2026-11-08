@@ -1,4 +1,4 @@
-import { and, type Database, eq, schema } from "@monaztore/db";
+import { and, asc, count, type Database, desc, eq, schema } from "@monaztore/db";
 import { DomainError } from "./errors";
 import type { TenantContext } from "./tenant";
 
@@ -48,6 +48,46 @@ export async function resolveStoreByHost(
     if (found) return found;
   }
   return undefined;
+}
+
+/** One store per instance (`single`, a standalone store) or many on their own domains. */
+export type StoreMode = "single" | "multi";
+
+/**
+ * In a standalone instance (`STORE_MODE=single`), the store that answers on any host the
+ * domains didn't claim: the instance's first workspace. Its links point to its main domain, or
+ * to the host it was asked on while it has none.
+ */
+export async function resolveOnlyStore(
+  db: Database,
+  host: string | null | undefined,
+): Promise<StorefrontStore | undefined> {
+  const hostname = normalizeHostname(host);
+  if (!hostname) return undefined;
+  const [found] = await db
+    .select({
+      organizationId: schema.organization.id,
+      name: schema.organization.name,
+      slug: schema.organization.slug,
+    })
+    .from(schema.organization)
+    .orderBy(asc(schema.organization.createdAt), asc(schema.organization.id))
+    .limit(1);
+  if (!found) return undefined;
+  const [main] = await db
+    .select({ hostname: schema.storeDomain.hostname })
+    .from(schema.storeDomain)
+    .where(eq(schema.storeDomain.organizationId, found.organizationId))
+    .orderBy(desc(schema.storeDomain.primary))
+    .limit(1);
+  return { ...found, hostname: main?.hostname ?? hostname };
+}
+
+/** A standalone instance holds one store: once it exists, nobody opens another. */
+export async function canOpenWorkspace(db: Database, mode: StoreMode): Promise<boolean> {
+  if (mode === "multi") return true;
+  const [row] = await db.select({ total: count() }).from(schema.organization);
+  return (row?.total ?? 0) === 0;
 }
 
 /**

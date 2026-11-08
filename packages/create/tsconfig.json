@@ -1,0 +1,7 @@
+{
+  "extends": "@monaztore/tsconfig/base.json",
+  "include": ["src"],
+  "compilerOptions": {
+    "allowImportingTsExtensions": true
+  }
+}

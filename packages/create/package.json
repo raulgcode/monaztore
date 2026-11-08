@@ -1,0 +1,29 @@
+{
+  "name": "create-monaztore",
+  "version": "0.1.0",
+  "description": "Starts a new store project from the Monaztore template: pnpm create monaztore <name>",
+  "type": "module",
+  "bin": {
+    "create-monaztore": "./dist/index.js"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./rename": "./src/rename.ts",
+    "./project": "./src/project.ts"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "scripts": {
+    "typecheck": "tsc",
+    "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "pnpm build"
+  },
+  "devDependencies": {
+    "@monaztore/tsconfig": "workspace:*",
+    "@types/node": "catalog:"
+  }
+}
