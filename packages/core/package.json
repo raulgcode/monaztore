@@ -11,9 +11,11 @@
   "dependencies": {
     "@monaztore/contracts": "workspace:*",
     "@monaztore/db": "workspace:*",
+    "sanitize-html": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@monaztore/tsconfig": "workspace:*"
+    "@monaztore/tsconfig": "workspace:*",
+    "@types/sanitize-html": "catalog:"
   }
 }

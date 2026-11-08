@@ -8,6 +8,7 @@ export {
   getTableColumns,
   gt,
   gte,
+  ilike,
   inArray,
   isNotNull,
   isNull,
