@@ -4,7 +4,13 @@
  */
 export const setInFlyToml = ["NODE_ENV", "PORT", "APP_URL", "API_URL", "CLIENT_IP_HEADER"];
 
-const localOnly = ["TEST_DATABASE_URL", "MAILPIT_URL", "FILES_DIR"];
+const localOnly = [
+  "TEST_DATABASE_URL",
+  "MAILPIT_URL",
+  "FILES_DIR",
+  "WOOCOMMERCE_KEY",
+  "WOOCOMMERCE_SECRET",
+];
 const r2 = ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET"];
 
 export interface SecretsPlan {

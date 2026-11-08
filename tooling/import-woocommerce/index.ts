@@ -1,9 +1,9 @@
 /**
  * Brings a WooCommerce shop into a Monaztore store:
  *
- *   pnpm import:woocommerce --url https://supechivacr.com --store <store-slug>
+ *   pnpm import:woocommerce --url https://superchivacr.com --store <store-slug>
  *
- * With `WOOCOMMERCE_KEY` and `WOOCOMMERCE_SECRET` in the environment (WooCommerce → Settings →
+ * With `WOOCOMMERCE_KEY` and `WOOCOMMERCE_SECRET` in `.env` (WooCommerce → Settings →
  * Advanced → REST API, "Read" permission) it brings everything: drafts, stock, SEO from Yoast or
  * Rank Math, variations and customers. Without them it reads the public Store API (what any
  * visitor sees). It only reads the shop, never writes to it, and can run as often as needed:
