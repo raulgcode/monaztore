@@ -11,6 +11,7 @@ test.describe("Feature: sign in with an email link", () => {
     await test.step("Given a visitor on the login page, choosing the link", async () => {
       await page.goto("/login");
       await page.getByRole("link", { name: "Email me a link instead, no password" }).click();
+      await expect(page).toHaveURL(/\?with=link$/);
     });
 
     await test.step("When they ask for the link with their email", async () => {

@@ -45,6 +45,17 @@ export {
 } from "./einvoicing";
 export { DomainError, NotFoundError } from "./errors";
 export {
+  ADMIN_MFA_TTL_MS,
+  confirmTotpEnrollment,
+  type MfaActor,
+  type MfaState,
+  markVerified,
+  mfaState,
+  pendingTotpEnrollment,
+  resetMfa,
+  verifyMfaCode,
+} from "./mfa";
+export {
   getOrderByToken,
   getPaymentOptions,
   getShopperEinvoiceFile,
@@ -78,6 +89,40 @@ export {
   type StorePage,
   updatePage,
 } from "./pages";
+export {
+  addPasskey,
+  listPasskeys,
+  PASSKEY_CHALLENGE_TTL_MS,
+  PASSKEYS_MAX,
+  type Passkey,
+  type PasskeyRelyingParty,
+  passkeyRegistrationOptions,
+  passkeySignInOptions,
+  removePasskey,
+  verifyPasskey,
+} from "./passkeys";
+export {
+  type AdminPage,
+  type AdminStoreDetail,
+  type AdminStoreMember,
+  type AdminStoreRow,
+  AUDIT_PAGE_SIZE,
+  type AuditLogRow,
+  cardCommissionBpsFor,
+  getPlatformSettings,
+  getStore,
+  listAuditLog,
+  listStores,
+  type PlatformAdminContext,
+  type PlatformSettings,
+  platformAdminContext,
+  promoteSuperAdmins,
+  SUPER_ADMIN_ROLE,
+  setDefaultCommission,
+  setStoreCommission,
+  setSupportNotice,
+} from "./platform-admin";
+export { type PlatformAuditAction, recordAudit } from "./platform-audit";
 export {
   clientAddress,
   hitRateLimit,
@@ -147,6 +192,7 @@ export {
   type ThemeLayout,
 } from "./theme-presets";
 export { getStoreTheme, getThemeSettings, updateStoreTheme } from "./themes";
+export { totpCode, totpStep } from "./totp";
 export {
   getWorkspace,
   listMemberships,

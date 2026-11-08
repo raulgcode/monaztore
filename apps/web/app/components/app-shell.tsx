@@ -14,7 +14,7 @@ import { ThemeToggle } from "~/components/theme-toggle";
 import { useT } from "~/lib/i18n";
 import { cn } from "~/lib/utils";
 
-interface NavItem {
+export interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
@@ -106,7 +106,7 @@ export function AppShell({
   );
 }
 
-function Nav({
+export function Nav({
   items,
   label,
   variant,

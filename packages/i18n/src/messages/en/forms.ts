@@ -54,4 +54,12 @@ export const forms = {
   pinRequired: "Enter the key's PIN",
   pinInvalid: "The PIN has 4 digits",
   numberInvalid: "Enter a whole number",
+  mfaCodeRequired: "Enter the 6-digit code",
+  mfaCodeInvalid: "That code didn't work. Enter the one your app shows now, or a recovery code.",
+  passkeyNameRequired: 'Give it a name, like "iPhone"',
+  passkeyNameTooLong: "Use 60 characters or fewer",
+  commissionRequired: "Enter the percentage",
+  commissionInvalid: "Write a percentage like 2.5",
+  commissionTooHigh: "The commission can't be more than 20 %",
+  noteTooLong: "Use 280 characters or fewer",
 } as const;

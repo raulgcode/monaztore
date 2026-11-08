@@ -25,6 +25,8 @@
     "db:migrate": "pnpm --filter @monaztore/db migrate",
     "db:studio": "pnpm --filter @monaztore/db studio",
     "auth:generate": "pnpm --filter @monaztore/auth auth:generate",
+    "admin:seed": "tsx tooling/admin/seed.ts",
+    "admin:reset-2fa": "tsx tooling/admin/reset-2fa.ts",
     "import:woocommerce": "tsx tooling/import-woocommerce/index.ts",
     "new": "node packages/create/src/index.ts --template .",
     "rename": "node packages/create/src/rename-cli.ts",

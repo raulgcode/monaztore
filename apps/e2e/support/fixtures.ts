@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
+import { promoteSuperAdmins, totpCode, totpStep } from "@monaztore/core";
 import type { Database } from "@monaztore/db";
 import {
   type Browser,
@@ -29,6 +30,11 @@ interface Fixtures {
    * language unless `options` says otherwise. Closed when the test ends, even if it fails.
    */
   newVisitor: (options?: BrowserContextOptions) => Promise<Page>;
+  /**
+   * Makes a new person a super admin (as `pnpm admin:seed` does), signs them in and sets up
+   * their authenticator app, landing on /admin. Returns the email and the app's secret.
+   */
+  signInAsSuperAdmin: (page: Page) => Promise<{ email: string; secret: string }>;
 }
 
 interface WorkerFixtures {
@@ -52,6 +58,40 @@ async function signInThroughEmail(
   await expect(page.getByRole("main").getByRole("status")).toContainText(email);
   await page.goto(await getLinkFromEmail(email, baseURL));
   return email;
+}
+
+/** A super admin's email link: it stops at the second step, before the panel. */
+export async function adminSignInThroughEmail(
+  page: Page,
+  baseURL: string | undefined,
+  email: string,
+): Promise<void> {
+  await page.goto("/login?with=link&redirectTo=%2Fadmin");
+  await page.getByLabel("Email").fill(email);
+  await page.getByRole("button", { name: "Email me the link" }).click();
+  await expect(page.getByRole("main").getByRole("status")).toContainText(email);
+  await page.goto(await getLinkFromEmail(email, baseURL));
+  await expect(page).toHaveURL(/\/admin\/mfa\?redirectTo=/);
+}
+
+/** What the authenticator app shows for the secret right now (or `stepsAhead` codes later). */
+export function authenticatorCode(secret: string, stepsAhead = 0): string {
+  return totpCode(secret, totpStep() + stepsAhead);
+}
+
+/** First visit: reads the key under the QR, as an app would, and confirms its first code. */
+export async function setUpAuthenticator(page: Page): Promise<string> {
+  await expect(
+    page.getByRole("heading", { name: "Protect the panel with your phone" }),
+  ).toBeVisible();
+  const secret = (await page.getByTestId("totp-secret").textContent())?.trim() ?? "";
+  await page.getByLabel("Code from the app").fill(authenticatorCode(secret));
+  await page.getByRole("button", { name: "Turn on" }).click();
+  await expect(
+    page.getByRole("list", { name: "Recovery codes" }).getByRole("listitem"),
+  ).toHaveCount(8);
+  await page.getByRole("link", { name: "I saved them, continue" }).click();
+  return secret;
 }
 
 /** Creates the workspace from the onboarding, landing on its home. */
@@ -132,6 +172,16 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
       const email = await signIn(page);
       await createWorkspace(page, workspaceName);
       return email;
+    });
+  },
+  signInAsSuperAdmin: async ({ baseURL, db }, use) => {
+    await use(async (page) => {
+      const email = uniqueEmail("admin");
+      await promoteSuperAdmins(db, [email]);
+      await adminSignInThroughEmail(page, baseURL, email);
+      const secret = await setUpAuthenticator(page);
+      await expect(page).toHaveURL(/\/admin$/);
+      return { email, secret };
     });
   },
   workspaceOf: async ({ db }, use) => {

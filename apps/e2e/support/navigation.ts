@@ -8,3 +8,12 @@ export async function openSection(page: Page, name: string): Promise<void> {
   await page.getByRole("navigation", { name: "Main menu" }).getByRole("link", { name }).click();
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
 }
+
+/** Opens a section of /admin from its menu, like `openSection` in a workspace. */
+export async function openAdminSection(page: Page, name: string): Promise<void> {
+  await page
+    .getByRole("navigation", { name: "Admin sections" })
+    .getByRole("link", { name })
+    .click();
+  await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
+}

@@ -43,6 +43,13 @@
       "when": 1794141222135,
       "tag": "0005_clear_micromax",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794142310276,
+      "tag": "0006_dazzling_scrambler",
+      "breakpoints": true
     }
   ]
 }

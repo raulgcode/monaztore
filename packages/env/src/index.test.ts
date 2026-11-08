@@ -6,6 +6,7 @@ import {
   googleCredentials,
   parseEnv,
   serverEnvSchema,
+  superAdminEnvSchema,
 } from "./index";
 
 const base = {
@@ -89,5 +90,14 @@ describe("parseEnv", () => {
 
   it("lists every invalid variable", () => {
     expect(() => parseEnv(serverEnvSchema, {})).toThrow(/APP_URL[\s\S]*DATABASE_URL/);
+  });
+});
+
+describe("SUPER_ADMIN_EMAILS", () => {
+  it("reads a comma-separated list, lowercased and without blanks", () => {
+    expect(
+      parseEnv(superAdminEnvSchema, { SUPER_ADMIN_EMAILS: " Raul@Example.com, ,ana@x.test " }),
+    ).toEqual({ SUPER_ADMIN_EMAILS: ["raul@example.com", "ana@x.test"] });
+    expect(parseEnv(superAdminEnvSchema, {})).toEqual({ SUPER_ADMIN_EMAILS: [] });
   });
 });

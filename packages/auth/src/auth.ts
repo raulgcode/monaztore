@@ -11,7 +11,7 @@ import { project } from "@monaztore/env/project";
 import { defaultLocale, parseLocale } from "@monaztore/i18n";
 import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { magicLink, organization } from "better-auth/plugins";
+import { admin, magicLink, organization } from "better-auth/plugins";
 import { createElement } from "react";
 import { devSignIn } from "./dev-sign-in";
 
@@ -76,6 +76,31 @@ export const disabledOrganizationPaths = [
   "/organization/check-slug",
 ];
 
+/** The platform operator's role on `user.role`: the only one that opens /admin. */
+export const SUPER_ADMIN_ROLE = "admin";
+
+/**
+ * The super admin endpoints. /admin calls them with `auth.api` after its own checks (the
+ * authenticator code, the internal log); over HTTP they would skip both.
+ */
+export const disabledAdminPaths = [
+  "/admin/ban-user",
+  "/admin/create-user",
+  "/admin/get-user",
+  "/admin/has-permission",
+  "/admin/impersonate-user",
+  "/admin/list-user-sessions",
+  "/admin/list-users",
+  "/admin/remove-user",
+  "/admin/revoke-user-session",
+  "/admin/revoke-user-sessions",
+  "/admin/set-role",
+  "/admin/set-user-password",
+  "/admin/stop-impersonating",
+  "/admin/unban-user",
+  "/admin/update-user",
+];
+
 export interface CreateAuthOptions {
   db: Database;
   mailer: Mailer;
@@ -136,7 +161,7 @@ export function createAuth({
     secret,
     trustedOrigins: [baseURL, ...trustedOrigins],
     rateLimit: { enabled: rateLimit, customStorage: rateLimitStorage },
-    disabledPaths: disabledOrganizationPaths,
+    disabledPaths: [...disabledOrganizationPaths, ...disabledAdminPaths],
     database: drizzleAdapter(db, { provider: "pg", schema }),
     user: {
       additionalFields: {
@@ -207,6 +232,12 @@ export function createAuth({
         },
       }),
       organization({ creatorRole: "owner" }),
+      // Support sessions ("Entrar como dueño") last an hour; nobody gets the role over HTTP.
+      admin({
+        defaultRole: "user",
+        adminRoles: [SUPER_ADMIN_ROLE],
+        impersonationSessionDuration: 60 * 60,
+      }),
       devSignIn(devSignInEnabled),
     ],
   });

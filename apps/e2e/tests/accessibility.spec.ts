@@ -1,6 +1,13 @@
 import { storeThemeIds, storeThemeSchema } from "@monaztore/contracts";
-import { updateStoreTheme } from "@monaztore/core";
-import { expect, ownerTest, test } from "../support/fixtures";
+import { promoteSuperAdmins, updateStoreTheme } from "@monaztore/core";
+import {
+  adminSignInThroughEmail,
+  expect,
+  ownerTest,
+  setUpAuthenticator,
+  test,
+} from "../support/fixtures";
+import { uniqueEmail } from "../support/mailpit";
 import { openStore, placeSampleOrder } from "../support/storefront";
 
 const schemes = ["light", "dark"] as const;
@@ -8,6 +15,8 @@ const schemes = ["light", "dark"] as const;
 const publicPages = ["/", "/login", "/login?with=link", "/sign-up", "/forgot-password"];
 // Sections inside the workspace, after /app/:workspace. A new section goes here.
 const workspaceSections = ["", "/orders", "/pages", "/store", "/design", "/invoicing", "/settings"];
+// The platform's /admin, after its second step. A new admin section goes here.
+const adminSections = ["", "/commission", "/log", "/security"];
 // Storefront pages, on a store's own domain. A new storefront page goes here.
 const storePages = [
   "/",
@@ -29,6 +38,28 @@ test.describe("Feature: accessibility (axe, WCAG 2.2 AA)", () => {
           await expectAccessible(page);
         });
       }
+
+      test("Scenario: the super admin's second step and every /admin section have no violations", async ({
+        page,
+        baseURL,
+        db,
+        expectAccessible,
+      }) => {
+        const email = uniqueEmail("admin");
+        await promoteSuperAdmins(db, [email]);
+        await adminSignInThroughEmail(page, baseURL, email);
+        await expectAccessible(page);
+        await setUpAuthenticator(page);
+        for (const path of adminSections) {
+          await page.goto(`/admin${path}`);
+          await expectAccessible(page);
+        }
+        // A store's detail: the newest one on the list.
+        await page.goto("/admin");
+        await page.getByRole("main").getByRole("listitem").first().getByRole("link").click();
+        await expect(page).toHaveURL(/\/admin\/stores\//);
+        await expectAccessible(page);
+      });
 
       ownerTest(
         "Scenario: the storefront pages have no violations",

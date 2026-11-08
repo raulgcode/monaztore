@@ -14,6 +14,7 @@
     "@monaztore/db": "workspace:*",
     "@monaztore/hacienda": "workspace:*",
     "@monaztore/storage": "workspace:*",
+    "@simplewebauthn/server": "catalog:",
     "sanitize-html": "catalog:",
     "zod": "catalog:"
   },
