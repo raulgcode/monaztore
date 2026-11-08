@@ -1,0 +1,24 @@
+import type { Translation } from "../../translate";
+import type { en } from "../en";
+
+/**
+ * Shared by the forms, including the validation errors: the schemas in `@monaztore/contracts`
+ * return these keys and `FieldErrors` translates them.
+ */
+export const forms = {
+  emailLabel: "Correo electrónico",
+  emailPlaceholder: "tu@correo.com",
+  continueWithGoogle: "Continuar con Google",
+  orWithEmail: "o con tu correo",
+  emailRequired: "Escribe tu correo",
+  emailInvalid: "Escribe un correo válido",
+  passwordRequired: "Escribe tu contraseña",
+  passwordTooShort: "Usa al menos 8 caracteres",
+  passwordTooLong: "Usa hasta 128 caracteres",
+  nameRequired: "Escribe tu nombre",
+  nameTooLong: "Tu nombre puede tener hasta 80 caracteres",
+  workspaceNameRequired: "Escribe el nombre de tu espacio",
+  workspaceNameTooShort: "El nombre debe tener al menos 2 caracteres",
+  workspaceNameTooLong: "El nombre puede tener hasta 80 caracteres",
+  tooManyAttempts: "Demasiados intentos. Espera unos minutos y vuelve a probar.",
+} as const satisfies Translation<typeof en>["forms"];

@@ -1,0 +1,50 @@
+# The API on Fly.io (api.monaztore.com) and its scheduled jobs. Deployed first by
+# .github/workflows/deploy.yml; by hand: `fly deploy --config fly.api.toml`. Secrets (same set as
+# the web): docs/deploy.md.
+app = "monaztore-api"
+primary_region = "iad"
+kill_signal = "SIGTERM"
+kill_timeout = "30s"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[deploy]
+  # Before the new version starts. If it fails, nothing is deployed and the old version keeps
+  # running.
+  release_command = "sh -c 'cd /app && pnpm db:migrate'"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3001"
+  APP_URL = "https://app.monaztore.com"
+  API_URL = "https://api.monaztore.com"
+  CLIENT_IP_HEADER = "fly-client-ip"
+
+[processes]
+  app = "sh -c 'cd /app/apps/api && exec node_modules/.bin/tsx --tsconfig tsconfig.run.json src/server.ts'"
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  # One machine, always on: the scheduled jobs live in this process.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 200
+    hard_limit = 250
+
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval = "15s"
+    timeout = "5s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"

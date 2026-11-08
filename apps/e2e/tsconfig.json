@@ -1,0 +1,7 @@
+{
+  "extends": "@monaztore/tsconfig/base.json",
+  "compilerOptions": {
+    "lib": ["DOM", "ES2023"]
+  },
+  "include": ["**/*.ts"]
+}

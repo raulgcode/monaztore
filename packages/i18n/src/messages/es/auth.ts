@@ -1,0 +1,50 @@
+import type { Translation } from "../../translate";
+import type { en } from "../en";
+
+/** /login, /sign-up, /forgot-password and /reset-password. */
+export const auth = {
+  title: "Entrar",
+  description: "Entra a tu cuenta.",
+  heading: "Entra a tu cuenta",
+  intro: "Elige cómo quieres entrar.",
+  logoHome: "Ir al inicio",
+  send: "Enviarme el enlace",
+  sending: "Enviando…",
+  sent: "Te mandamos un enlace a <email>{email}</email>. Ábrelo en este dispositivo para entrar.",
+  magicLinkHint: "Te mandamos un enlace para entrar, sin contraseña.",
+  useMagicLink: "Mejor mándame un enlace, sin contraseña",
+  usePassword: "Entrar con mi contraseña",
+  googleFailed: "No pudimos entrar con Google. Vuelve a intentarlo o usa tu correo.",
+  passwordLabel: "Contraseña",
+  signInWithPassword: "Entrar",
+  signingIn: "Entrando…",
+  wrongPassword: "El correo o la contraseña no coinciden.",
+  emailNotVerified:
+    "Primero confirma tu correo: te mandamos un enlace nuevo a <email>{email}</email>.",
+  forgotLink: "¿Olvidaste tu contraseña?",
+  noAccount: "¿No tienes cuenta? <link>Créala aquí</link>",
+  haveAccount: "¿Ya tienes cuenta? <link>Entra aquí</link>",
+  signUpTitle: "Crear cuenta",
+  signUpHeading: "Crea tu cuenta",
+  signUpIntro: "Con tu correo y una contraseña.",
+  nameLabel: "Tu nombre",
+  signUp: "Crear cuenta",
+  signingUp: "Creando…",
+  emailTaken: "Ya hay una cuenta con ese correo.",
+  checkEmailHeading: "Revisa tu correo",
+  checkEmailBody:
+    "Te mandamos un enlace a <email>{email}</email> para confirmar tu cuenta. Ábrelo para entrar.",
+  forgotTitle: "Recuperar contraseña",
+  forgotHeading: "Recupera tu contraseña",
+  forgotIntro: "Escribe tu correo y te mandamos un enlace para elegir una nueva.",
+  forgotSend: "Mandarme el enlace",
+  forgotSent:
+    "Si hay una cuenta con <email>{email}</email>, te llegará un enlace para elegir otra contraseña.",
+  resetTitle: "Nueva contraseña",
+  resetHeading: "Elige tu nueva contraseña",
+  newPasswordLabel: "Nueva contraseña",
+  resetSave: "Guardar contraseña",
+  resetInvalid: "El enlace venció o ya se usó. Pide otro.",
+  resetDone: "Listo, ya puedes entrar con tu nueva contraseña.",
+  backToSignIn: "Volver a entrar",
+} as const satisfies Translation<typeof en>["auth"];

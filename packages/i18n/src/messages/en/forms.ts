@@ -1,0 +1,17 @@
+export const forms = {
+  emailLabel: "Email",
+  emailPlaceholder: "you@email.com",
+  continueWithGoogle: "Continue with Google",
+  orWithEmail: "or with your email",
+  emailRequired: "Enter your email",
+  emailInvalid: "Enter a valid email",
+  passwordRequired: "Enter your password",
+  passwordTooShort: "Use at least 8 characters",
+  passwordTooLong: "Use up to 128 characters",
+  nameRequired: "Enter your name",
+  nameTooLong: "Your name can be up to 80 characters",
+  workspaceNameRequired: "Enter your workspace's name",
+  workspaceNameTooShort: "The name needs at least 2 characters",
+  workspaceNameTooLong: "The name can be up to 80 characters",
+  tooManyAttempts: "Too many tries. Wait a few minutes and try again.",
+} as const;

@@ -1,0 +1,3 @@
+`$page.waitForTimeout($_)` as $call where {
+  register_diagnostic(span=$call, message="E2E: no waitForTimeout. Wait for what the person sees, with expect().", severity="error")
+}

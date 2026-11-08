@@ -1,0 +1,17 @@
+{
+  "name": "@monaztore/env",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@monaztore/tsconfig": "workspace:*"
+  }
+}

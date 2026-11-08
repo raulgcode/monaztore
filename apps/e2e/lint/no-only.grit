@@ -1,0 +1,3 @@
+`$test.only` as $only where {
+  register_diagnostic(span=$only, message="E2E: no .only. It would leave the rest of the suite out of CI.", severity="error")
+}

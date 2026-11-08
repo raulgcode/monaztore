@@ -1,0 +1,44 @@
+{
+  "name": "monaztore",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "scripts": {
+    "setup": "tsx tooling/setup/index.ts",
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "pnpm --filter @monaztore/e2e test",
+    "e2e:remote": "tsx tooling/e2e-remote/index.ts",
+    "release": "tsx tooling/release/index.ts",
+    "fly:secrets": "tsx tooling/fly-secrets/index.ts",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:generate": "pnpm --filter @monaztore/db generate",
+    "db:migrate": "pnpm --filter @monaztore/db migrate",
+    "db:studio": "pnpm --filter @monaztore/db studio",
+    "auth:generate": "pnpm --filter @monaztore/auth auth:generate"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@monaztore/db": "workspace:*",
+    "@monaztore/env": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/browser-playwright": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "lefthook": "catalog:",
+    "playwright": "catalog:",
+    "tsx": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "vitest-browser-react": "catalog:"
+  }
+}

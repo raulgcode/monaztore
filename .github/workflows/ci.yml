@@ -1,0 +1,45 @@
+# Each push: lint, typecheck and Vitest (unit, integration against Postgres + Mailpit, browser).
+# The Playwright scenarios run on demand in e2e.yml (`pnpm e2e:remote`).
+name: CI
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: monaztore
+          POSTGRES_PASSWORD: monaztore
+          POSTGRES_DB: monaztore_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U monaztore -d monaztore_test"
+          --health-interval 2s --health-timeout 5s --health-retries 20
+      mailpit:
+        image: axllent/mailpit:latest
+        env:
+          MP_SMTP_AUTH_ACCEPT_ANY: 1
+          MP_SMTP_AUTH_ALLOW_INSECURE: 1
+        ports: ["1025:1025", "8025:8025"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/setup
+      # Known advisories in production dependencies (the accepted ones: auditConfig in
+      # pnpm-workspace.yaml).
+      - run: pnpm audit --prod --audit-level high
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test

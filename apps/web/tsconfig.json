@@ -1,0 +1,12 @@
+{
+  "extends": "@monaztore/tsconfig/react.json",
+  "include": ["**/*", "**/.server/**/*", "**/.client/**/*", ".react-router/types/**/*"],
+  "exclude": ["build", "node_modules"],
+  "compilerOptions": {
+    "types": ["node", "vite/client", "@vitest/browser-playwright"],
+    "rootDirs": [".", "./.react-router/types"],
+    "paths": {
+      "~/*": ["./app/*"]
+    }
+  }
+}

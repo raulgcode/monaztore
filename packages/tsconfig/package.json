@@ -1,0 +1,8 @@
+{
+  "name": "@monaztore/tsconfig",
+  "private": true,
+  "files": [
+    "base.json",
+    "react.json"
+  ]
+}

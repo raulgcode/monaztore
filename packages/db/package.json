@@ -1,0 +1,27 @@
+{
+  "name": "@monaztore/db",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts",
+    "./testing": "./src/testing.ts",
+    "./migrate": "./src/migrate.ts"
+  },
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx src/migrate.ts",
+    "studio": "drizzle-kit studio",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@monaztore/env": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "pg": "catalog:"
+  },
+  "devDependencies": {
+    "@monaztore/tsconfig": "workspace:*",
+    "@types/pg": "catalog:",
+    "drizzle-kit": "catalog:"
+  }
+}

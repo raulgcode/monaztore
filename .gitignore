@@ -1,0 +1,20 @@
+node_modules/
+.env
+.env.*
+!.env.example
+dist/
+build/
+coverage/
+.turbo/
+.react-router/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+*.log
+.DS_Store
+.lighthouseci/
+.vitest/
+.data/
+# Playwright CLI output (may contain credentials)
+.playwright-cli/

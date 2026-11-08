@@ -1,0 +1,139 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* `dark:` follows the resolved theme: the OS preference unless the person picked one. */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) & {
+      @slot;
+    }
+  }
+  :root[data-theme="dark"] & {
+    @slot;
+  }
+}
+
+/*
+ * Theme tokens: light-dark(light, dark), resolved by `color-scheme` on <html>. Components use only
+ * these (`bg-primary`, `text-muted-foreground`, …), never raw colors. app/lib/brand.test.ts checks
+ * every text/surface pair for WCAG AA and that the emails (@monaztore/email/brand) match. To rebrand,
+ * change the values here and in packages/email/src/brand.ts, then run `pnpm test`.
+ * System fonts keep the page inside the Lighthouse budget.
+ */
+:root {
+  color-scheme: light dark;
+  --radius: 0.75rem;
+
+  --background: light-dark(#ffffff, #09090b);
+  --foreground: light-dark(#18181b, #fafafa);
+  --card: light-dark(#ffffff, #18181b);
+  --card-foreground: light-dark(#18181b, #fafafa);
+  --primary: light-dark(#4338ca, #a5b4fc);
+  --primary-foreground: light-dark(#ffffff, #1e1b4b);
+  --secondary: light-dark(#f4f4f5, #27272a);
+  --secondary-foreground: light-dark(#18181b, #fafafa);
+  --muted: light-dark(#f4f4f5, #27272a);
+  --muted-foreground: light-dark(#52525b, #a1a1aa);
+  --accent: light-dark(#eef2ff, #1e1b4b);
+  --accent-foreground: light-dark(#3730a3, #e0e7ff);
+  --destructive: light-dark(#b91c1c, #f87171);
+  --destructive-foreground: light-dark(#ffffff, #09090b);
+  --warning: light-dark(#fffbeb, #422006);
+  --warning-foreground: light-dark(#92400e, #fde68a);
+  --border: light-dark(#e4e4e7, #27272a);
+  --input: light-dark(#71717a, #71717a);
+  --ring: light-dark(#4f46e5, #818cf8);
+  --link: light-dark(#4338ca, #a5b4fc);
+  --sidebar: light-dark(#fafafa, #111113);
+  --nav-active: light-dark(#eef2ff, #1e1b4b);
+  --nav-active-foreground: light-dark(#3730a3, #c7d2fe);
+  /* Edge shadow of horizontal scrollers (<ScrollShadow>): there is more to see that way. */
+  --scroll-shadow: light-dark(rgb(24 24 27 / 0.2), rgb(0 0 0 / 0.75));
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-link: var(--link);
+  --color-sidebar: var(--sidebar);
+  --color-nav-active: var(--nav-active);
+  --color-nav-active-foreground: var(--nav-active-foreground);
+  --color-scroll-shadow: var(--scroll-shadow);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* <NavigationProgress />: shows after 150 ms, then creeps to 90% while the page loads. */
+@layer components {
+  .navigation-progress-bar {
+    width: 90%;
+    transform-origin: left;
+    animation:
+      navigation-progress-in 150ms 150ms both,
+      navigation-progress-grow 8s 150ms cubic-bezier(0.1, 0.8, 0.2, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* No movement: a full bar that just appears after the same delay. */
+    .navigation-progress-bar {
+      width: 100%;
+      animation: navigation-progress-in 0s 150ms both;
+    }
+  }
+}
+
+@keyframes navigation-progress-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes navigation-progress-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "name": "@monaztore/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "react-router build",
+    "dev": "react-router dev",
+    "start": "react-router-serve ./build/server/index.js",
+    "typecheck": "NODE_ENV=development react-router typegen && tsc",
+    "lighthouse": "lhci autorun && pnpm lighthouse:dark && pnpm lighthouse:es",
+    "lighthouse:dark": "lhci autorun --collect.settings.extraHeaders='{\"Cookie\":\"theme=ImRhcmsi\"}'",
+    "lighthouse:es": "lhci autorun --collect.settings.extraHeaders='{\"Accept-Language\":\"es\"}'"
+  },
+  "dependencies": {
+    "@conform-to/react": "catalog:",
+    "@conform-to/zod": "catalog:",
+    "@react-router/node": "catalog:",
+    "@react-router/serve": "catalog:",
+    "@monaztore/auth": "workspace:*",
+    "@monaztore/contracts": "workspace:*",
+    "@monaztore/core": "workspace:*",
+    "@monaztore/db": "workspace:*",
+    "@monaztore/email": "workspace:*",
+    "@monaztore/env": "workspace:*",
+    "@monaztore/i18n": "workspace:*",
+    "class-variance-authority": "catalog:",
+    "clsx": "catalog:",
+    "isbot": "catalog:",
+    "lucide-react": "catalog:",
+    "radix-ui": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-router": "catalog:",
+    "tailwind-merge": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@lhci/cli": "catalog:",
+    "@react-router/dev": "catalog:",
+    "@monaztore/tsconfig": "workspace:*",
+    "@tailwindcss/vite": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "tailwindcss": "catalog:",
+    "tw-animate-css": "catalog:",
+    "vite": "catalog:"
+  }
+}

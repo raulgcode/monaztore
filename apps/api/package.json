@@ -1,0 +1,29 @@
+{
+  "name": "@monaztore/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --tsconfig tsconfig.run.json src/server.ts",
+    "start": "tsx --tsconfig tsconfig.run.json src/server.ts",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@fastify/cors": "catalog:",
+    "@fastify/helmet": "catalog:",
+    "@fastify/sensible": "catalog:",
+    "@fastify/swagger": "catalog:",
+    "@monaztore/contracts": "workspace:*",
+    "@monaztore/core": "workspace:*",
+    "@monaztore/db": "workspace:*",
+    "@monaztore/email": "workspace:*",
+    "@monaztore/env": "workspace:*",
+    "fastify": "catalog:",
+    "fastify-type-provider-zod": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@monaztore/tsconfig": "workspace:*",
+    "pino-pretty": "catalog:",
+    "tsx": "catalog:"
+  }
+}

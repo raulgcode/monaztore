@@ -1,0 +1,4 @@
+`$scope.locator($selector)` as $call where {
+  $selector <: r"[\"'`]xpath=.*",
+  register_diagnostic(span=$call, message="E2E: no XPath. Find the element by role, label or text, as the person would.", severity="error")
+}

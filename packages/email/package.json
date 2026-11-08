@@ -1,0 +1,29 @@
+{
+  "name": "@monaztore/email",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./brand": "./src/brand.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@faire/mjml-react": "catalog:",
+    "@monaztore/env": "workspace:*",
+    "@monaztore/i18n": "workspace:*",
+    "html-to-text": "catalog:",
+    "mjml": "catalog:",
+    "nodemailer": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@monaztore/tsconfig": "workspace:*",
+    "@types/html-to-text": "catalog:",
+    "@types/nodemailer": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:"
+  }
+}

@@ -1,0 +1,16 @@
+# What the image doesn't need, and what must never go into it (.env with the local secrets).
+**/node_modules
+**/build
+**/dist
+**/.react-router
+**/.turbo
+**/coverage
+**/test-results
+**/playwright-report
+**/.lighthouseci
+.git
+.data
+.env
+.env.*
+!.env.example
+*.log

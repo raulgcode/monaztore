@@ -1,0 +1,8 @@
+# Installed by `pnpm install` (lefthook postinstall). Docs: https://lefthook.dev
+pre-commit:
+  parallel: true
+  jobs:
+    - name: biome
+      glob: "*.{js,ts,tsx,json,jsonc,css}"
+      run: pnpm exec biome check --write --no-errors-on-unmatched {staged_files}
+      stage_fixed: true

@@ -1,0 +1,3 @@
+`force: true` as $force where {
+  register_diagnostic(span=$force, message="E2E: no force: true. If the element can't be clicked, the person can't click it either.", severity="error")
+}

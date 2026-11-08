@@ -1,0 +1,7 @@
+{
+  // What tsx runs with (dev, start, e2e:webhooks). tsx applies a tsconfig only to the files it
+  // includes, so without the workspace packages here their .tsx (the emails) would compile with
+  // the classic JSX transform and fail with "React is not defined".
+  "extends": "./tsconfig.json",
+  "include": ["src", "test", "../../packages/*/src"]
+}

@@ -1,0 +1,4 @@
+{
+  "extends": "@monaztore/tsconfig/base.json",
+  "include": ["src", "drizzle.config.ts"]
+}

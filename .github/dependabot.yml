@@ -1,0 +1,7 @@
+# The GitHub Actions are pinned by commit; Dependabot proposes the new commits each month.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories: ["/", "/.github/actions/setup"]
+    schedule:
+      interval: monthly

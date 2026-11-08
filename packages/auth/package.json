@@ -1,0 +1,26 @@
+{
+  "name": "@monaztore/auth",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc",
+    "auth:generate": "auth generate --config src/cli-config.ts --output ../db/src/schema/auth.ts --yes"
+  },
+  "dependencies": {
+    "@monaztore/db": "workspace:*",
+    "@monaztore/email": "workspace:*",
+    "@monaztore/env": "workspace:*",
+    "@monaztore/i18n": "workspace:*",
+    "better-auth": "catalog:",
+    "react": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@monaztore/tsconfig": "workspace:*",
+    "@types/react": "catalog:",
+    "auth": "catalog:"
+  }
+}
