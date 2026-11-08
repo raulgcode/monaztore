@@ -1,0 +1,17 @@
+{
+  "name": "@monaztore/importer-woocommerce",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@monaztore/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@monaztore/tsconfig": "workspace:*"
+  }
+}

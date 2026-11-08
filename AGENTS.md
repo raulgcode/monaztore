@@ -7,19 +7,20 @@ following these rules. If a rule doesn't apply, change it here first and then th
 
 ## Monorepo map
 
-| Path                 | What it is                                                          |
-| -------------------- | ------------------------------------------------------------------- |
-| `apps/web`           | React Router 8 (framework mode): pages, sign-in, the workspace      |
-| `apps/api`           | Fastify + Zod: public API, webhooks and scheduled jobs              |
-| `apps/e2e`           | Playwright: BDD scenarios on phone and desktop, accessibility (axe) |
-| `packages/core`      | Multi-tenant use cases. All business logic lives here               |
-| `packages/contracts` | `zod/mini` schemas shared by forms, actions, API and core           |
-| `packages/db`        | Drizzle: schema, migrations, client, test utilities                 |
-| `packages/auth`      | Better Auth: email link, password, Google and organizations         |
-| `packages/email`     | Nodemailer + MJML: branded emails, in light and dark                |
-| `packages/i18n`      | Languages (en, es): typed dictionaries, `t()`, language choice      |
-| `packages/env`       | Environment variable validation with Zod                            |
-| `tooling/*`          | Repo scripts: setup, release, Fly secrets, remote e2e               |
+| Path                            | What it is                                                                       |
+| ------------------------------- | -------------------------------------------------------------------------------- |
+| `apps/web`                      | React Router 8 (framework mode): pages, sign-in, the workspace                   |
+| `apps/api`                      | Fastify + Zod: public API, webhooks and scheduled jobs                           |
+| `apps/e2e`                      | Playwright: BDD scenarios on phone and desktop, accessibility (axe)              |
+| `packages/core`                 | Multi-tenant use cases (stores, catalog, imports). All business logic lives here |
+| `packages/contracts`            | `zod/mini` schemas shared by forms, actions, API and core                        |
+| `packages/db`                   | Drizzle: schema, migrations, client, test utilities                              |
+| `packages/auth`                 | Better Auth: email link, password, Google and organizations                      |
+| `packages/email`                | Nodemailer + MJML: branded emails, in light and dark                             |
+| `packages/i18n`                 | Languages (en, es): typed dictionaries, `t()`, language choice                   |
+| `packages/env`                  | Environment variable validation with Zod                                         |
+| `packages/importer-woocommerce` | Reads a WooCommerce shop (REST v3 or Store API) into Monaztore's shape           |
+| `tooling/*`                     | Repo scripts: setup, release, Fly secrets, remote e2e                            |
 
 ## Rules
 
@@ -189,6 +190,11 @@ and the routes of a method that is off respond 404 (`requireMethod`).
   `import.meta.env.DEV` and `requireDevTools` requires localhost.
 
 ### Multi-tenant
+
+In Monaztore every store is a workspace (a Better Auth organization). The admin keeps the
+workspace in the URL; the public storefront finds its store from the request's Host with
+`resolveStoreByHost` (`store_domain`), the one public entry point that picks a store. Operator
+tools run from a terminal (`pnpm import:woocommerce`) use `ownerContextForStore`.
 
 Every `core` use case takes a `TenantContext` and filters by `organizationId`.
 - The workspace goes in the URL (`/app/:workspace/…`) and `requireTenant` resolves it with

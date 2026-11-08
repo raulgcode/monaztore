@@ -17,6 +17,7 @@ export {
   max,
   ne,
   notExists,
+  notInArray,
   or,
   type SQL,
   type SQLWrapper,
