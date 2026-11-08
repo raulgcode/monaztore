@@ -5,6 +5,7 @@ export {
   type ImageCopyResult,
   mediaKeyOf,
   mediaPath,
+  saveStoreImage,
 } from "./catalog-images";
 export {
   type CatalogImportResult,
@@ -28,6 +29,25 @@ export {
   submitPaymentReference,
   updateStorePayments,
 } from "./orders";
+export {
+  blockProducts,
+  cleanBlocks,
+  createPage,
+  deletePage,
+  getPage,
+  getStorePage,
+  importPages,
+  listPages,
+  listStorePages,
+  type PageInput,
+  type PageStatus,
+  type PageSummary,
+  pagePath,
+  previewBlockProducts,
+  type StorefrontPage,
+  type StorePage,
+  updatePage,
+} from "./pages";
 export {
   clientAddress,
   hitRateLimit,

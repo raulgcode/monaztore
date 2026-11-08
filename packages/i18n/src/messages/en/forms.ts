@@ -27,4 +27,10 @@ export const forms = {
   ibanInvalid: "Enter a valid IBAN, like CR05015202001026284066",
   domainRequired: "Enter the domain",
   domainInvalid: "Write only the domain, like mitienda.com",
+  linkInvalid: "Use an address of your store (/products/…) or one that starts with https://",
+  blocksInvalid: "Something in the page's blocks isn't right. Check them and try again.",
+  pageTitleRequired: "Give the page a title",
+  pageSlugInvalid: "Use lowercase letters, numbers and dashes, like about-us",
+  pageSlugReserved: "Your store already uses this address. Pick another one.",
+  pageSlugTaken: "Another page already has this address",
 } as const;

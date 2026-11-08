@@ -105,10 +105,24 @@ function catalog(overrides: Partial<ImportedCatalog> = {}): ImportedCatalog {
 }
 
 describe("importCatalog", () => {
-  it("brings categories with their parent, products with variants, customers and 301s", async () => {
+  it("brings categories with their parent, products with variants, customers, pages and 301s", async () => {
     const ctx = await owner();
 
-    const result = await importCatalog(ctx, catalog());
+    const result = await importCatalog(
+      ctx,
+      catalog({
+        pages: [
+          {
+            externalId: "7",
+            slug: "faqs",
+            title: "FAQs",
+            status: "published",
+            oldPath: "/preguntas/",
+            blocks: [{ type: "text", id: "b1", html: "<p>Enviamos a todo el país.</p>" }],
+          },
+        ],
+      }),
+    );
 
     expect(result.stats).toEqual({
       categories: 2,
@@ -116,7 +130,8 @@ describe("importCatalog", () => {
       variants: 2,
       images: 1,
       customers: 1,
-      redirects: 2,
+      pages: 1,
+      redirects: 3,
     });
     const categories = await db
       .select()
@@ -133,8 +148,14 @@ describe("importCatalog", () => {
       expect.arrayContaining([
         { fromPath: "/producto/camiseta-tica/", toPath: "/products/camiseta-tica" },
         { fromPath: "/categoria-producto/ropa/", toPath: "/collections/ropa" },
+        { fromPath: "/preguntas/", toPath: "/faqs" },
       ]),
     );
+    const [page] = await db
+      .select({ title: schema.page.title, status: schema.page.status })
+      .from(schema.page)
+      .where(eq(schema.page.organizationId, ctx.organizationId));
+    expect(page).toEqual({ title: "FAQs", status: "published" });
 
     const [customer] = await db
       .select()

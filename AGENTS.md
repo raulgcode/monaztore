@@ -246,6 +246,18 @@ and spend) or cancels an unpaid order (`cancelOrder`, which puts counted stock b
 (`/app/:workspace/store`) connects domains (one main domain: a new main one takes over) and sets
 the manual payments, owners only.
 
+Pages (`core/src/pages.ts`, `contracts/src/pages.ts`): the store's own pages ("About us",
+"Questions"), built from blocks (heading, text, photo, button, questions, products) in the
+workspace's Pages (`/app/:workspace/pages/:pageId`, owners only), with the editor and its preview
+side by side from 1024 px and as tabs on the phone. Blocks are JSON checked by `pageBlocksSchema`
+and the text's HTML goes through `cleanHtml`; photos are uploaded with `saveStoreImage`. A
+published page answers at `/<slug>` on the store's hosts (`routes/store/fallback.tsx`, before the
+redirects), is listed in the footer and the sitemap, and a questions block adds FAQPage JSON-LD.
+Slugs that are the storefront's own routes are refused (`reservedPageSlugs`); changing a
+published page's address leaves a 301 from the old one. `pnpm import:woocommerce` brings the
+shop's WordPress pages (`wp/v2/pages`, `wordPressPageBlocks`: Flatsome accordions become
+questions; forms are left out and noted) with a 301 from their old address.
+
 Every `core` use case takes a `TenantContext` and filters by `organizationId`.
 - The workspace goes in the URL (`/app/:workspace/…`) and `requireTenant` resolves it with
   `resolveTenant`, which checks the membership; never take the workspace from the session or from

@@ -31,6 +31,7 @@ export const storefront = {
   subcollectionOf: "Part of {name}",
   footer: "© {year} {store}",
   poweredBy: "Store made with Monaztore",
+  pagesNav: "Information",
   cart: "Cart",
   cartWithCount: { one: "Cart, {count} item", other: "Cart, {count} items" },
   addToCart: "Add to cart",

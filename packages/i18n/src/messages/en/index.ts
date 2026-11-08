@@ -4,6 +4,7 @@ import { email } from "./email";
 import { forms } from "./forms";
 import { home } from "./home";
 import { orders } from "./orders";
+import { pages } from "./pages";
 import { settings } from "./settings";
 import { store } from "./store";
 import { storefront } from "./storefront";
@@ -17,6 +18,7 @@ export const en = {
   forms,
   home,
   orders,
+  pages,
   settings,
   store,
   storefront,

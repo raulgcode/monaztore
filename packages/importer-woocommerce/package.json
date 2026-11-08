@@ -9,7 +9,8 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@monaztore/contracts": "workspace:*"
+    "@monaztore/contracts": "workspace:*",
+    "node-html-parser": "catalog:"
   },
   "devDependencies": {
     "@monaztore/tsconfig": "workspace:*"

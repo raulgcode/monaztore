@@ -14,8 +14,6 @@
   "dependencies": {
     "@conform-to/react": "catalog:",
     "@conform-to/zod": "catalog:",
-    "@react-router/node": "catalog:",
-    "@react-router/serve": "catalog:",
     "@monaztore/auth": "workspace:*",
     "@monaztore/contracts": "workspace:*",
     "@monaztore/core": "workspace:*",
@@ -24,6 +22,8 @@
     "@monaztore/env": "workspace:*",
     "@monaztore/i18n": "workspace:*",
     "@monaztore/storage": "workspace:*",
+    "@react-router/node": "catalog:",
+    "@react-router/serve": "catalog:",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
     "isbot": "catalog:",
@@ -32,13 +32,14 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-router": "catalog:",
+    "sharp": "catalog:",
     "tailwind-merge": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@lhci/cli": "catalog:",
-    "@react-router/dev": "catalog:",
     "@monaztore/tsconfig": "workspace:*",
+    "@react-router/dev": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",

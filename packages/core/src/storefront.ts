@@ -25,8 +25,11 @@ export interface StorefrontContext {
 
 export const STOREFRONT_PAGE_SIZE = 24;
 
-/** Product HTML comes from the store (or an import): only formatting survives, never scripts. */
-export function cleanHtml(html: string): string {
+/**
+ * Product HTML comes from the store (or an import): only formatting survives, never scripts.
+ * Links open in a new tab, except, with `ownLinks`, those to the store's own pages (`/…`).
+ */
+export function cleanHtml(html: string, { ownLinks = false }: { ownLinks?: boolean } = {}): string {
   return sanitizeHtml(html, {
     allowedTags: [
       "p",
@@ -56,7 +59,20 @@ export function cleanHtml(html: string): string {
     allowedAttributes: { a: ["href", "title", "rel", "target"] },
     allowedSchemes: ["http", "https", "mailto", "tel"],
     transformTags: {
-      a: sanitizeHtml.simpleTransform("a", { rel: "nofollow noopener", target: "_blank" }),
+      a: (tagName, attribs): sanitizeHtml.Tag => {
+        const href = attribs.href ?? "";
+        if (ownLinks && href.startsWith("/") && !href.startsWith("//")) {
+          return { tagName, attribs: { href } };
+        }
+        return {
+          tagName,
+          attribs: {
+            ...attribs,
+            rel: "nofollow noopener",
+            target: "_blank",
+          } as sanitizeHtml.Attributes,
+        };
+      },
     },
   });
 }
@@ -375,7 +391,7 @@ export interface SitemapEntry {
 
 /** Every public page of the store, for /sitemap.xml. */
 export async function sitemapEntries(ctx: StorefrontContext): Promise<SitemapEntry[]> {
-  const [products, collections] = await Promise.all([
+  const [products, collections, pages] = await Promise.all([
     ctx.db
       .select({ slug: schema.product.slug, updatedAt: schema.product.updatedAt })
       .from(schema.product)
@@ -387,8 +403,19 @@ export async function sitemapEntries(ctx: StorefrontContext): Promise<SitemapEnt
       .from(schema.category)
       .where(eq(schema.category.organizationId, ctx.store.organizationId))
       .orderBy(asc(schema.category.slug)),
+    ctx.db
+      .select({ slug: schema.page.slug, updatedAt: schema.page.updatedAt })
+      .from(schema.page)
+      .where(
+        and(
+          eq(schema.page.organizationId, ctx.store.organizationId),
+          eq(schema.page.status, "published"),
+        ),
+      )
+      .orderBy(asc(schema.page.slug)),
   ]);
   return [
+    ...pages.map((p) => ({ path: `/${p.slug}`, updatedAt: p.updatedAt })),
     ...collections.map((c) => ({ path: `/collections/${c.slug}`, updatedAt: c.updatedAt })),
     ...products.map((p) => ({ path: `/products/${p.slug}`, updatedAt: p.updatedAt })),
   ];

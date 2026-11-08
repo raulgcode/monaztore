@@ -11,6 +11,8 @@ import { cn } from "~/lib/utils";
 export interface StoreShellProps {
   name: string;
   collections: { slug: string; name: string }[];
+  /** The store's published pages, linked from the footer. */
+  pages?: { slug: string; title: string }[];
   cartCount: number;
   children: React.ReactNode;
 }
@@ -22,7 +24,13 @@ const chip =
  * The frame of every storefront page: the store's name, search, its collections as chips that
  * scroll sideways on a phone, and the footer.
  */
-export function StoreShell({ name, collections, cartCount, children }: StoreShellProps) {
+export function StoreShell({
+  name,
+  collections,
+  pages = [],
+  cartCount,
+  children,
+}: StoreShellProps) {
   const t = useT();
   return (
     <div className="flex min-h-dvh flex-col">
@@ -99,6 +107,22 @@ export function StoreShell({ name, collections, cartCount, children }: StoreShel
       </header>
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
       <footer className="border-t">
+        {pages.length > 0 ? (
+          <nav aria-label={t("storefront.pagesNav")} className="mx-auto max-w-6xl px-4 pt-4">
+            <ul className="flex flex-wrap gap-x-2">
+              {pages.map((page) => (
+                <li key={page.slug}>
+                  <Link
+                    to={href("/*", { "*": page.slug })}
+                    className="inline-flex min-h-11 items-center px-2 text-sm underline-offset-4 hover:underline"
+                  >
+                    {page.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ) : null}
         <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-2 px-4 py-6 text-sm text-muted-foreground">
           <p>{t("storefront.footer", { year: String(new Date().getFullYear()), store: name })}</p>
           <p>{t("storefront.poweredBy")}</p>

@@ -120,6 +120,9 @@ catalogs:
     mjml:
       specifier: ^5.4.1
       version: 5.4.1
+    node-html-parser:
+      specifier: ^9.0.7
+      version: 9.0.7
     nodemailer:
       specifier: ^10.2.0
       version: 10.2.1
@@ -382,6 +385,9 @@ importers:
       react-router:
         specifier: 'catalog:'
         version: 8.5.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      sharp:
+        specifier: 'catalog:'
+        version: 0.35.5(@types/node@24.19.2)
       tailwind-merge:
         specifier: 'catalog:'
         version: 3.7.0
@@ -584,6 +590,9 @@ importers:
       '@monaztore/contracts':
         specifier: workspace:*
         version: link:../contracts
+      node-html-parser:
+        specifier: 'catalog:'
+        version: 9.0.7
     devDependencies:
       '@monaztore/tsconfig':
         specifier: workspace:*
@@ -4987,6 +4996,9 @@ packages:
     peerDependenciesMeta:
       encoding:
         optional: true
+
+  node-html-parser@9.0.7:
+    resolution: {integrity: sha512-0Io6nKYNN2e+QSoJFxU991Z8kX4H2Ogy3l14Ow0XxR2Wonk9l5qBonx1dYO97UyVfYJ1U9H0WHZOIZW6q5KPrA==}
 
   node-releases@2.0.60:
     resolution: {integrity: sha512-OmO8+GM1JUZqXET720VrJCwkjUCXmCMQm0Z3UDDRbfNLHS4NEAvY60j5jiFv0tkKw2PNNlqOLhahVmwJIOLDIQ==}
@@ -10816,6 +10828,11 @@ snapshots:
   node-fetch@2.7.0:
     dependencies:
       whatwg-url: 5.0.0
+
+  node-html-parser@9.0.7:
+    dependencies:
+      css-select: 5.2.2
+      entities: 8.1.0
 
   node-releases@2.0.60: {}
 

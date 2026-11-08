@@ -88,6 +88,34 @@ describe("fetchWooCommerceCatalog", () => {
       "wc/v3/products": [[v3SimpleProduct], [v3VariableProduct]],
       "wc/v3/products/102/variations": [v3Variations],
       "wc/v3/customers": [v3Customers],
+      "wp/v2/pages": [
+        [
+          {
+            id: 7,
+            slug: "preguntas-frecuentes",
+            link: "https://shop.example/preguntas-frecuentes/",
+            status: "publish",
+            title: { rendered: "Preguntas frecuentes" },
+            content: { rendered: "<p>Enviamos a todo el país.</p>" },
+          },
+          {
+            id: 8,
+            slug: "carrito",
+            link: "https://shop.example/carrito/",
+            status: "publish",
+            title: { rendered: "Carrito" },
+            content: { rendered: "[woocommerce_cart]" },
+          },
+          {
+            id: 9,
+            slug: "contacto",
+            link: "https://shop.example/contacto/",
+            status: "publish",
+            title: { rendered: "Contacto" },
+            content: { rendered: '<div class="wpcf7"><form></form></div>' },
+          },
+        ],
+      ],
     });
 
     const catalog = await fetchWooCommerceCatalog({
@@ -109,7 +137,15 @@ describe("fetchWooCommerceCatalog", () => {
       ["camiseta-tica", 2],
     ]);
     expect(catalog.customers.map((c) => c.email)).toEqual(["ana@example.com"]);
-    expect(catalog.warnings).toEqual([]);
+    // The shop's own pages come as blocks; the cart is the new store's own, and a page with
+    // only a form waits as a draft.
+    expect(catalog.pages?.map((p) => [p.slug, p.status, p.oldPath, p.blocks.length])).toEqual([
+      ["preguntas-frecuentes", "published", "/preguntas-frecuentes/", 1],
+      ["contacto", "draft", "/contacto/", 0],
+    ]);
+    expect(catalog.warnings).toEqual([
+      '"Contacto" had a form, which pages don\'t have: write how to reach you instead.',
+    ]);
     // WordPress refuses its own endpoints with WooCommerce's keys: the public one goes without.
     expect(requests.find((r) => r.path === "wp/v2/product_cat")?.auth).toBeNull();
     expect(requests.find((r) => r.path === "wc/v3/products")?.auth).toMatch(/^Basic /);
@@ -130,6 +166,7 @@ describe("fetchWooCommerceCatalog", () => {
     expect(catalog.currency).toBe("CRC");
     expect(catalog.customers).toEqual([]);
     expect(catalog.warnings[0]).toMatch(/without keys/);
+    expect(catalog.warnings.at(-1)).toMatch(/Couldn't read the shop's pages/);
     expect(catalog.products[0]?.variants).toEqual([
       {
         externalId: "201",

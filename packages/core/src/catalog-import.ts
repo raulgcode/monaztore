@@ -1,6 +1,7 @@
 import type { ImportedCatalog } from "@monaztore/contracts";
 import { and, type Database, eq, inArray, notInArray, schema, sql } from "@monaztore/db";
 import { DomainError } from "./errors";
+import { importPages } from "./pages";
 import type { TenantContext } from "./tenant";
 
 export interface CatalogImportStats {
@@ -9,6 +10,7 @@ export interface CatalogImportStats {
   variants: number;
   images: number;
   customers: number;
+  pages: number;
   redirects: number;
 }
 
@@ -50,6 +52,11 @@ export async function importCatalog(
 
   try {
     const stats = await ctx.db.transaction((tx) => writeCatalog(tx, ctx.organizationId, catalog));
+    if (catalog.pages?.length) {
+      const pages = await importPages(ctx, catalog.source, catalog.pages);
+      stats.pages = pages.pages;
+      stats.redirects += pages.redirects;
+    }
     await ctx.db
       .update(schema.importRun)
       .set({ status: "succeeded", stats: { ...stats }, finishedAt: new Date() })
@@ -91,6 +98,7 @@ async function writeCatalog(
     variants: 0,
     images: 0,
     customers: 0,
+    pages: 0,
     redirects: 0,
   };
 

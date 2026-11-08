@@ -91,7 +91,7 @@ if (values.from) {
 console.log(
   `  ${catalog.categories.length} categories · ${catalog.products.length} products · ` +
     `${catalog.products.reduce((sum, p) => sum + p.variants.length, 0)} variants · ` +
-    `${catalog.customers.length} customers · ${catalog.currency}`,
+    `${catalog.customers.length} customers · ${catalog.pages?.length ?? 0} pages · ${catalog.currency}`,
 );
 for (const warning of catalog.warnings) console.log(`  ⚠ ${warning}`);
 
@@ -138,7 +138,7 @@ try {
   console.log(
     `  ✓ ${result.stats.categories} categories, ${result.stats.products} products, ` +
       `${result.stats.variants} variants, ${result.stats.images} images, ` +
-      `${result.stats.customers} customers, ${result.stats.redirects} redirects (run ${result.runId})`,
+      `${result.stats.customers} customers, ${result.stats.pages} pages, ${result.stats.redirects} redirects (run ${result.runId})`,
   );
 } finally {
   await close();

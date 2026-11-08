@@ -51,7 +51,7 @@ export interface ImageCopyResult {
 }
 
 /**
- * Copies every photo of a catalog (products, variants and categories) to the store's own files
+ * Copies every photo of a catalog (products, variants, categories and pages) to the store's own files
  * and returns the catalog pointing at those copies, so the store never depends on the old site.
  * Each address is downloaded once; one that fails keeps its old address and goes to the
  * warnings. Addresses that are already ours are left as they are, so it can run again.
@@ -71,6 +71,9 @@ export async function copyCatalogImages(
   for (const product of catalog.products) {
     for (const image of product.images) add(image.url);
     for (const variant of product.variants) add(variant.imageUrl);
+  }
+  for (const page of catalog.pages ?? []) {
+    for (const block of page.blocks) if (block.type === "image") add(block.url);
   }
 
   const prefix = `organizations/${ctx.organizationId}/images`;
@@ -109,9 +112,31 @@ export async function copyCatalogImages(
           imageUrl: variant.imageUrl && ours(variant.imageUrl),
         })),
       })),
+      pages: catalog.pages?.map((page) => ({
+        ...page,
+        blocks: page.blocks.map((block) =>
+          block.type === "image" ? { ...block, url: ours(block.url) } : block,
+        ),
+      })),
       warnings: [...catalog.warnings, ...warnings.toSorted()],
     },
     copied: copies.size,
     failed: urls.size - copies.size,
   };
+}
+
+/**
+ * A photo the store uploads (in the page editor): re-encoded by `convert` and kept with the
+ * store's files. Returns the address the storefront shows it at.
+ */
+export async function saveStoreImage(
+  ctx: TenantContext,
+  { files, convert }: Pick<ImageCopyDeps, "files" | "convert">,
+  bytes: Uint8Array,
+): Promise<string> {
+  if (ctx.role !== "owner") throw new DomainError("forbidden", "Only owners upload photos");
+  const image = await convert(bytes);
+  const key = contentKey(`organizations/${ctx.organizationId}/images`, image.body, image.extension);
+  await files.put(key, image.body, image.contentType);
+  return mediaPath(key);
 }

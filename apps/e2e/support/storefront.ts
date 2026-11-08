@@ -98,6 +98,23 @@ export const sampleCatalog: ImportedCatalog = {
     },
   ],
   customers: [],
+  pages: [
+    {
+      externalId: "w1",
+      slug: "questions",
+      title: "Questions",
+      status: "published",
+      oldPath: "/preguntas-frecuentes/",
+      blocks: [
+        { type: "heading", id: "b1", text: "Shipping", level: 2 },
+        {
+          type: "faq",
+          id: "b2",
+          items: [{ question: "How long does shipping take?", answer: "Two to three days." }],
+        },
+      ],
+    },
+  ],
   warnings: [],
 };
 

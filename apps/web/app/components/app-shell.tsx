@@ -1,4 +1,11 @@
-import { HomeIcon, type LucideIcon, ReceiptIcon, SettingsIcon, StoreIcon } from "lucide-react";
+import {
+  FileTextIcon,
+  HomeIcon,
+  type LucideIcon,
+  ReceiptIcon,
+  SettingsIcon,
+  StoreIcon,
+} from "lucide-react";
 import type * as React from "react";
 import { href, NavLink } from "react-router";
 import { Logo } from "~/components/logo";
@@ -36,6 +43,11 @@ export function AppShell({
       to: href("/app/:workspace/orders", { workspace: workspace.slug }),
       label: t("workspace.navOrders"),
       icon: ReceiptIcon,
+    },
+    {
+      to: href("/app/:workspace/pages", { workspace: workspace.slug }),
+      label: t("workspace.navPages"),
+      icon: FileTextIcon,
     },
     {
       to: href("/app/:workspace/store", { workspace: workspace.slug }),

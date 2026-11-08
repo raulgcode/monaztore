@@ -5,7 +5,7 @@ const schemes = ["light", "dark"] as const;
 // Public pages, before signing in.
 const publicPages = ["/", "/login", "/login?with=link", "/sign-up", "/forgot-password"];
 // Sections inside the workspace, after /app/:workspace. A new section goes here.
-const workspaceSections = ["", "/orders", "/store", "/settings"];
+const workspaceSections = ["", "/orders", "/pages", "/store", "/settings"];
 // Storefront pages, on a store's own domain. A new storefront page goes here.
 const storePages = [
   "/",
@@ -13,6 +13,7 @@ const storePages = [
   "/products/pura-vida-mug",
   "/collections",
   "/collections/kitchen",
+  "/questions",
 ];
 
 test.describe("Feature: accessibility (axe, WCAG 2.2 AA)", () => {
@@ -54,6 +55,11 @@ test.describe("Feature: accessibility (axe, WCAG 2.2 AA)", () => {
             await page.goto(`/app/${workspace.slug}${section}`);
             await expectAccessible(page);
           }
+          // The page editor, with the sample store's "Questions" page.
+          await page.goto(`/app/${workspace.slug}/pages`);
+          await page.getByRole("link", { name: /^Questions/ }).click();
+          await expect(page.getByRole("heading", { level: 1 })).toHaveText("Edit “Questions”");
+          await expectAccessible(page);
         },
       );
     });

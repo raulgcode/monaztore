@@ -294,6 +294,37 @@ export const redirect = pgTable(
   (table) => [uniqueIndex("redirect_from_idx").on(table.organizationId, table.fromPath)],
 );
 
+/**
+ * A page the store writes in the workspace's block editor ("About us", "FAQ"), shown at
+ * `/<slug>` on the storefront. `blocks` is the `pageBlocksSchema` of contracts, checked by
+ * core on every save; text blocks keep sanitized HTML.
+ */
+export const page = pgTable(
+  "page",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: organizationId(),
+    slug: text().notNull(),
+    title: text().notNull(),
+    /** draft | published */
+    status: text().notNull().default("draft"),
+    blocks: jsonb().notNull().default([]),
+    seoTitle: text(),
+    seoDescription: text(),
+    publishedAt: timestamp({ withTimezone: true }),
+    ...externalRef,
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("page_slug_idx").on(table.organizationId, table.slug),
+    uniqueIndex("page_external_idx").on(
+      table.organizationId,
+      table.externalSource,
+      table.externalId,
+    ),
+  ],
+);
+
 /** One run of an importer: what it brought and how it ended. */
 export const importRun = pgTable(
   "import_run",

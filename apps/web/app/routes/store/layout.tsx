@@ -31,6 +31,7 @@ export default function StoreLayout({ loaderData }: Route.ComponentProps) {
     <StoreShell
       name={loaderData.shell.name}
       collections={loaderData.shell.collections}
+      pages={loaderData.shell.pages}
       cartCount={loaderData.cartCount ?? 0}
     >
       <Outlet />
@@ -64,6 +65,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
     <StoreShell
       name={layout.shell.name}
       collections={layout.shell.collections}
+      pages={layout.shell.pages}
       cartCount={layout.cartCount ?? 0}
     >
       {head}

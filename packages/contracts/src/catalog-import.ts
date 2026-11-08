@@ -1,4 +1,5 @@
 import { z } from "zod/mini";
+import { pageBlocksSchema } from "./pages";
 
 // What any importer (WooCommerce today, Shopify later) hands to core: a catalog already in
 // Monaztore's shape. Prices are integers in minor units (céntimos) of `currency`.
@@ -62,6 +63,17 @@ export const importedCustomerSchema = z.object({
   totalSpent: z.int(),
 });
 
+/** One of the shop's own pages ("FAQs", "About us"), already as blocks. */
+export const importedPageSchema = z.object({
+  externalId: z.string(),
+  slug: z.string().check(z.minLength(1)),
+  title: z.string(),
+  blocks: pageBlocksSchema,
+  status: z.enum(["draft", "published"]),
+  /** Path on the old site, e.g. /faqs/, to redirect from when it isn't /<slug>. */
+  oldPath: z.nullable(z.string()),
+});
+
 export const importedCatalogSchema = z.object({
   source: z.string(),
   sourceUrl: z.string(),
@@ -69,6 +81,8 @@ export const importedCatalogSchema = z.object({
   categories: z.array(importedCategorySchema),
   products: z.array(importedProductSchema),
   customers: z.array(importedCustomerSchema),
+  /** The shop's own pages; older files saved with --out have none. */
+  pages: z.optional(z.array(importedPageSchema)),
   /** What the importer saw but couldn't bring, for the report. */
   warnings: z.array(z.string()),
 });
@@ -77,4 +91,5 @@ export type ImportedCategory = z.infer<typeof importedCategorySchema>;
 export type ImportedVariant = z.infer<typeof importedVariantSchema>;
 export type ImportedProduct = z.infer<typeof importedProductSchema>;
 export type ImportedCustomer = z.infer<typeof importedCustomerSchema>;
+export type ImportedPage = z.infer<typeof importedPageSchema>;
 export type ImportedCatalog = z.infer<typeof importedCatalogSchema>;

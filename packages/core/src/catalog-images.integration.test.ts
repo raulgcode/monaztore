@@ -3,7 +3,7 @@ import { eq, schema } from "@monaztore/db";
 import { createTestDatabase, createTestTenant } from "@monaztore/db/testing";
 import { memoryFileStore } from "@monaztore/storage";
 import { afterAll, describe, expect, it } from "vitest";
-import { copyCatalogImages, mediaKeyOf, mediaPath } from "./catalog-images";
+import { copyCatalogImages, mediaKeyOf, mediaPath, saveStoreImage } from "./catalog-images";
 import { importCatalog, listImportedProducts } from "./catalog-import";
 import { resolveTenant } from "./workspaces";
 
@@ -73,6 +73,18 @@ const catalog = (): ImportedCatalog => ({
     },
   ],
   customers: [],
+  pages: [
+    {
+      externalId: "7",
+      slug: "nosotros",
+      title: "Nosotros",
+      status: "published",
+      oldPath: null,
+      blocks: [
+        { type: "image", id: "b1", url: "https://shop.example/tienda.png", alt: "", caption: "" },
+      ],
+    },
+  ],
   warnings: [],
 });
 
@@ -106,9 +118,10 @@ describe("copyCatalogImages", () => {
       "https://shop.example/gato.png",
       "https://shop.example/gone.png",
       "https://shop.example/medias.png",
+      "https://shop.example/tienda.png",
     ]);
-    expect(result.copied).toBe(2);
-    expect(files.keys()).toHaveLength(2);
+    expect(result.copied).toBe(3);
+    expect(files.keys()).toHaveLength(3);
     for (const key of files.keys()) {
       expect(key.startsWith(`organizations/${ctx.organizationId}/images/`)).toBe(true);
     }
@@ -118,6 +131,8 @@ describe("copyCatalogImages", () => {
     expect(photo).toMatch(/^\/media\/organizations\/.+\.webp$/);
     expect(product?.variants[0]?.imageUrl).toBe(photo);
     expect(result.catalog.categories[0]?.imageUrl).toMatch(/^\/media\//);
+    const pageImage = result.catalog.pages?.[0]?.blocks[0];
+    expect(pageImage?.type === "image" && pageImage.url).toMatch(/^\/media\//);
     // What couldn't be copied keeps its old address and is reported.
     expect(product?.images[1]?.url).toBe("https://shop.example/gone.png");
     expect(result.catalog.warnings).toEqual([
@@ -155,6 +170,24 @@ describe("copyCatalogImages", () => {
     const ctx = await tenant("member");
     await expect(
       copyCatalogImages(ctx, catalog(), { files: memoryFileStore(), ...fakeShop() }),
+    ).rejects.toThrow(/owners/);
+  });
+});
+
+describe("saveStoreImage", () => {
+  it("keeps an uploaded photo with the store's files, only for owners", async () => {
+    const ctx = await tenant();
+    const files = memoryFileStore();
+    const shop = fakeShop();
+    const path = await saveStoreImage(ctx, { files, convert: shop.convert }, new Uint8Array([1]));
+    expect(mediaKeyOf(path)).toBe(files.keys()[0]);
+    expect(files.keys()[0]?.startsWith(`organizations/${ctx.organizationId}/images/`)).toBe(true);
+    await expect(
+      saveStoreImage(
+        { ...ctx, role: "member" },
+        { files, convert: shop.convert },
+        new Uint8Array([1]),
+      ),
     ).rejects.toThrow(/owners/);
   });
 });

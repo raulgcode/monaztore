@@ -7,6 +7,7 @@ import {
   mapV3Customer,
   mapV3Product,
 } from "./map";
+import { fetchWordPressPages } from "./pages";
 import type { Store, V3 } from "./types";
 
 export {
@@ -16,6 +17,7 @@ export {
   WooCommerceError,
 } from "./client";
 export * from "./map";
+export { fetchWordPressPages, type WordPressPage, wordPressPageBlocks } from "./pages";
 export type { Store, V3 } from "./types";
 
 export interface FetchCatalogOptions extends WooCommerceConnection {
@@ -23,6 +25,8 @@ export interface FetchCatalogOptions extends WooCommerceConnection {
   currency?: string;
   /** Skip customers even when the keys allow reading them. */
   skipCustomers?: boolean;
+  /** Skip the shop's own pages ("FAQs", "About us"). */
+  skipPages?: boolean;
   onProgress?: (message: string) => void;
 }
 
@@ -120,6 +124,7 @@ async function fetchWithKeys(
     }
   }
 
+  const pages = await readPages(client, options, log, warnings);
   return {
     source: "woocommerce",
     sourceUrl: client.base.origin,
@@ -127,6 +132,7 @@ async function fetchWithKeys(
     categories,
     products,
     customers,
+    pages,
     warnings,
   };
 }
@@ -162,6 +168,7 @@ async function fetchPublic(
     if ((index + 1) % 25 === 0) log(`  ${index + 1}/${rawProducts.length} products`);
   }
 
+  const pages = await readPages(client, options, log, warnings);
   return {
     source: "woocommerce",
     sourceUrl: client.base.origin,
@@ -169,6 +176,25 @@ async function fetchPublic(
     categories,
     products,
     customers: [],
+    pages,
     warnings,
   };
+}
+
+async function readPages(
+  client: WooCommerceClient,
+  options: FetchCatalogOptions,
+  log: (message: string) => void,
+  warnings: string[],
+) {
+  if (options.skipPages) return [];
+  log("Reading pages…");
+  try {
+    const { pages, warnings: pageWarnings } = await fetchWordPressPages(client);
+    warnings.push(...pageWarnings);
+    return pages;
+  } catch (error) {
+    warnings.push(`Couldn't read the shop's pages: ${(error as Error).message}`);
+    return [];
+  }
 }

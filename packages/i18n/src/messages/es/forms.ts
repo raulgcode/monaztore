@@ -34,4 +34,10 @@ export const forms = {
   ibanInvalid: "Escribe un IBAN válido, como CR05015202001026284066",
   domainRequired: "Escribe el dominio",
   domainInvalid: "Escribe solo el dominio, como mitienda.com",
+  linkInvalid: "Usa una dirección de tu tienda (/products/…) o una que empiece con https://",
+  blocksInvalid: "Algo en los bloques de la página no está bien. Revísalos y vuelve a intentarlo.",
+  pageTitleRequired: "Ponle un título a la página",
+  pageSlugInvalid: "Usa minúsculas, números y guiones, como sobre-nosotros",
+  pageSlugReserved: "Tu tienda ya usa esta dirección. Elige otra.",
+  pageSlugTaken: "Otra página ya tiene esta dirección",
 } as const satisfies Translation<typeof en>["forms"];

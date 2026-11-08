@@ -41,6 +41,8 @@ export default [
         index("routes/app/home.tsx"),
         route("orders", "routes/app/orders.tsx"),
         route("orders/:number", "routes/app/order.tsx"),
+        route("pages", "routes/app/pages.tsx"),
+        route("pages/:pageId", "routes/app/page-editor.tsx"),
         route("store", "routes/app/store.tsx"),
         route("settings", "routes/app/settings.tsx"),
       ]),

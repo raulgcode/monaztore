@@ -1,14 +1,24 @@
-import { getStoreInfo, listTopCollections, type StorefrontContext } from "@monaztore/core";
+import {
+  getStoreInfo,
+  listStorePages,
+  listTopCollections,
+  type StorefrontContext,
+} from "@monaztore/core";
 import { storeOrigin } from "./store-seo";
 
-/** What every storefront page shows around itself: the store's name, menu and currency. */
+/** What every storefront page shows around itself: name, menu, pages and currency. */
 export async function storeShell(store: StorefrontContext, request: Request) {
-  const [info, collections] = await Promise.all([getStoreInfo(store), listTopCollections(store)]);
+  const [info, collections, pages] = await Promise.all([
+    getStoreInfo(store),
+    listTopCollections(store),
+    listStorePages(store),
+  ]);
   return {
     name: info.name,
     currency: info.currency,
     origin: storeOrigin(info.canonicalHost, request.url),
     collections,
+    pages: pages.map(({ slug, title }) => ({ slug, title })),
   };
 }
 

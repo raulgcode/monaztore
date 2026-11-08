@@ -126,6 +126,7 @@ test.describe("Feature: the store on its own domain", () => {
     const robots = await (await requestStore(page.request, store, "/robots.txt")).text();
 
     expect(sitemap).toContain(`<loc>${store}/products/pura-vida-mug</loc>`);
+    expect(sitemap).toContain(`<loc>${store}/questions</loc>`);
     expect(sitemap).not.toContain("secret-draft");
     expect(robots).toContain(`Sitemap: ${store}/sitemap.xml`);
   });
