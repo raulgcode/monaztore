@@ -1,4 +1,6 @@
 import { promoteSuperAdmins } from "@monaztore/core";
+import type { Page } from "@playwright/test";
+import { slugOf } from "../support/database";
 import {
   adminSignInThroughEmail,
   authenticatorCode,
@@ -178,8 +180,8 @@ test.describe("Feature: the platform's super admin panel", () => {
       await store.click();
       await expect(page.getByRole("heading", { level: 1, name: "Pura Vida Crafts" })).toBeVisible();
       await expect(page.getByText("Following the platform's:", { exact: false })).toBeVisible();
-      await expect(page.getByText(ownerEmail)).toBeVisible();
-      await expect(page.getByText("Owner · No second step yet")).toBeVisible();
+      await expect(page.getByText(ownerEmail, { exact: true })).toBeVisible();
+      await expect(page.getByText("Owner · Second step on")).toBeVisible();
     });
 
     await test.step("When they type 25 %, Then it is refused", async () => {
@@ -211,4 +213,117 @@ test.describe("Feature: the platform's super admin panel", () => {
       );
     });
   });
+
+  test("Scenario: support enters a store as its owner, its change goes to the log and it goes back to admin", async ({
+    page,
+    newVisitor,
+    signInWithWorkspace,
+    signInAsSuperAdmin,
+    expectAccessible,
+  }) => {
+    const ownerPage = await newVisitor();
+    const ownerEmail = await test.step("Given an owner with the store Café Tica", () =>
+      signInWithWorkspace(ownerPage, "Café Tica"));
+    const slug = slugOf(ownerPage);
+
+    await test.step("And a super admin on that store's detail", async () => {
+      await signInAsSuperAdmin(page);
+      await openStoreDetail(page, ownerEmail, "Café Tica");
+      await expect(
+        page.getByText(`Opens the store's panel as its owner, ${ownerEmail}, for an hour.`, {
+          exact: false,
+        }),
+      ).toBeVisible();
+      await expect(page.getByText("The store isn't told about the visit.")).toBeVisible();
+    });
+
+    await test.step("When they enter as the owner", async () => {
+      await page.getByRole("button", { name: "Enter as the owner" }).click();
+    });
+
+    await test.step("Then the store's home opens without a second step, under the support banner", async () => {
+      await expect(page).toHaveURL(new RegExp(`/app/${slug}$`));
+      await expect(page.getByRole("region", { name: "Back to admin" })).toHaveText(
+        `Support: you're inside ${ownerEmail}'s accountBack to admin`,
+      );
+      await expect(page.getByText("This is the home of Café Tica.")).toBeVisible();
+      await expectAccessible(page);
+    });
+
+    await test.step("When they create a page in the store", async () => {
+      await page.goto(`/app/${slug}/pages`);
+      await page.getByRole("button", { name: "New page" }).click();
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText("Edit “New page”");
+    });
+
+    await test.step("And go back to admin", async () => {
+      await page.getByRole("button", { name: "Back to admin" }).click();
+    });
+
+    await test.step("Then they are on the store's detail, and its log has the visit and the change", async () => {
+      await expect(page).toHaveURL(/\/admin\/stores\//);
+      const log = page.getByRole("region", { name: "What changed in this store" });
+      await expect(log.getByRole("listitem")).toHaveCount(3);
+      await expect(log.getByRole("listitem").nth(0)).toContainText("Left the store");
+      await expect(log.getByRole("listitem").nth(1)).toContainText(
+        `Made a change inside the store`,
+      );
+      await expect(log.getByRole("listitem").nth(1)).toContainText(`POST /app/${slug}/pages`);
+      await expect(log.getByRole("listitem").nth(2)).toContainText(
+        "Entered the store as its owner",
+      );
+    });
+
+    await test.step("And the owner's own session still works", async () => {
+      await ownerPage.reload();
+      await expect(ownerPage.getByText("This is the home of Café Tica.")).toBeVisible();
+    });
+  });
+
+  test("Scenario: support that only looks can't change anything in the store", async ({
+    page,
+    newVisitor,
+    signInWithWorkspace,
+    signInAsSuperAdmin,
+  }) => {
+    const ownerPage = await newVisitor();
+    const ownerEmail = await test.step("Given an owner with the store Soda La Esquina", () =>
+      signInWithWorkspace(ownerPage, "Soda La Esquina"));
+    const slug = slugOf(ownerPage);
+
+    await test.step("And a super admin who chose to only look", async () => {
+      await signInAsSuperAdmin(page);
+      await openStoreDetail(page, ownerEmail, "Soda La Esquina");
+      await page.getByRole("button", { name: "Only look" }).click();
+      await expect(page.getByRole("region", { name: "Back to admin" })).toContainText(
+        `Support, only looking: ${ownerEmail}`,
+      );
+    });
+
+    await test.step("When they try to create a page", async () => {
+      await page.goto(`/app/${slug}/pages`);
+      await page.getByRole("button", { name: "New page" }).click();
+    });
+
+    await test.step("Then it is refused and the store has no new page", async () => {
+      await expect(page.getByText("Error 403")).toBeVisible();
+      await page.goto(`/app/${slug}/pages`);
+      await expect(page.getByRole("link", { name: /^New page/ })).toHaveCount(0);
+    });
+
+    await test.step("And the log marks the visit as only looking", async () => {
+      await page.getByRole("button", { name: "Back to admin" }).click();
+      const log = page.getByRole("region", { name: "What changed in this store" });
+      await expect(log.getByRole("listitem")).toHaveCount(2);
+      await expect(log.getByRole("listitem").nth(1)).toContainText("Only looking");
+    });
+  });
 });
+
+async function openStoreDetail(page: Page, ownerEmail: string, name: string): Promise<void> {
+  await page.getByRole("searchbox", { name: "Search" }).fill(ownerEmail);
+  await page.getByRole("button", { name: "Search" }).click();
+  await expect(page.getByRole("main").getByRole("status")).toHaveText("1 store");
+  await page.getByRole("link", { name: new RegExp(name) }).click();
+  await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
+}

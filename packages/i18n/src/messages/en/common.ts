@@ -18,4 +18,7 @@ export const common = {
   errorHome: "Go home",
   notFoundTitle: "We couldn't find this page",
   notFoundDetails: "The link may be incomplete, or the page no longer exists.",
+  supportBanner: "Support: you're inside <strong>{email}</strong>'s account",
+  supportBannerReadOnly: "Support, only looking: <strong>{email}</strong>",
+  supportLeave: "Back to admin",
 } as const;

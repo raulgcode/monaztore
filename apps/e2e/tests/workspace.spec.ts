@@ -1,5 +1,7 @@
 import { createWorkspace, expect, ownerTest, test } from "../support/fixtures";
+import { getLinkFromEmail } from "../support/mailpit";
 import { openSection } from "../support/navigation";
+import { addFingerprintReader } from "../support/passkeys";
 
 test.describe("Feature: the workspace", () => {
   test("Scenario: someone signing in for the first time creates their workspace and lands on its home", async ({
@@ -88,5 +90,45 @@ test.describe("Feature: the workspace", () => {
     await expect(page).toHaveURL(/\/$/);
     await page.goto("/app");
     await expect(page).toHaveURL(/\/login\?redirectTo=%2Fapp$/);
+  });
+
+  test("Scenario: an owner adds their fingerprint in Settings and the next sign-in gets in with it, without the code", async ({
+    page,
+    baseURL,
+    signInWithWorkspace,
+  }) => {
+    const email =
+      await test.step("Given an owner on a device with a fingerprint reader", async () => {
+        const email = await signInWithWorkspace(page, "Huella Shop");
+        await addFingerprintReader(page);
+        return email;
+      });
+
+    await test.step("When they add their fingerprint from Settings", async () => {
+      await openSection(page, "Settings");
+      await page.getByRole("link", { name: "Fingerprints and keys" }).click();
+      await expect(page.getByRole("heading", { level: 1, name: "Security" })).toBeVisible();
+      await page.getByLabel("Name", { exact: true }).fill("My phone");
+      await page.getByRole("button", { name: "Add fingerprint or key" }).click();
+      await expect(page.getByRole("status").filter({ hasText: "Done" })).toHaveText(
+        "Done: next time, get in with “My phone”.",
+      );
+    });
+
+    await test.step("And sign in again on this device", async () => {
+      await page.context().clearCookies();
+      await page.goto("/login?with=link");
+      await page.getByLabel("Email").fill(email);
+      await page.getByRole("button", { name: "Email me the link" }).click();
+      await expect(page.getByRole("main").getByRole("status")).toContainText(email);
+      await page.goto(await getLinkFromEmail(email, baseURL));
+    });
+
+    await test.step("Then the second step offers the fingerprint, and it opens their workspace", async () => {
+      await expect(page.getByRole("heading", { level: 1, name: "Confirm it's you" })).toBeVisible();
+      await page.getByRole("button", { name: "Use fingerprint or key" }).click();
+      await expect(page).toHaveURL(/\/app\/[a-z0-9-]+-[0-9a-f]{6}$/);
+      await expect(page.getByText("This is the home of Huella Shop.")).toBeVisible();
+    });
   });
 });

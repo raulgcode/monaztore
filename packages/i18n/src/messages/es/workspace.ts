@@ -22,4 +22,6 @@ export const workspace = {
   homeTitle: "Inicio",
   homeHeading: "Hola, {name}",
   homeIntro: "Este es el inicio de {workspace}. Aquí va la primera pantalla de tu proyecto.",
+  supportVisit: "Nuestro equipo de soporte entró a tu tienda el {date} para ayudarte.",
+  supportVisitReadOnly: "Nuestro equipo de soporte miró tu tienda el {date}, sin cambiar nada.",
 } as const satisfies Translation<typeof en>["workspace"];

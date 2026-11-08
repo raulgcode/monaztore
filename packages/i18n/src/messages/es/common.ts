@@ -22,4 +22,7 @@ export const common = {
   errorHome: "Ir al inicio",
   notFoundTitle: "No encontramos esta página",
   notFoundDetails: "Puede que el enlace esté incompleto o que la página ya no exista.",
+  supportBanner: "Soporte: estás dentro de la cuenta de <strong>{email}</strong>",
+  supportBannerReadOnly: "Soporte, solo mirando: <strong>{email}</strong>",
+  supportLeave: "Volver al admin",
 } as const satisfies Translation<typeof en>["common"];

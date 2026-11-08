@@ -37,6 +37,8 @@ export default [
   // passkey). Anyone else gets a 404, as if it did not exist.
   ...prefix("admin", [
     route("mfa", "routes/admin/mfa.tsx"),
+    // Leaves a store's account ("Back to admin"): it runs inside the owner's session.
+    route("support/stop", "routes/admin/stop-support.ts"),
     layout("routes/admin/layout.tsx", [
       index("routes/admin/stores.tsx"),
       route("stores/:storeId", "routes/admin/store.tsx"),
@@ -46,6 +48,8 @@ export default [
     ]),
   ]),
   ...prefix("app", [
+    // The team's second step (authenticator app or passkey), before anything else under /app.
+    route("mfa", "routes/app/mfa.tsx"),
     layout("routes/app/layout.tsx", [
       index("routes/app/open-workspace.ts"),
       route("onboarding", "routes/app/onboarding.tsx"),
@@ -62,6 +66,7 @@ export default [
         route("invoicing", "routes/app/invoicing.tsx"),
         route("invoicing/:id/:file", "routes/app/invoicing-file.ts"),
         route("settings", "routes/app/settings.tsx"),
+        route("settings/security", "routes/app/security.tsx"),
       ]),
     ]),
   ]),

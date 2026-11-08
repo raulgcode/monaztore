@@ -57,7 +57,31 @@ async function signInThroughEmail(
   await page.getByRole("button", { name: "Email me the link" }).click();
   await expect(page.getByRole("main").getByRole("status")).toContainText(email);
   await page.goto(await getLinkFromEmail(email, baseURL));
+  await passSecondStep(page, email);
   return email;
+}
+
+/** Each person's authenticator app in this worker, and the last code step it used. */
+const authenticators = new Map<string, { secret: string; step: number }>();
+
+/**
+ * The second step every store's team passes after signing in: the first time it sets up the
+ * authenticator app; later, it types the app's code (a code never works twice, so the next one).
+ */
+export async function passSecondStep(page: Page, email: string): Promise<void> {
+  await expect(page).toHaveURL(/\/mfa\?redirectTo=/);
+  const heading = page.getByRole("heading", { level: 1 });
+  await expect(heading).toHaveText(/Protect your account|Enter your code|Confirm it's you/);
+  const known = authenticators.get(email);
+  if (!known || (await heading.textContent())?.startsWith("Protect")) {
+    const secret = await setUpAuthenticator(page);
+    authenticators.set(email, { secret, step: totpStep() });
+    return;
+  }
+  const step = Math.max(totpStep(), known.step + 1);
+  await page.getByLabel("Code from the app").fill(totpCode(known.secret, step));
+  await page.getByRole("button", { name: "Continue" }).click();
+  known.step = step;
 }
 
 /** A super admin's email link: it stops at the second step, before the panel. */
@@ -82,7 +106,7 @@ export function authenticatorCode(secret: string, stepsAhead = 0): string {
 /** First visit: reads the key under the QR, as an app would, and confirms its first code. */
 export async function setUpAuthenticator(page: Page): Promise<string> {
   await expect(
-    page.getByRole("heading", { name: "Protect the panel with your phone" }),
+    page.getByRole("heading", { name: "Protect your account with your phone" }),
   ).toBeVisible();
   const secret = (await page.getByTestId("totp-secret").textContent())?.trim() ?? "";
   await page.getByLabel("Code from the app").fill(authenticatorCode(secret));
