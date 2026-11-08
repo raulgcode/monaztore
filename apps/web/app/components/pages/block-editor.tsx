@@ -489,7 +489,16 @@ function BlockFields({
  * Formatted text, written in place like in a word processor: bold, italics, links and lists.
  * What it writes is HTML that core cleans on every save; pasting keeps only the text.
  */
-function RichText({ html, onChange }: { html: string; onChange: (html: string) => void }) {
+export function RichText({
+  html,
+  onChange,
+  label,
+}: {
+  html: string;
+  onChange: (html: string) => void;
+  /** What the text is; "Text" by default. Its toolbar's names come from `pages`. */
+  label?: string;
+}) {
   const t = useT();
   const id = useId();
   // Uncontrolled: the browser keeps the caret; the first HTML goes in once.
@@ -515,7 +524,7 @@ function RichText({ html, onChange }: { html: string; onChange: (html: string) =
   return (
     <div className="grid gap-2">
       <span id={`${id}-label`} className="text-sm font-medium">
-        {t("pages.textLabel")}
+        {label ?? t("pages.textLabel")}
       </span>
       <div className="overflow-hidden rounded-md border border-input focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
         <div role="toolbar" aria-labelledby={`${id}-label`} className="flex gap-1 border-b p-1">

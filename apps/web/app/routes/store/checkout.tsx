@@ -17,7 +17,7 @@ import {
 import { data, Form, href, Link, redirect, useNavigation } from "react-router";
 import { FieldErrors, TextField } from "~/components/text-field";
 import { Button } from "~/components/ui/button";
-import { cartCookieHeader, readCart } from "~/lib/cart.server";
+import { cartCookieHeader, couponCookieHeader, readCart, readCoupon } from "~/lib/cart.server";
 import { metaT, useLocale, useT } from "~/lib/i18n";
 import { localeOf, translations } from "~/lib/locale.server";
 import { formatPrice } from "~/lib/money";
@@ -40,8 +40,9 @@ export function meta({ matches }: Route.MetaArgs) {
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const store = requireStore(context);
+  const couponCode = await readCoupon(request);
   const [cart, payments, invoices] = await Promise.all([
-    readCart(request).then((lines) => priceCart(store, lines)),
+    readCart(request).then((lines) => priceCart(store, lines, { couponCode })),
     getPaymentOptions(store),
     storeIssuesInvoices(store.db, store.store.organizationId),
   ]);
@@ -57,9 +58,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 export async function action({ request, context }: Route.ActionArgs) {
   const store = requireStore(context);
-  const [invoices, cart] = await Promise.all([
+  const [invoices, cart, couponCode] = await Promise.all([
     storeIssuesInvoices(store.db, store.store.organizationId),
     readCart(request),
+    readCoupon(request),
   ]);
   const { needsShipping } = await priceCart(store, cart);
   const submission = parseWithZod(await request.formData(), {
@@ -83,10 +85,12 @@ export async function action({ request, context }: Route.ActionArgs) {
       checkout: submission.value,
       taxId: invoiceTo(submission.value),
       locale: localeOf(context),
+      couponCode,
     });
-    throw redirect(href("/orders/:token", { token: placed.token }), {
-      headers: { "Set-Cookie": await cartCookieHeader([]) },
-    });
+    const headers = new Headers();
+    headers.append("Set-Cookie", await cartCookieHeader([]));
+    if (couponCode) headers.append("Set-Cookie", await couponCookieHeader(null));
+    throw redirect(href("/orders/:token", { token: placed.token }), { headers });
   } catch (error) {
     if (!(error instanceof DomainError)) throw error;
     // The cart changed in another tab (a product to ship added): the page asks for the address.
@@ -96,6 +100,27 @@ export async function action({ request, context }: Route.ActionArgs) {
       error.code === "address_required"
     ) {
       return data({ result: submission.reply(), cartChanged: true }, { status: 409 });
+    }
+    // The code stopped applying while they filled the form (it ended, its last use went, or
+    // this email already used it): the order isn't placed and the page shows the new total.
+    if (error.code === "coupon_invalid" || error.code === "coupon_used") {
+      return data(
+        {
+          result: submission.reply({
+            formErrors: [
+              error.code === "coupon_used" ? "forms.couponUsedByYou" : "forms.couponGone",
+            ],
+          }),
+          cartChanged: false,
+        },
+        {
+          status: 409,
+          headers:
+            error.code === "coupon_used"
+              ? undefined
+              : { "Set-Cookie": await couponCookieHeader(null) },
+        },
+      );
     }
     if (error.code === "payment_method_unavailable") {
       return data(
@@ -268,9 +293,21 @@ export default function Checkout({ loaderData, actionData }: Route.ComponentProp
               </li>
             ))}
           </ul>
+          {cart.discount > 0 ? (
+            <dl className="grid gap-1 border-t pt-3 text-sm">
+              <div className="flex justify-between">
+                <dt>{t("storefront.subtotal")}</dt>
+                <dd>{money(cart.subtotal)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt>{t("storefront.discount", { code: cart.coupon?.code ?? "" })}</dt>
+                <dd>−{money(cart.discount)}</dd>
+              </div>
+            </dl>
+          ) : null}
           <p className="flex justify-between border-t pt-3 font-semibold">
             <span>{t("storefront.total")}</span>
-            <span>{money(cart.subtotal)}</span>
+            <span>{money(cart.total)}</span>
           </p>
         </section>
       </div>

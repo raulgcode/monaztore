@@ -2,6 +2,7 @@ import {
   FileTextIcon,
   HomeIcon,
   type LucideIcon,
+  PackageIcon,
   PaletteIcon,
   ReceiptIcon,
   SettingsIcon,
@@ -19,6 +20,8 @@ export interface NavItem {
   label: string;
   icon: LucideIcon;
   end?: boolean;
+  /** False keeps it out of the phone's bar, which fits six; it's reached from another section. */
+  phone?: boolean;
 }
 
 /**
@@ -48,9 +51,16 @@ export function AppShell({
       icon: ReceiptIcon,
     },
     {
+      to: href("/app/:workspace/products", { workspace: workspace.slug }),
+      label: t("workspace.navProducts"),
+      icon: PackageIcon,
+    },
+    {
       to: href("/app/:workspace/pages", { workspace: workspace.slug }),
       label: t("workspace.navPages"),
       icon: FileTextIcon,
+      // On the phone, Pages opens from Store.
+      phone: false,
     },
     {
       to: href("/app/:workspace/store", { workspace: workspace.slug }),
@@ -118,26 +128,29 @@ export function Nav({
   return (
     <nav aria-label={label}>
       <ul className={variant === "bottom" ? "grid grid-flow-col auto-cols-fr" : "grid gap-1"}>
-        {items.map(({ to, label, icon: Icon, end }) => (
-          <li key={to}>
-            <NavLink
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                cn(
-                  "flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                  variant === "bottom" && "flex-col justify-center gap-1 rounded-none py-2 text-xs",
-                  isActive
-                    ? "bg-nav-active text-nav-active-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )
-              }
-            >
-              <Icon aria-hidden className="size-5" />
-              {label}
-            </NavLink>
-          </li>
-        ))}
+        {items
+          .filter((item) => variant === "side" || item.phone !== false)
+          .map(({ to, label, icon: Icon, end }) => (
+            <li key={to}>
+              <NavLink
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  cn(
+                    "flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                    variant === "bottom" &&
+                      "flex-col justify-center gap-1 rounded-none py-2 text-xs",
+                    isActive
+                      ? "bg-nav-active text-nav-active-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )
+                }
+              >
+                <Icon aria-hidden className="size-5" />
+                {label}
+              </NavLink>
+            </li>
+          ))}
       </ul>
     </nav>
   );

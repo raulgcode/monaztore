@@ -32,4 +32,6 @@ export const store = {
   savePayments: "Guardar pagos",
   paymentsSaved: "Pagos guardados.",
   ownersOnly: "Solo la persona dueña del espacio cambia esto.",
+  pagesCard: "Páginas →",
+  pagesCardHint: "Las páginas propias de tu tienda, como “Quiénes somos”.",
 } as const satisfies Translation<typeof en>["store"];

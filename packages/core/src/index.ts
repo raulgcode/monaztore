@@ -162,6 +162,7 @@ export { type PlatformAuditAction, recordAudit } from "./platform-audit";
 export {
   bulkUpdateProducts,
   type CategoryRow,
+  catalogSettings,
   createCategory,
   deleteCategory,
   duplicateProduct,

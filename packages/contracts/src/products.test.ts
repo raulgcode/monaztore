@@ -4,12 +4,14 @@ import {
   currentPrice,
   dayOf,
   dayStart,
+  emptyVariant,
   formPricesOf,
   pricesOf,
   productFormSchema,
   productInputOf,
   readProductListQuery,
   saleIsOn,
+  syncVariants,
   variantCombinations,
   variantKey,
 } from "./products";
@@ -178,5 +180,58 @@ describe("readProductListQuery", () => {
       status: "all",
       page: 1,
     });
+  });
+});
+
+describe("syncVariants", () => {
+  const size = (values: string[], variation = true) => ({ name: "Size", values, variation });
+  const color = (values: string[]) => ({ name: "Color", values, variation: true });
+  const priced = (options: Record<string, string>, price: string) => ({
+    ...emptyVariant(options),
+    price,
+  });
+
+  it("makes one option per value when the shopper starts choosing", () => {
+    const variants = syncVariants([], [size(["S", "M"])], []);
+    expect(variants.map((v) => v.options)).toEqual([{ Size: "S" }, { Size: "M" }]);
+  });
+
+  it("keeps what each option had when a value is added, and adds only the new one", () => {
+    const before = [priced({ Size: "S" }, "10"), priced({ Size: "M" }, "12")];
+    const variants = syncVariants([size(["S", "M"])], [size(["S", "M", "L"])], before);
+    expect(variants.map((v) => [v.options.Size, v.price])).toEqual([
+      ["S", "10"],
+      ["M", "12"],
+      ["L", ""],
+    ]);
+  });
+
+  it("drops the options of a value that was removed", () => {
+    const before = [priced({ Size: "S" }, "10"), priced({ Size: "M" }, "12")];
+    const variants = syncVariants([size(["S", "M"])], [size(["M"])], before);
+    expect(variants.map((v) => v.options)).toEqual([{ Size: "M" }]);
+  });
+
+  it("doesn't bring back an option removed by hand when nothing new was added", () => {
+    const before = [priced({ Size: "S" }, "10")];
+    const variants = syncVariants([size(["S", "M"])], [size(["S", "M"])], before);
+    expect(variants.map((v) => v.options)).toEqual([{ Size: "S" }]);
+  });
+
+  it("combines every value when a second attribute is chosen, keeping matching rows", () => {
+    const variants = syncVariants(
+      [size(["S", "M"])],
+      [size(["S", "M"]), color(["Red"])],
+      [priced({ Size: "S" }, "10")],
+    );
+    expect(variants.map((v) => v.options)).toEqual([
+      { Size: "S", Color: "Red" },
+      { Size: "M", Color: "Red" },
+    ]);
+  });
+
+  it("has no options when the attribute stops being chosen by the shopper", () => {
+    const before = [priced({ Size: "S" }, "10")];
+    expect(syncVariants([size(["S"])], [size(["S"], false)], before)).toEqual([]);
   });
 });

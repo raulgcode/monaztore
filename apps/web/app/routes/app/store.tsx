@@ -143,6 +143,13 @@ export default function Store({ loaderData, actionData, params }: Route.Componen
       )}
       <div className="grid gap-6">
         <Link
+          to={href("/app/:workspace/pages", { workspace: params.workspace })}
+          className="grid min-h-14 gap-1 rounded-xl border bg-card p-4 text-card-foreground hover:bg-muted"
+        >
+          <span className="font-medium">{t("store.pagesCard")}</span>
+          <span className="text-sm text-muted-foreground">{t("store.pagesCardHint")}</span>
+        </Link>
+        <Link
           to={href("/app/:workspace/downloads", { workspace: params.workspace })}
           className="grid min-h-14 gap-1 rounded-xl border bg-card p-4 text-card-foreground hover:bg-muted"
         >

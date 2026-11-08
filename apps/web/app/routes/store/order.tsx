@@ -152,6 +152,18 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
             </li>
           ))}
         </ul>
+        {order.discount > 0 ? (
+          <dl className="grid gap-1 border-t pt-3 text-sm">
+            <div className="flex justify-between">
+              <dt>{t("storefront.subtotal")}</dt>
+              <dd>{money(order.subtotal)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt>{t("storefront.discount", { code: order.couponCode ?? "" })}</dt>
+              <dd>−{money(order.discount)}</dd>
+            </div>
+          </dl>
+        ) : null}
         <p className="flex justify-between border-t pt-3 font-semibold">
           <span>{t("storefront.total")}</span>
           <span>{money(order.total)}</span>

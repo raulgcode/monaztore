@@ -55,7 +55,10 @@ export function currentPrice(
 }
 
 /** The form's "Price" and "Offer price" → what the database keeps (`price` is what it costs). */
-export function pricesOf(regular: number | null, offer: number | null) {
+export function pricesOf(
+  regular: number | null,
+  offer: number | null,
+): { price: number | null; compareAtPrice: number | null } {
   if (regular === null) return { price: offer, compareAtPrice: null };
   if (offer === null || offer >= regular) return { price: regular, compareAtPrice: null };
   return { price: offer, compareAtPrice: regular };
@@ -203,6 +206,51 @@ export interface VariantDraft {
 
 const optionalPrice = (value: string) => (value.trim() === "" ? null : priceToMinor(value));
 const stockOf = (value: string) => (/^\d{1,6}$/.test(value.trim()) ? Number(value.trim()) : null);
+
+export const emptyVariant = (options: Record<string, string>): VariantDraft => ({
+  options,
+  sku: "",
+  price: "",
+  offerPrice: "",
+  stock: "",
+  inStock: true,
+  imageUrl: "",
+});
+
+/**
+ * The variants that go with new attributes. When the attributes the shopper picks are the
+ * same ones (by name), the variants the owner took out stay out and only new values add rows;
+ * when they change, every combination comes, keeping what was typed for the ones that remain.
+ */
+export function syncVariants(
+  before: readonly ProductAttribute[],
+  after: readonly ProductAttribute[],
+  variants: readonly VariantDraft[],
+): VariantDraft[] {
+  const names = (list: readonly ProductAttribute[]) =>
+    list
+      .filter((a) => a.variation && a.values.length > 0)
+      .map((a) => a.name)
+      .sort()
+      .join("|");
+  const combinations = variantCombinations(after);
+  const byKey = new Map(variants.map((variant) => [variantKey(variant.options), variant]));
+  if (names(before) !== names(after)) {
+    return combinations.map((options) => byKey.get(variantKey(options)) ?? emptyVariant(options));
+  }
+  const valid = (options: Record<string, string>) =>
+    Object.entries(options).every(([name, value]) =>
+      after.some((a) => a.variation && a.name === name && a.values.includes(value)),
+    );
+  const oldValues = new Map(before.map((a) => [a.name, new Set(a.values)]));
+  const kept = variants.filter((variant) => valid(variant.options));
+  const added = combinations.filter(
+    (options) =>
+      !byKey.has(variantKey(options)) &&
+      Object.entries(options).some(([name, value]) => !oldValues.get(name)?.has(value)),
+  );
+  return [...kept, ...added.map(emptyVariant)];
+}
 
 /** A price field that may stay empty: empty, or a valid price. */
 export const priceIsValid = (value: string) =>
@@ -378,7 +426,7 @@ export const productFormSchema = z
 export type ProductForm = z.infer<typeof productFormSchema>;
 
 /** What core saves: the form with its prices in minor units, dates as instants. Pure. */
-export function productInputOf(form: ProductForm) {
+export function productInputOf(form: ProductForm): ProductInput {
   const zone = safeTimeZone(form.timeZone);
   const prices = pricesOf(optionalPrice(form.regularPrice), optionalPrice(form.offerPrice));
   const hasVariants = form.variants.length > 0;
@@ -419,7 +467,38 @@ export function productInputOf(form: ProductForm) {
     }),
   };
 }
-export type ProductInput = ReturnType<typeof productInputOf>;
+export interface ProductVariantInput {
+  id?: string | undefined;
+  options: Record<string, string>;
+  sku: string | null;
+  price: number | null;
+  compareAtPrice: number | null;
+  stockQuantity: number | null;
+  inStock: boolean;
+  imageUrl: string | null;
+}
+
+export interface ProductInput {
+  name: string;
+  slug: string;
+  status: ProductStatus;
+  description: string;
+  shortDescription: string;
+  sku: string | null;
+  price: number | null;
+  compareAtPrice: number | null;
+  saleStartsAt: Date | null;
+  saleEndsAt: Date | null;
+  stockQuantity: number | null;
+  inStock: boolean;
+  weightGrams: number | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  categoryIds: string[];
+  images: ProductForm["images"];
+  attributes: ProductForm["attributes"];
+  variants: ProductVariantInput[];
+}
 
 // ── The list ─────────────────────────────────────────────────────────────────────────────────
 
@@ -487,3 +566,27 @@ export const categoryFormSchema = z.object({
     ),
   parentId: z.optional(z.union([z.literal(""), z.uuid()])),
 });
+
+/**
+ * The time zone a store's dates are read in ("offer until the 20th"), from its country. Costa
+ * Rica when the country isn't listed: where Monaztore's stores sell today.
+ */
+const countryZones: Record<string, string> = {
+  CR: "America/Costa_Rica",
+  PA: "America/Panama",
+  NI: "America/Managua",
+  HN: "America/Tegucigalpa",
+  SV: "America/El_Salvador",
+  GT: "America/Guatemala",
+  MX: "America/Mexico_City",
+  CO: "America/Bogota",
+  PE: "America/Lima",
+  CL: "America/Santiago",
+  AR: "America/Argentina/Buenos_Aires",
+  US: "America/New_York",
+  ES: "Europe/Madrid",
+};
+
+export function storeTimeZone(country: string | null | undefined): string {
+  return countryZones[(country ?? "").toUpperCase()] ?? "America/Costa_Rica";
+}

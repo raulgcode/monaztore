@@ -6,6 +6,7 @@ import {
   type ProductListQuery,
   type ProductStatus,
   pageSlugOf,
+  storeTimeZone,
   variantKey,
 } from "@monaztore/contracts";
 import {
@@ -541,16 +542,14 @@ export async function saveProduct(
 
     await tx.delete(schema.productImage).where(eq(schema.productImage.productId, id));
     if (input.images.length) {
-      await tx
-        .insert(schema.productImage)
-        .values(
-          input.images.map((image, position) => ({
-            productId: id,
-            url: image.url,
-            alt: image.alt,
-            position,
-          })),
-        );
+      await tx.insert(schema.productImage).values(
+        input.images.map((image, position) => ({
+          productId: id,
+          url: image.url,
+          alt: image.alt,
+          position,
+        })),
+      );
     }
 
     await tx.delete(schema.productOption).where(eq(schema.productOption.productId, id));
@@ -756,26 +755,22 @@ export async function duplicateProduct(ctx: TenantContext, productId: string): P
         .values(product.images.map((image, position) => ({ productId: id, ...image, position })));
     }
     if (product.attributes.length) {
-      await tx
-        .insert(schema.productOption)
-        .values(
-          product.attributes.map((attribute, position) => ({
-            productId: id,
-            ...attribute,
-            position,
-          })),
-        );
+      await tx.insert(schema.productOption).values(
+        product.attributes.map((attribute, position) => ({
+          productId: id,
+          ...attribute,
+          position,
+        })),
+      );
     }
     if (product.variants.length) {
-      await tx
-        .insert(schema.productVariant)
-        .values(
-          product.variants.map(({ id: _id, sku: _sku, ...variant }, position) => ({
-            productId: id,
-            ...variant,
-            position,
-          })),
-        );
+      await tx.insert(schema.productVariant).values(
+        product.variants.map(({ id: _id, sku: _sku, ...variant }, position) => ({
+          productId: id,
+          ...variant,
+          position,
+        })),
+      );
     }
     return id;
   });
@@ -940,4 +935,15 @@ export async function searchProducts(
     .where(and(eq(schema.product.organizationId, ctx.organizationId), or(...filters)))
     .orderBy(asc(schema.product.name))
     .limit(ids.length ? Math.max(20, ids.length) : 20);
+}
+
+/** What the catalog's screens need of the store: its currency and the zone its dates are in. */
+export async function catalogSettings(
+  ctx: TenantContext,
+): Promise<{ currency: string; timeZone: string }> {
+  const [settings] = await ctx.db
+    .select({ currency: schema.storeSettings.currency, country: schema.storeSettings.country })
+    .from(schema.storeSettings)
+    .where(eq(schema.storeSettings.organizationId, ctx.organizationId));
+  return { currency: settings?.currency ?? "CRC", timeZone: storeTimeZone(settings?.country) };
 }

@@ -86,4 +86,11 @@ export const forms = {
   couponAmountInvalid: "Write a percentage from 1 to 100, or an amount like 5000",
   couponLimitInvalid: "Write a number like 100, or leave it empty for no limit",
   couponScopeRequired: "Pick at least one product or collection",
+  productSlugTaken: "Another product already uses this address",
+  skuTaken: "Another product already uses this SKU",
+  productNotSaved: "Something is missing. Check the fields marked in red",
+  couponCodeTaken: "Another coupon already uses this code",
+  couponGone:
+    "Your discount code stopped working, so the total changed. Check it and place the order again",
+  couponUsedByYou: "You already used this discount code. Remove it in your cart to place the order",
 } as const;

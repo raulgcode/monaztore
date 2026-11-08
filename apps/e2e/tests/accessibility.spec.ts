@@ -22,6 +22,11 @@ const publicPages = ["/", "/login", "/login?with=link", "/sign-up", "/forgot-pas
 const workspaceSections = [
   "",
   "/orders",
+  "/products",
+  "/products/new",
+  "/collections",
+  "/coupons",
+  "/coupons/new",
   "/pages",
   "/store",
   "/downloads",
@@ -173,6 +178,14 @@ test.describe("Feature: accessibility (axe, WCAG 2.2 AA)", () => {
             await page.goto(`/app/${workspace.slug}${section}`);
             await expectAccessible(page);
           }
+          // A product's editor, with the sample store's mug and its photo.
+          await page.goto(`/app/${workspace.slug}/products?q=Pura`);
+          await page
+            .getByRole("link", { name: /^Pura Vida mug/ })
+            .first()
+            .click();
+          await expect(page.getByRole("heading", { level: 1 })).toHaveText("Pura Vida mug");
+          await expectAccessible(page);
           // The page editor, with the sample store's "Questions" page.
           await page.goto(`/app/${workspace.slug}/pages`);
           await page.getByRole("link", { name: /^Questions/ }).click();

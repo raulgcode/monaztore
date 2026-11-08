@@ -96,4 +96,11 @@ export const forms = {
   couponAmountInvalid: "Escribe un porcentaje del 1 al 100, o un monto como 5000",
   couponLimitInvalid: "Escribe un número como 100, o déjalo vacío para no poner límite",
   couponScopeRequired: "Elige al menos un producto o una colección",
+  productSlugTaken: "Otro producto ya usa esta dirección",
+  skuTaken: "Otro producto ya usa este SKU",
+  productNotSaved: "Falta algo. Revisa los campos marcados en rojo",
+  couponCodeTaken: "Otro cupón ya usa este código",
+  couponGone:
+    "Tu código de descuento dejó de funcionar y el total cambió. Revísalo y vuelve a hacer el pedido",
+  couponUsedByYou: "Ya usaste este código de descuento. Quítalo en tu carrito para hacer el pedido",
 } as const satisfies Translation<typeof en>["forms"];
