@@ -97,6 +97,8 @@ export interface StoreThemeSettings {
    * The rest show as the theme lays them out.
    */
   hiddenFilters?: string[];
+  /** What the store calls its categories ("Designs", "Brands"); empty = "Categories". */
+  categoriesLabel?: string;
   /** Up to three short promises ("Delivery in 24 h"); none = the theme's own. */
   highlights?: string[];
 }

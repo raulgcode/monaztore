@@ -36,7 +36,7 @@ export const pages = {
   blockImageHint: "A photo with its description",
   blockButtonHint: "A button to another page",
   blockFaqHint: "Questions that open one at a time",
-  blockProductsHint: "Your newest products or a collection's",
+  blockProductsHint: "Your newest products or a category's",
   headingText: "Heading",
   headingSize: "Size",
   headingBig: "Big",

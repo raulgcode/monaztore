@@ -55,6 +55,10 @@ export const design = {
   frontHeading: "Página de inicio",
   heroTitle: "Título",
   heroTitleHint: "Vacío: el nombre de tu tienda.",
+  categoriesLabel: "Cómo llamas a tus categorías",
+  categoriesLabelHint:
+    "Como “Diseños” o “Marcas”. Quien compra lo ve en el menú y los títulos de la tienda. Vacío: “Categorías”.",
+  categoriesLabelPlaceholder: "Categorías",
   heroSubtitle: "Texto bajo el título",
   heroSubtitleHint: "Vacío: el del tema.",
   announcement: "Aviso arriba",

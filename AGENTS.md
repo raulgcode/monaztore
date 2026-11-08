@@ -264,7 +264,10 @@ browser, the first is the cover; only the store's own `/media` keys are kept), p
 the offer and `currentPrice` reads it every time, in the store's time zone from its country),
 stock, SKU (unique in the store), options and details (`product_option.variation`: the ones the
 shopper chooses make the variants, up to `VARIATION_ATTRIBUTES_MAX`; the rest show as details;
-all of them are filters), SEO and collections (`/collections`, a tab next to Products). Editing a
+all of them are filters), SEO and categories (the `category` table, imported from WooCommerce;
+`/collections`, a tab next to Products, picked with a search and chips). The interface says
+"Categories"; each store names them its own way in Design (`theme.categoriesLabel`, e.g. "Designs"),
+which the storefront's home and categories page use. Editing a
 published product's address leaves a 301. Its structured parts travel as JSON fields checked by
 the schema, like the page editor's blocks.
 

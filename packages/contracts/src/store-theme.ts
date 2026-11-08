@@ -58,6 +58,7 @@ export const storeThemeSchema = z.object({
   heroTitle: optionalText(80),
   heroSubtitle: optionalText(160),
   announcement: optionalText(120),
+  categoriesLabel: optionalText(40),
   highlight1: optionalText(60),
   highlight2: optionalText(60),
   highlight3: optionalText(60),

@@ -60,6 +60,7 @@ export async function updateStoreTheme(
     heroTitle: input.heroTitle,
     heroSubtitle: input.heroSubtitle,
     announcement: input.announcement,
+    ...(input.categoriesLabel ? { categoriesLabel: input.categoriesLabel } : {}),
     highlights: [input.highlight1, input.highlight2, input.highlight3].filter(Boolean),
     // The filters offered on the form and left unticked; any other stays as it was.
     ...hiddenFiltersOf(input, current.hiddenFilters ?? []),
