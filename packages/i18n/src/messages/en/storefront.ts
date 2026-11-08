@@ -1,7 +1,7 @@
 /** The public store: what a shopper sees on the store's own domain. */
 export const storefront = {
   home: "Home",
-  collections: "Collections",
+  collections: "Categories",
   allProducts: "All products",
   menu: "Store sections",
   searchLabel: "Search products",
@@ -137,7 +137,7 @@ export const storefront = {
   seeMore: "See all",
   newArrivals: "New arrivals",
   onSaleHeading: "On sale now",
-  shopCollections: "Shop by collection",
+  shopCollections: "Shop by category",
   shopNow: "Shop now",
   viewCatalog: "See the catalog",
   highlightsLabel: "Why buy here",

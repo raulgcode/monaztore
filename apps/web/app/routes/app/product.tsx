@@ -35,7 +35,14 @@ import {
   NotFoundError,
   saveProduct,
 } from "@monaztore/core";
-import { ArrowLeftIcon, CopyIcon, DownloadIcon, ExternalLinkIcon, Trash2Icon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  CopyIcon,
+  DownloadIcon,
+  ExternalLinkIcon,
+  Trash2Icon,
+  XIcon,
+} from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
 import { data, Form, href, Link, redirect, useFetcher, useSearchParams } from "react-router";
 import { PageHeader } from "~/components/page-header";
@@ -709,33 +716,99 @@ function CollectionsPicker({
     const made = madeNow?.id;
     if (made) setFresh((ids) => (ids.includes(made) ? ids : [...ids, made]));
   }, [madeNow?.id]);
-  const checked = new Set([...(selected ?? []), ...fresh]);
-  const depth = (category: { parentId: string | null }) => (category.parentId ? 1 : 0);
+  const [picked, setPicked] = useState<string[]>(() => selected ?? []);
+  const [query, setQuery] = useState("");
+  const chosen = new Set([...picked, ...fresh]);
+  const toggle = (categoryId: string, on: boolean) => {
+    setFresh((ids) => ids.filter((x) => x !== categoryId));
+    setPicked((ids) =>
+      on ? [...new Set([...ids, categoryId])] : ids.filter((x) => x !== categoryId),
+    );
+  };
+  const nameOf = new Map(categories.map((category) => [category.id, category.name]));
+  // Imported shops can have dozens: a search box narrows the list, accents and case aside.
+  const plain = (text: string) =>
+    text
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  const wanted = plain(query.trim());
+  const shown = wanted
+    ? categories.filter((category) => plain(category.name).includes(wanted))
+    : categories;
 
   return (
     <section aria-labelledby={id} className="grid gap-3 rounded-lg border p-4">
       <h2 id={id} className="text-lg font-semibold">
         {t("products.collectionsHeading")}
       </h2>
+      {[...chosen].map((categoryId) => (
+        <input key={categoryId} type="hidden" name={name} value={categoryId} />
+      ))}
+      {chosen.size > 0 ? (
+        <ul className="flex flex-wrap gap-1" aria-label={t("products.chosenCategories")}>
+          {[...chosen].map((categoryId) => (
+            <li key={categoryId}>
+              <span className="inline-flex min-h-9 items-center gap-1 rounded-full border bg-muted pl-3 text-sm">
+                {nameOf.get(categoryId) ?? madeNow?.name}
+                <button
+                  type="button"
+                  onClick={() => toggle(categoryId, false)}
+                  className="grid size-9 place-items-center rounded-full outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  aria-label={t("products.removeCategory", {
+                    name: nameOf.get(categoryId) ?? madeNow?.name ?? "",
+                  })}
+                >
+                  <XIcon aria-hidden className="size-3.5" />
+                </button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {categories.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t("products.noCollections")}</p>
-      ) : null}
-      <ul className="grid max-h-72 gap-1 overflow-y-auto">
-        {categories.map((category) => (
-          <li key={category.id} className={cn(depth(category) && "pl-6")}>
-            <label className="flex min-h-11 items-center gap-3 text-sm">
-              <input
-                type="checkbox"
-                name={name}
-                value={category.id}
-                defaultChecked={checked.has(category.id)}
-                className="size-5 accent-primary"
+      ) : (
+        <>
+          {categories.length > 8 ? (
+            <div className="grid gap-2">
+              <Label htmlFor={`${id}-search`}>{t("products.searchCategories")}</Label>
+              <Input
+                id={`${id}-search`}
+                type="search"
+                value={query}
+                autoComplete="off"
+                placeholder={t("products.searchCategoriesPlaceholder")}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") event.preventDefault();
+                }}
               />
-              {category.name}
-            </label>
-          </li>
-        ))}
-      </ul>
+            </div>
+          ) : null}
+          {shown.length > 0 ? (
+            <ul className="grid max-h-60 gap-1 overflow-y-auto rounded-md border p-2">
+              {shown.map((category) => (
+                <li key={category.id} className={cn(!wanted && category.parentId && "pl-6")}>
+                  <label className="flex min-h-11 items-center gap-3 rounded-sm px-1 text-sm hover:bg-muted">
+                    <input
+                      type="checkbox"
+                      checked={chosen.has(category.id)}
+                      onChange={(event) => toggle(category.id, event.target.checked)}
+                      className="size-5 accent-primary"
+                    />
+                    {category.name}
+                  </label>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p role="status" className="text-sm text-muted-foreground">
+              {t("products.noCategoryMatches")}
+            </p>
+          )}
+        </>
+      )}
       <div className="grid gap-2">
         <Label htmlFor={`${id}-new`}>{t("products.newCollection")}</Label>
         <div className="flex gap-2">

@@ -22,3 +22,8 @@ export function useStoreHighlights(): string[] {
     ? theme.highlights
     : ([1, 2, 3] as const).map((n) => t(`storefront.highlight_${theme.id}_${n}`));
 }
+
+/** What the store calls its categories ("Designs"), set in Design; the translated word without it. */
+export function categoriesLabelOf(shell: StoreShell | null | undefined, fallback: string): string {
+  return shell?.theme.categoriesLabel || fallback;
+}

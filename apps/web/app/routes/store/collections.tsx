@@ -2,6 +2,8 @@ import { getStoreInfo, listTopCollections } from "@monaztore/core";
 import { href, Link } from "react-router";
 import { metaT, useT } from "~/lib/i18n";
 import { pageMeta, storeOrigin } from "~/lib/store-seo";
+import { categoriesLabelOf, useStoreShell } from "~/lib/store-theme";
+import type { StoreShell } from "~/lib/storefront.server";
 import { requireStore } from "~/middleware/store.server";
 import type { Route } from "./+types/collections";
 
@@ -15,8 +17,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 export function meta({ loaderData, matches }: Route.MetaArgs) {
   if (!loaderData) return [];
   const t = metaT(matches);
+  const shell = (
+    matches.find((match) => match?.id === "routes/store/layout")?.loaderData as
+      | { shell?: StoreShell | null }
+      | undefined
+  )?.shell;
   return pageMeta({
-    title: `${t("storefront.collections")} | ${loaderData.storeName}`,
+    title: `${categoriesLabelOf(shell, t("storefront.collections"))} | ${loaderData.storeName}`,
     description: loaderData.collections.map((c) => c.name).join(", "),
     canonical: loaderData.canonical,
     siteName: loaderData.storeName,
@@ -25,9 +32,10 @@ export function meta({ loaderData, matches }: Route.MetaArgs) {
 
 export default function Collections({ loaderData }: Route.ComponentProps) {
   const t = useT();
+  const title = categoriesLabelOf(useStoreShell(), t("storefront.collections"));
   return (
     <>
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">{t("storefront.collections")}</h1>
+      <h1 className="mb-6 text-2xl font-semibold tracking-tight">{title}</h1>
       <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {loaderData.collections.map((collection) => (
           <li key={collection.slug}>

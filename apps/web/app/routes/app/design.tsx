@@ -134,6 +134,7 @@ export default function Design({ loaderData, actionData }: Route.ComponentProps)
       heroTitle: settings.heroTitle ?? "",
       heroSubtitle: settings.heroSubtitle ?? "",
       announcement: settings.announcement ?? "",
+      categoriesLabel: settings.categoriesLabel ?? "",
       highlight1: highlights[0] ?? "",
       highlight2: highlights[1] ?? "",
       highlight3: highlights[2] ?? "",
@@ -324,6 +325,12 @@ export default function Design({ loaderData, actionData }: Route.ComponentProps)
                   field={fields.announcement}
                   label={t("design.announcement")}
                   description={t("design.announcementHint")}
+                />
+                <TextField
+                  field={fields.categoriesLabel}
+                  label={t("design.categoriesLabel")}
+                  description={t("design.categoriesLabelHint")}
+                  placeholder={t("design.categoriesLabelPlaceholder")}
                 />
                 <fieldset className="grid gap-3">
                   <legend className="mb-1 text-sm font-medium">

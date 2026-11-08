@@ -341,6 +341,8 @@ export interface StoreTheme {
   highlights: string[];
   /** Catalog filters the owner turned off (`withoutHiddenFilters`). */
   hiddenFilters: string[];
+  /** What the store calls its categories; empty = the web's translated "Categories". */
+  categoriesLabel: string;
 }
 
 const fonts = {
@@ -394,5 +396,6 @@ export function resolveStoreTheme(settings: StoreThemeSettings = {}): StoreTheme
     announcement: settings.announcement ?? "",
     highlights: (settings.highlights ?? []).filter(Boolean).slice(0, 3),
     hiddenFilters: settings.hiddenFilters ?? [],
+    categoriesLabel: settings.categoriesLabel ?? "",
   };
 }

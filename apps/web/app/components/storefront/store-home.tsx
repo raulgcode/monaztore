@@ -35,7 +35,12 @@ export function StoreHome({ storeName, currency, products, total, sale }: StoreH
     highlights: <Highlights key="highlights" items={highlights} />,
     collections:
       collections.length > 0 ? (
-        <Collections key="collections" collections={collections} layout={layout} />
+        <Collections
+          key="collections"
+          collections={collections}
+          layout={layout}
+          heading={theme.categoriesLabel || t("storefront.shopCollections")}
+        />
       ) : null,
     new: (
       <Section
@@ -196,15 +201,16 @@ function Highlights({ items }: { items: string[] }) {
 function Collections({
   collections,
   layout,
+  heading,
 }: {
   collections: { slug: string; name: string; imageUrl: string | null }[];
   layout: StoreTheme["layout"];
+  heading: string;
 }) {
-  const t = useT();
   const shown = collections.slice(0, 8);
   const withPhotos = layout.productCard !== "row" && shown.some((c) => c.imageUrl);
   return (
-    <Section heading={t("storefront.shopCollections")}>
+    <Section heading={heading}>
       {withPhotos ? (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {shown.map((collection) => (

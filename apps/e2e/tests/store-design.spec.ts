@@ -288,6 +288,35 @@ test.describe("Feature: the store's design", () => {
     });
   });
 
+  test("Scenario: the owner calls their categories “Designs” in Design and the store's categories page says so", async ({
+    page,
+    baseURL,
+    signInWithWorkspace,
+    workspaceOf,
+    newVisitor,
+  }) => {
+    const store = await test.step("Given the owner's store is open", async () => {
+      await signInWithWorkspace(page);
+      return openStore(await workspaceOf(page), baseURL);
+    });
+
+    await test.step("When they write “Designs” as what they call their categories and save", async () => {
+      await openSection(page, "Design");
+      await page.getByLabel("What you call your categories").fill("Designs");
+      await page.getByRole("button", { name: "Save design" }).click();
+      await expect(page.getByRole("main").getByRole("status")).toHaveText(
+        "Saved. Your store already looks like this.",
+      );
+    });
+
+    await test.step("Then a shopper sees the categories page titled “Designs”", async () => {
+      const shopper = await newVisitor();
+      await shopper.goto(`${store}/collections`);
+      await expect(shopper.getByRole("heading", { level: 1 })).toHaveText("Designs");
+      await expect(shopper).toHaveTitle(/^Designs \| /);
+    });
+  });
+
   test("Scenario: a filter with many values shows a few, finds the rest by name and keeps what was picked", async ({
     page,
     baseURL,

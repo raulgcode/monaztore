@@ -53,6 +53,10 @@ export const design = {
   frontHeading: "Front page",
   heroTitle: "Title",
   heroTitleHint: "Empty: your store's name.",
+  categoriesLabel: "What you call your categories",
+  categoriesLabelHint:
+    "Like “Designs” or “Brands”. Shoppers see it in the store's menu and titles. Empty: “Categories”.",
+  categoriesLabelPlaceholder: "Categories",
   heroSubtitle: "Text under the title",
   heroSubtitleHint: "Empty: the theme's own.",
   announcement: "Announcement at the top",
