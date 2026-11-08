@@ -234,8 +234,15 @@ export async function cancelOrder(ctx: TenantContext, number: number): Promise<v
           inArray(schema.order.status, ["pending_payment", "payment_submitted"]),
         ),
       )
-      .returning({ id: schema.order.id });
+      .returning({ id: schema.order.id, couponId: schema.order.couponId });
     if (!updated) throw new DomainError("order_closed", "Only an open order can be cancelled");
+    // The coupon's use comes back too.
+    if (updated.couponId) {
+      await tx
+        .update(schema.coupon)
+        .set({ usedCount: sql`greatest(${schema.coupon.usedCount} - 1, 0)` })
+        .where(eq(schema.coupon.id, updated.couponId));
+    }
     const lines = await tx
       .select({
         productId: schema.orderLine.productId,

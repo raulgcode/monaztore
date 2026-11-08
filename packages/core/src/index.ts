@@ -16,6 +16,17 @@ export {
   storefrontPaths,
 } from "./catalog-import";
 export {
+  type CouponRow,
+  couponUsesBy,
+  deleteCoupon,
+  findCouponByCode,
+  getCoupon,
+  listCoupons,
+  type StoreCoupon,
+  saveCoupon,
+  setCouponActive,
+} from "./coupons";
+export {
   addProductFile,
   createDigitalProduct,
   type DigitalFileDeps,
@@ -74,6 +85,7 @@ export {
   verifyMfaCode,
 } from "./mfa";
 export {
+  type CartCoupon,
   type DownloadRefusal,
   type DownloadResult,
   getDownloadsByLink,
@@ -147,6 +159,23 @@ export {
   setSupportNotice,
 } from "./platform-admin";
 export { type PlatformAuditAction, recordAudit } from "./platform-audit";
+export {
+  bulkUpdateProducts,
+  type CategoryRow,
+  createCategory,
+  deleteCategory,
+  duplicateProduct,
+  type EditableProduct,
+  getEditableProduct,
+  listAttributeNames,
+  listCategories,
+  listProducts,
+  type ProductList,
+  type ProductRow,
+  renameCategory,
+  saveProduct,
+  searchProducts,
+} from "./products";
 export {
   clientAddress,
   hitRateLimit,

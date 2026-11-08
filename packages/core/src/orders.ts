@@ -1,7 +1,15 @@
 import { createHash, randomBytes } from "node:crypto";
-import type { CartLine, CheckoutInput, CheckoutPaymentMethod } from "@monaztore/contracts";
+import {
+  type CartLine,
+  type CheckoutInput,
+  type CheckoutPaymentMethod,
+  type CouponProblem,
+  couponDiscount,
+  currentPrice,
+} from "@monaztore/contracts";
 import { and, asc, type Database, eq, inArray, schema, sql } from "@monaztore/db";
 import type { EinvoiceKind, OrderStatus, OrderTaxId, StorePayments } from "@monaztore/db/schema";
+import { couponUsesBy, findCouponByCode } from "./coupons";
 import { digitalProductIds } from "./digital-products";
 import { storeIssuesInvoices } from "./einvoicing";
 import { DomainError } from "./errors";
@@ -66,6 +74,17 @@ export interface PricedLine {
   stockQuantity: number | null;
   /** A digital product: the buyer downloads its files once the order is paid. */
   digital: boolean;
+  /** The regular price when the line is on offer right now; null otherwise. */
+  compareAtPrice: number | null;
+  /** This line's share of the coupon (minor units). */
+  discount: number;
+}
+
+/** The coupon the shopper typed, as it applies to this cart. */
+export interface CartCoupon {
+  code: string;
+  kind: "percent" | "fixed";
+  amount: number;
 }
 
 export interface PricedCart {
@@ -78,6 +97,13 @@ export interface PricedCart {
   shortOfStock: number;
   /** Something has to be shipped; false when every line is a download (no address asked). */
   needsShipping: boolean;
+  /** What the coupon takes off; `total` = `subtotal` − `discount`. */
+  discount: number;
+  total: number;
+  /** The coupon that applies, or null. */
+  coupon: CartCoupon | null;
+  /** Why the code typed doesn't apply (`not_found` when the store has no such code). */
+  couponProblem: CouponProblem | "not_found" | null;
 }
 
 const titleOf = (options: Record<string, string>) => Object.values(options).join(" / ") || null;
@@ -89,12 +115,27 @@ const titleOf = (options: Record<string, string>) => Object.values(options).join
 export async function priceCart(
   ctx: StorefrontContext,
   cart: readonly CartLine[],
-  { lock = false }: { lock?: boolean } = {},
+  {
+    lock = false,
+    couponCode = null,
+    now = new Date(),
+  }: { lock?: boolean; couponCode?: string | null; now?: Date } = {},
 ): Promise<PricedCart> {
   const { currency } = await storeSettingsOf(ctx.db, ctx.store.organizationId);
   const productIds = [...new Set(cart.map((line) => line.productId))];
   if (productIds.length === 0) {
-    return { lines: [], subtotal: 0, currency, removed: 0, shortOfStock: 0, needsShipping: false };
+    return {
+      lines: [],
+      subtotal: 0,
+      currency,
+      removed: 0,
+      shortOfStock: 0,
+      needsShipping: false,
+      discount: 0,
+      total: 0,
+      coupon: null,
+      couponProblem: null,
+    };
   }
   const productQuery = ctx.db
     .select({
@@ -103,6 +144,9 @@ export async function priceCart(
       name: schema.product.name,
       sku: schema.product.sku,
       price: schema.product.price,
+      compareAtPrice: schema.product.compareAtPrice,
+      saleStartsAt: schema.product.saleStartsAt,
+      saleEndsAt: schema.product.saleEndsAt,
       stockQuantity: schema.product.stockQuantity,
       inStock: schema.product.inStock,
     })
@@ -147,7 +191,15 @@ export async function priceCart(
       removed++;
       continue;
     }
-    const unitPrice = variant ? (variant.price ?? product.price) : product.price;
+    // A variant without its own price takes the product's, offer included.
+    const prices = currentPrice(
+      variant && variant.price !== null
+        ? { price: variant.price, compareAtPrice: variant.compareAtPrice }
+        : { price: product.price, compareAtPrice: product.compareAtPrice },
+      product,
+      now,
+    );
+    const unitPrice = prices.price;
     const stockQuantity = variant ? variant.stockQuantity : product.stockQuantity;
     const inStock = variant ? variant.inStock : product.inStock;
     if (unitPrice === null || !inStock || stockQuantity === 0) {
@@ -172,15 +224,61 @@ export async function priceCart(
       lineTotal: unitPrice * quantity,
       stockQuantity,
       digital: digital.has(product.id),
+      compareAtPrice: prices.compareAtPrice,
+      discount: 0,
     });
+  }
+  const subtotal = lines.reduce((sum, line) => sum + line.lineTotal, 0);
+  let coupon: CartCoupon | null = null;
+  let couponProblem: PricedCart["couponProblem"] = null;
+  let discount = 0;
+  if (couponCode && lines.length > 0) {
+    const found = await findCouponByCode(ctx.db, ctx.store.organizationId, couponCode);
+    if (!found) {
+      couponProblem = "not_found";
+    } else {
+      const categories = await ctx.db
+        .select({
+          productId: schema.productCategory.productId,
+          categoryId: schema.productCategory.categoryId,
+        })
+        .from(schema.productCategory)
+        .where(inArray(schema.productCategory.productId, ids));
+      const result = couponDiscount(
+        found,
+        lines.map((line) => ({
+          productId: line.productId,
+          categoryIds: categories
+            .filter((c) => c.productId === line.productId)
+            .map((c) => c.categoryId),
+          lineTotal: line.lineTotal,
+          onSale: line.compareAtPrice !== null,
+        })),
+        now,
+      );
+      if (result.ok) {
+        discount = result.discount;
+        coupon = { code: found.code, kind: found.kind, amount: found.amount };
+        result.perLine.forEach((share, index) => {
+          const line = lines[index];
+          if (line) line.discount = share;
+        });
+      } else {
+        couponProblem = result.problem;
+      }
+    }
   }
   return {
     lines,
-    subtotal: lines.reduce((sum, line) => sum + line.lineTotal, 0),
+    subtotal,
     currency,
     removed,
     shortOfStock,
     needsShipping: lines.some((line) => !line.digital),
+    discount,
+    total: subtotal - discount,
+    coupon,
+    couponProblem,
   };
 }
 
@@ -205,10 +303,13 @@ export async function placeOrder(
     checkout,
     locale,
     taxId = null,
+    couponCode = null,
   }: {
     cart: readonly CartLine[];
     checkout: CheckoutInput;
     locale: string;
+    /** The code the shopper applied in the cart; checked again here, with its limits. */
+    couponCode?: string | null;
     /** "Invoice in my name" (Costa Rica): kept only if the store issues invoices. */
     taxId?: OrderTaxId | null;
   },
@@ -220,8 +321,24 @@ export async function placeOrder(
     if (!enabledPayments(payments)[checkout.paymentMethod as CheckoutPaymentMethod]) {
       throw new DomainError("payment_method_unavailable", "The store doesn't take this payment");
     }
-    const priced = await priceCart(store, cart, { lock: true });
+    // The coupon's row stays locked to the end, so its last use goes to one order only.
+    const coupon = couponCode
+      ? await findCouponByCode(store.db, organizationId, couponCode, { lock: true })
+      : undefined;
+    const priced = await priceCart(store, cart, { lock: true, couponCode });
     if (priced.lines.length === 0) throw new DomainError("cart_empty", "Nothing to buy");
+    if (couponCode && (!coupon || !priced.coupon)) {
+      throw new DomainError("coupon_invalid", priced.couponProblem ?? "not_found");
+    }
+    if (
+      coupon?.usageLimitPerCustomer != null &&
+      (await couponUsesBy(store.db, coupon.id, checkout.email)) >= coupon.usageLimitPerCustomer
+    ) {
+      throw new DomainError(
+        "coupon_used",
+        "This email already used the coupon as many times as it can",
+      );
+    }
     if (priced.removed > 0 || priced.shortOfStock > 0) {
       throw new DomainError("cart_changed", "Prices or stock changed: review the cart");
     }
@@ -277,7 +394,10 @@ export async function placeOrder(
         needsShipping: priced.needsShipping,
         currency: priced.currency,
         subtotal: priced.subtotal,
-        total: priced.subtotal,
+        discount: priced.discount,
+        couponCode: coupon && priced.coupon ? coupon.code : null,
+        couponId: coupon && priced.coupon ? coupon.id : null,
+        total: priced.total,
         locale,
         taxId: taxId && (await storeIssuesInvoices(tx, organizationId)) ? taxId : null,
       })
@@ -297,6 +417,7 @@ export async function placeOrder(
           unitPrice: line.unitPrice,
           quantity: line.quantity,
           lineTotal: line.lineTotal,
+          discount: line.discount,
           position,
         })),
       )
@@ -308,6 +429,13 @@ export async function placeOrder(
       priced.lines,
       orderLines,
     );
+
+    if (coupon && priced.coupon) {
+      await tx
+        .update(schema.coupon)
+        .set({ usedCount: sql`${schema.coupon.usedCount} + 1` })
+        .where(eq(schema.coupon.id, coupon.id));
+    }
 
     for (const line of priced.lines) {
       if (line.stockQuantity === null) continue;
@@ -536,6 +664,9 @@ export interface ShopperOrder {
   email: string;
   currency: string;
   subtotal: number;
+  /** What a coupon took off, and its code. */
+  discount: number;
+  couponCode: string | null;
   total: number;
   createdAt: Date;
   shippingAddress: { line1: string; city: string; province: string; notes: string };
@@ -643,6 +774,8 @@ export async function getOrderByToken(
     email: found.email,
     currency: found.currency,
     subtotal: found.subtotal,
+    discount: found.discount,
+    couponCode: found.couponCode,
     total: found.total,
     createdAt: found.createdAt,
     shippingAddress: found.shippingAddress,

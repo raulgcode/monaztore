@@ -1,4 +1,4 @@
-import { haciendaEnvironmentOf } from "@monaztore/contracts";
+import { discountedUnits, haciendaEnvironmentOf } from "@monaztore/contracts";
 import { and, asc, type Database, eq, inArray, isNull, lt, lte, or, schema } from "@monaztore/db";
 import type { EinvoiceProblem, TaxReceiver } from "@monaztore/db/schema";
 import {
@@ -134,6 +134,8 @@ async function signedDocument(
       variantTitle: schema.orderLine.variantTitle,
       quantity: schema.orderLine.quantity,
       unitPrice: schema.orderLine.unitPrice,
+      lineTotal: schema.orderLine.lineTotal,
+      discount: schema.orderLine.discount,
     })
     .from(schema.orderLine)
     .where(eq(schema.orderLine.orderId, doc.orderId))
@@ -166,12 +168,15 @@ async function signedDocument(
       currency: "CRC",
       exchangeRate: "1",
       payment: paymentCodes[order.paymentMethod] ?? "99",
-      lines: lines.map((line) => ({
-        detail: line.variantTitle ? `${line.name} (${line.variantTitle})` : line.name,
-        cabys: settings.cabys,
-        quantity: line.quantity,
-        unitPriceMinor: line.unitPrice,
-      })),
+      // A coupon's share lowers the line's price, so the document adds up to what was paid.
+      lines: lines.flatMap((line) =>
+        discountedUnits(line).map((units) => ({
+          detail: line.variantTitle ? `${line.name} (${line.variantTitle})` : line.name,
+          cabys: settings.cabys,
+          quantity: units.quantity,
+          unitPriceMinor: units.unitPrice,
+        })),
+      ),
     });
   } catch (error) {
     throw new InvalidDocument(error instanceof Error ? error.message : String(error));

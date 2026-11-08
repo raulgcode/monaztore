@@ -81,4 +81,19 @@ export const forms = {
   downloadDaysInvalid:
     "Escribe un número de días del 1 al 3650, o déjalo vacío para no poner límite",
   photoInvalid: "Esa foto no sirvió: usa un JPG, PNG o WebP de hasta 5 MB.",
+  dateInvalid: "Elige una fecha del calendario",
+  stockInvalid: "Escribe cuántos tienes, como 12",
+  weightInvalid: "Escribe el peso en gramos, como 250",
+  imagesInvalid: "Una de las fotos no sirvió: súbela de nuevo",
+  attributesInvalid:
+    "Revisa los atributos: cada uno necesita nombre y valores, sin repetir nombres, y hasta 3 para variantes",
+  variantsInvalid: "Revisa las variantes: un precio o una cantidad no está bien",
+  offerNotLower: "El precio de oferta tiene que ser menor que el precio",
+  saleDatesOrder: "La fecha final va después de la inicial",
+  categoryNameRequired: "Ponle un nombre a la colección",
+  couponRequired: "Escribe el código del cupón",
+  couponCodeInvalid: "Usa de 3 a 32 letras, números, - o _, como VERANO10",
+  couponAmountInvalid: "Escribe un porcentaje del 1 al 100, o un monto como 5000",
+  couponLimitInvalid: "Escribe un número como 100, o déjalo vacío para no poner límite",
+  couponScopeRequired: "Elige al menos un producto o una colección",
 } as const satisfies Translation<typeof en>["forms"];
