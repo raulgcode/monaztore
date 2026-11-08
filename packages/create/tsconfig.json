@@ -1,5 +1,5 @@
 {
-  "extends": "@monaztore/tsconfig/base.json",
+  "extends": "../tsconfig/base.json",
   "include": ["src"],
   "compilerOptions": {
     "allowImportingTsExtensions": true
