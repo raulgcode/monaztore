@@ -2,6 +2,7 @@ import { isRouteErrorResponse, Outlet, useRouteLoaderData } from "react-router";
 import { ErrorPage } from "~/components/error-page";
 import { StoreShell } from "~/components/storefront/store-shell";
 import { storeContext } from "~/context";
+import { cartCount, readCart } from "~/lib/cart.server";
 import { useT } from "~/lib/i18n";
 import { translations } from "~/lib/locale.server";
 import { storeShell } from "~/lib/storefront.server";
@@ -17,13 +18,21 @@ export const middleware: Route.MiddlewareFunction[] = [storeMiddleware];
 export async function loader({ request, context }: Route.LoaderArgs) {
   const store = context.get(storeContext);
   if (!store) return { shell: null };
-  return { shell: await storeShell(store, request), i18n: translations(context, "storefront") };
+  return {
+    shell: await storeShell(store, request),
+    cartCount: cartCount(await readCart(request)),
+    i18n: translations(context, "storefront"),
+  };
 }
 
 export default function StoreLayout({ loaderData }: Route.ComponentProps) {
   if (!loaderData.shell) return <Outlet />;
   return (
-    <StoreShell name={loaderData.shell.name} collections={loaderData.shell.collections}>
+    <StoreShell
+      name={loaderData.shell.name}
+      collections={loaderData.shell.collections}
+      cartCount={loaderData.cartCount ?? 0}
+    >
       <Outlet />
     </StoreShell>
   );
@@ -52,7 +61,11 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
     );
   }
   return (
-    <StoreShell name={layout.shell.name} collections={layout.shell.collections}>
+    <StoreShell
+      name={layout.shell.name}
+      collections={layout.shell.collections}
+      cartCount={layout.cartCount ?? 0}
+    >
       {head}
       <div className="py-10 text-center">
         <h1 className="text-2xl font-semibold">{heading}</h1>

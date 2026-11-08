@@ -1,9 +1,9 @@
-# Each push: lint, typecheck and Vitest (unit, integration against Postgres + Mailpit, browser).
-# The Playwright scenarios run on demand in e2e.yml (`pnpm e2e:remote`).
+# Lint, typecheck and Vitest (unit, integration against Postgres + Mailpit, browser). Only on
+# demand: the project has no budget for Actions minutes, so checks run on the developer's (or
+# the agent's) machine before pushing. See AGENTS.md, "Workflow".
 name: CI
 
 on:
-  push:
   workflow_dispatch:
 
 concurrency:

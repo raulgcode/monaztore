@@ -35,6 +35,14 @@ test.describe("Feature: accessibility (axe, WCAG 2.2 AA)", () => {
             await page.goto(`${store}${path}`);
             await expectAccessible(page);
           }
+          // The cart and checkout, with the mug in the cart.
+          await page.goto(`${store}/products/pura-vida-mug`);
+          await page.getByRole("button", { name: "Add to cart" }).click();
+          await expect(page.getByRole("main").getByRole("status")).toContainText("Added");
+          for (const path of ["/cart", "/checkout"]) {
+            await page.goto(`${store}${path}`);
+            await expectAccessible(page);
+          }
         },
       );
 

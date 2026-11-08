@@ -77,8 +77,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.ref.outputs.tag }}
-      # CI (ci.yml) runs on each push, the tag's included. A green run of this commit is enough;
-      # otherwise it waits for the newest one and stops the deploy if it fails.
+      # CI (ci.yml) only runs on demand: checks run locally before pushing. A green run of this
+      # commit is enough; one in progress is waited for; a failed one stops the deploy. With
+      # none, the deploy goes on (the local checks are the gate).
       - name: CI of this commit is green
         env:
           GH_TOKEN: ${{ github.token }}
@@ -92,8 +93,12 @@ jobs:
           fi
           id=$(jq -r '[.[] | select(.status != "completed")][0].databaseId // empty' <<< "$runs")
           if [ -z "$id" ]; then
-            echo "::error::No green CI run for $sha: fix main and release again"
-            exit 1
+            if [ "$(jq '[.[] | select(.conclusion == "failure")] | length' <<< "$runs")" -gt 0 ]; then
+              echo "::error::CI failed for $sha: fix main and release again"
+              exit 1
+            fi
+            echo "No CI run for $sha: deploying on the local checks"
+            exit 0
           fi
           gh run watch "$id" --exit-status --interval 30
 

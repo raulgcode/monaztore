@@ -336,6 +336,7 @@ export async function listVariants(ctx: TenantContext, productIds: string[]) {
   if (productIds.length === 0) return [];
   return ctx.db
     .select({
+      id: schema.productVariant.id,
       productId: schema.productVariant.productId,
       options: schema.productVariant.options,
       price: schema.productVariant.price,

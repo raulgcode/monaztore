@@ -202,7 +202,15 @@ pages answer 404). Its use cases take a `StorefrontContext` and only read what a
 (`status = "active"`; descriptions cleaned with `cleanHtml`). Every page has its canonical on the
 store's primary domain (`storeOrigin`), Open Graph and, for a product, JSON-LD; `sitemap.xml` and
 `robots.txt` are per store, and the `*` route sends a migrated shop's old addresses (`redirect`)
-with a 301. e2e opens a store on its own `*.localhost` domain (`support/storefront.ts`).
+with a 301. e2e opens a store on its own `*.localhost` domain (`support/storefront.ts`; requests
+without a browser go through `requestStore`, since Node doesn't resolve `*.localhost`).
+
+Buying (`core/src/orders.ts`): the cart is a signed, host-only cookie with ids and quantities,
+never prices (`lib/cart.server.ts`); `priceCart` reads prices and stock from the database every
+time. `placeOrder` prices again under lock, numbers the order from `store_settings` (#1001…),
+lowers the stock it counts and keeps only the SHA-256 of the order link's token
+(`/orders/:token`, a secret path). Manual payments (SINPE Móvil, transfer) live in
+`store_settings.payments`; the shopper sends the reference and the store confirms it.
 
 Every `core` use case takes a `TenantContext` and filters by `organizationId`.
 - The workspace goes in the URL (`/app/:workspace/…`) and `requireTenant` resolves it with
@@ -250,15 +258,16 @@ Every new variable goes in `.env.example` with a comment saying what it is, and 
 
 ## Workflow
 
+- **No GitHub Actions minutes: every check runs locally (or on the agent's cloud machine), never
+  on push or on a PR.** The project has no budget for them. `ci.yml` and `e2e.yml` only run when
+  someone starts them by hand, and nobody does unless the owner asks.
 - **Every branch that will be merged into `main` first gets the latest `main`**: `git fetch
   origin main` and `git merge origin/main` (resolve conflicts, regenerate generated files with
-  their CLI, such as a migration whose number clashes), run lint, typecheck and tests, push and
-  wait for CI to be green.
-- CI (`.github/workflows/ci.yml`): every push runs `pnpm lint`, `pnpm typecheck` and `pnpm test`
-  (unit, integration with Postgres and Mailpit, browser).
-- The e2e tests (`.github/workflows/e2e.yml`) run on demand: `pnpm e2e:remote [branch] [--project
-  desktop|mobile] [--grep "text"]` (needs `gh auth login`), or from Actions. Run them before
-  merging a change that touches flows. Locally: `pnpm test:e2e`.
+  their CLI, such as a migration whose number clashes), then run `pnpm lint`, `pnpm typecheck`,
+  `pnpm test` (unit, integration with Postgres and Mailpit, browser) and the Playwright scenarios
+  the change touches (`pnpm test:e2e`), all locally, and only then push and merge.
+- Agents may merge their own PRs into `main` without the owner's review, once the local checks
+  pass.
 - Production on Fly.io (`docs/deploy.md`): `pnpm release [patch|minor|major|x.y.z]` creates the
   tag and `.github/workflows/deploy.yml` deploys the API (with migrations) and then the web.
   Secrets with `pnpm fly:secrets` from `.env.production` (never in git).

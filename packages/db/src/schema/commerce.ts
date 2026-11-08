@@ -56,8 +56,87 @@ export const storeSettings = pgTable("store_settings", {
     .references(() => organization.id, { onDelete: "cascade" }),
   /** ISO 4217. Prices are stored in minor units (cents, céntimos) of this currency. */
   currency: text().notNull().default("CRC"),
+  /** How shoppers pay: SINPE Móvil and bank transfer for now (see `StorePayments`). */
+  payments: jsonb().$type<StorePayments>().notNull().default({}),
+  /** The number the next order gets: #1001, #1002… Taken under the row's lock. */
+  nextOrderNumber: integer().notNull().default(1001),
   ...timestamps,
 });
+
+/** Manual payments the store accepts, with what the shopper needs to pay. */
+export interface StorePayments {
+  sinpe?: { enabled: boolean; phone: string; holder: string };
+  transfer?: { enabled: boolean; bank: string; iban: string; holder: string };
+}
+
+export type PaymentMethod = "sinpe" | "transfer";
+
+/**
+ * pending_payment → the shopper still has to pay; payment_submitted → they sent the reference and
+ * the store checks it; paid; cancelled. Shipping states come later.
+ */
+export type OrderStatus = "pending_payment" | "payment_submitted" | "paid" | "cancelled";
+
+export interface ShippingAddress {
+  line1: string;
+  city: string;
+  province: string;
+  notes: string;
+}
+
+/** An order of a store. The shopper opens it with a link whose token is kept only as SHA-256. */
+export const order = pgTable(
+  "order",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: organizationId(),
+    number: integer().notNull(),
+    tokenHash: text().notNull(),
+    status: text().$type<OrderStatus>().notNull().default("pending_payment"),
+    paymentMethod: text().$type<PaymentMethod>().notNull(),
+    /** What the shopper says identifies their payment (SINPE or transfer reference). */
+    paymentReference: text(),
+    paymentSubmittedAt: timestamp({ withTimezone: true }),
+    paidAt: timestamp({ withTimezone: true }),
+    customerId: uuid().references(() => customer.id, { onDelete: "set null" }),
+    email: text().notNull(),
+    name: text().notNull(),
+    phone: text().notNull(),
+    shippingAddress: jsonb().$type<ShippingAddress>().notNull(),
+    currency: text().notNull(),
+    /** Minor units. */
+    subtotal: bigint({ mode: "number" }).notNull(),
+    total: bigint({ mode: "number" }).notNull(),
+    locale: text().notNull().default("en"),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("order_number_idx").on(table.organizationId, table.number),
+    uniqueIndex("order_token_idx").on(table.tokenHash),
+    index("order_status_idx").on(table.organizationId, table.status, table.createdAt),
+  ],
+);
+
+/** What was bought, copied at the time: renaming or repricing a product never changes an order. */
+export const orderLine = pgTable(
+  "order_line",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    orderId: uuid()
+      .notNull()
+      .references(() => order.id, { onDelete: "cascade" }),
+    productId: uuid().references(() => product.id, { onDelete: "set null" }),
+    variantId: uuid().references(() => productVariant.id, { onDelete: "set null" }),
+    name: text().notNull(),
+    variantTitle: text(),
+    sku: text(),
+    unitPrice: bigint({ mode: "number" }).notNull(),
+    quantity: integer().notNull(),
+    lineTotal: bigint({ mode: "number" }).notNull(),
+    position: integer().notNull().default(0),
+  },
+  (table) => [index("order_line_order_idx").on(table.orderId, table.position)],
+);
 
 /**
  * Where a row came from when it was imported (WooCommerce, Shopify…), so importing again

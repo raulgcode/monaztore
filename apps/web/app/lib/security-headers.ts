@@ -6,9 +6,10 @@ const formTargets = ["https://accounts.google.com"];
 
 /**
  * Paths that carry a secret in the URL (a reset token, an emailed link): they never travel as a
- * Referer and search engines don't keep them. A new emailed link goes here.
+ * Referer and search engines don't keep them. A new emailed link goes here, and so does an
+ * order's link (`/orders/:token`), which opens the order to whoever has it.
  */
-const secretPaths = ["/reset-password"];
+const secretPaths = ["/reset-password", "/orders/"];
 
 export interface SecurityHeaderOptions {
   /** Changes on every page; React Router puts it on its own inline scripts. */

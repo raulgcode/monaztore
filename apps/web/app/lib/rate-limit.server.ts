@@ -16,6 +16,10 @@ export const rateLimits = {
   passwordIp: { limit: 20, windowMs: 15 * MINUTE },
   /** Password tries against one email (a password being guessed). */
   passwordEmail: { limit: 10, windowMs: 15 * MINUTE },
+  /** Orders placed from one IP: a family buys a few, a script many. */
+  orderIp: { limit: 10, windowMs: 15 * MINUTE },
+  /** Payment references sent from one IP. */
+  paymentReferenceIp: { limit: 20, windowMs: 15 * MINUTE },
 } satisfies Record<string, RateLimitRule>;
 
 export type RateLimitName = keyof typeof rateLimits;
