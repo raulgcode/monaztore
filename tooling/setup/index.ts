@@ -17,6 +17,7 @@ import { parseArgs } from "node:util";
 import { type AuthMethod, authMethods, authMethodsSchema } from "@monaztore/env";
 import { chromium } from "playwright";
 import { authMethodLabels, parseAuthChoice } from "./auth-choice";
+import { databaseAddress, isListening } from "./database";
 import { buildEnvFile, parseEnvKeys, type SecretGenerators, setEnvValue } from "./env-file";
 
 const root = join(import.meta.dirname, "../..");
@@ -217,6 +218,19 @@ if (existsSync(chromiumPath)) {
 startServices();
 
 step("Migrations");
+const databaseUrl = parseEnvKeys(readEnvFile()).get("DATABASE_URL") ?? "";
+const database = databaseAddress(databaseUrl);
+if (database && !(await isListening(database))) {
+  console.error(
+    `\n✗ Nothing answers at ${database.host}:${database.port} (DATABASE_URL), so there is nowhere to migrate.\n` +
+      "  · With Docker: open Docker Desktop, wait until it says it is running, then run pnpm run setup again.\n" +
+      "    Check with: docker compose ps (postgres and mailpit should be running).\n" +
+      `  · Another Postgres already on port ${database.port}? Stop it (brew services stop postgresql) or set\n` +
+      "    POSTGRES_PORT in .env and the same port in DATABASE_URL and TEST_DATABASE_URL.\n" +
+      "  · Your own Postgres: point DATABASE_URL at it (with a _test database for TEST_DATABASE_URL).",
+  );
+  process.exit(1);
+}
 run("pnpm", ["--silent", "db:migrate"]);
 
 console.log(`
