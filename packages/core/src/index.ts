@@ -16,6 +16,21 @@ export {
   storefrontPaths,
 } from "./catalog-import";
 export {
+  addProductFile,
+  createDigitalProduct,
+  type DigitalFileDeps,
+  type DigitalProduct,
+  type DigitalProductRow,
+  downloadKey,
+  type FileUpload,
+  findProductsWithoutFiles,
+  getDigitalProduct,
+  listDigitalProducts,
+  removeProductFile,
+  safeContentType,
+  setDownloadRules,
+} from "./digital-products";
+export {
   type AcceptedEinvoice,
   deliverEinvoices,
   EINVOICE_MAX_ATTEMPTS,
@@ -57,15 +72,21 @@ export {
   verifyMfaCode,
 } from "./mfa";
 export {
+  type DownloadRefusal,
+  type DownloadResult,
+  getDownloadsByLink,
   getOrderByToken,
   getPaymentOptions,
   getShopperEinvoiceFile,
+  openLinkDownload,
+  openOrderDownload,
   type PaymentOptions,
   type PlacedOrder,
   type PricedCart,
   type PricedLine,
   placeOrder,
   priceCart,
+  type ShopperDownload,
   type ShopperEinvoice,
   type ShopperOrder,
   submitPaymentReference,
@@ -137,6 +158,7 @@ export {
   ADMIN_ORDERS_PAGE_SIZE,
   cancelOrder,
   countOrdersToReview,
+  type DownloadsLink,
   getOrder,
   getStorePayments,
   listOrders,
@@ -144,6 +166,7 @@ export {
   markOrderPaid,
   type OrderRow,
   removeStoreDomain,
+  renewDownloadsLink,
   setPrimaryDomain,
 } from "./store-admin";
 export {
