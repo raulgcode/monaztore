@@ -2,6 +2,7 @@ import { admin } from "./admin";
 import { auth } from "./auth";
 import { common } from "./common";
 import { design } from "./design";
+import { digital } from "./digital";
 import { einvoicing } from "./einvoicing";
 import { email } from "./email";
 import { forms } from "./forms";
@@ -20,6 +21,7 @@ export const en = {
   auth,
   common,
   design,
+  digital,
   einvoicing,
   email,
   forms,

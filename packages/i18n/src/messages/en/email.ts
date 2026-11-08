@@ -22,4 +22,10 @@ export const email = {
   einvoiceNumber: "Number: {consecutive}",
   einvoiceClave: "Key (clave): {clave}",
   einvoiceFiles: "Attached are the signed XML and Hacienda's answer. Keep them for your records.",
+  downloadsSubject: "{store}: your downloads from order #{number}",
+  downloadsHeading: "Hi, {name}: your files are ready",
+  downloadsBody: "{store} confirmed your payment. Download what you bought from this page:",
+  downloadsButton: "Download my files",
+  downloadsNote:
+    "The link is only for you: each file can be downloaded a limited number of times, for a limited number of days. Your order's page has them too.",
 } as const;

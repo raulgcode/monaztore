@@ -147,4 +147,26 @@ export const storefront = {
   einvoiceTicket: "Tiquete electrónico {consecutive}",
   einvoiceDocument: "Descargar la factura (XML)",
   einvoiceResponse: "Descargar la respuesta de Hacienda (XML)",
+  digitalProduct: "Descarga digital: recibes el archivo apenas la tienda confirma tu pago.",
+  digitalCheckout:
+    "No hay nada que enviar: descargas lo que compraste desde la página de tu pedido, y te mandamos el enlace por correo, cuando la tienda confirme tu pago.",
+  downloadsHeading: "Tus descargas",
+  downloadsWaiting:
+    "Tus archivos aparecen aquí apenas la tienda confirme tu pago. También te mandamos el enlace por correo.",
+  downloadsReady: "Descárgalos ya y guárdalos en tu aparato.",
+  download: "Descargar {name}",
+  downloadsLeft: { one: "Te queda {count} descarga", other: "Te quedan {count} descargas" },
+  downloadsUnlimited: "Sin límite de descargas",
+  downloadsUntil: "hasta el {date}",
+  downloadsUsedUp: "Ya no quedan descargas",
+  downloadsExpired: "Venció el {date}",
+  downloadsHelp: "Si lo necesitas de nuevo, escríbele a la tienda.",
+  downloadRefused_not_paid: "Este archivo se abre cuando la tienda confirme tu pago.",
+  downloadRefused_expired:
+    "Se acabó el tiempo para descargar este archivo. Escríbele a la tienda si lo necesitas de nuevo.",
+  downloadRefused_used_up:
+    "Ya descargaste este archivo todas las veces que permite. Escríbele a la tienda si lo necesitas de nuevo.",
+  downloadRefused_not_found: "Ese archivo no está aquí.",
+  downloadsTitle: "Descargas del pedido #{number}",
+  downloadsIntro: "Hola, {name}: esto es lo que compraste.",
 } as const satisfies Translation<typeof en>["storefront"];

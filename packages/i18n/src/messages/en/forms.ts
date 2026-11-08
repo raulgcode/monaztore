@@ -69,4 +69,5 @@ export const forms = {
   digitalFileTooBig: "The file can be up to 50 MB",
   downloadLimitInvalid: "Write a number from 1 to 100, or leave it empty for no limit",
   downloadDaysInvalid: "Write a number of days from 1 to 3650, or leave it empty for no limit",
+  photoInvalid: "That photo didn't work: use a JPG, PNG or WebP of up to 5 MB.",
 } as const;

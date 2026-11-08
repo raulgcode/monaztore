@@ -98,6 +98,9 @@ export default function Product({ loaderData }: Route.ComponentProps) {
           >
             {product.inStock ? t("storefront.inStock") : t("storefront.soldOut")}
           </p>
+          {product.digital ? (
+            <p className="text-sm text-muted-foreground">{t("storefront.digitalProduct")}</p>
+          ) : null}
           <AddToCart
             productId={product.id}
             variants={product.variants}

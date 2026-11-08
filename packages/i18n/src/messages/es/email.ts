@@ -27,4 +27,10 @@ export const email = {
   einvoiceClave: "Clave: {clave}",
   einvoiceFiles:
     "Van adjuntos el XML firmado y la respuesta de Hacienda. Guárdalos para tus registros.",
+  downloadsSubject: "{store}: tus descargas del pedido #{number}",
+  downloadsHeading: "Hola, {name}: tus archivos están listos",
+  downloadsBody: "{store} confirmó tu pago. Descarga lo que compraste desde esta página:",
+  downloadsButton: "Descargar mis archivos",
+  downloadsNote:
+    "El enlace es solo para ti: cada archivo se descarga un número limitado de veces y durante unos días. La página de tu pedido también los tiene.",
 } as const satisfies Translation<typeof en>["email"];

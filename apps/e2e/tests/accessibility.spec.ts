@@ -1,5 +1,5 @@
 import { storeThemeIds, storeThemeSchema } from "@monaztore/contracts";
-import { promoteSuperAdmins, updateStoreTheme } from "@monaztore/core";
+import { markOrderPaid, promoteSuperAdmins, updateStoreTheme } from "@monaztore/core";
 import {
   adminSignInThroughEmail,
   expect,
@@ -8,7 +8,7 @@ import {
   test,
 } from "../support/fixtures";
 import { getLinkFromEmail, uniqueEmail } from "../support/mailpit";
-import { openStore, placeSampleOrder } from "../support/storefront";
+import { openStore, placeSampleOrder, sellEbook } from "../support/storefront";
 
 const schemes = ["light", "dark"] as const;
 // Public pages, before signing in.
@@ -19,6 +19,8 @@ const workspaceSections = [
   "/orders",
   "/pages",
   "/store",
+  "/downloads",
+  "/downloads/new",
   "/design",
   "/invoicing",
   "/settings",
@@ -101,6 +103,32 @@ test.describe("Feature: accessibility (axe, WCAG 2.2 AA)", () => {
             await page.goto(`${store}${path}`);
             await expectAccessible(page);
           }
+          // A paid order of a digital product: its downloads on the order and the email's page.
+          const { slug } = await sellEbook(workspace);
+          await page.goto(`${store}/products/${slug}`);
+          await expectAccessible(page);
+          await page.context().clearCookies({ domain: new URL(store).hostname });
+          await page.goto(`${store}/products/${slug}`);
+          await page.getByRole("button", { name: "Add to cart" }).click();
+          await expect(page.getByRole("main").getByRole("status")).toContainText("Added");
+          await page.goto(`${store}/checkout`);
+          await expectAccessible(page);
+          await page.getByLabel("Email", { exact: true }).fill("ana@example.com");
+          await page.getByLabel("Full name").fill("Ana Mora");
+          await page.getByLabel("Phone", { exact: true }).fill("8888-0000");
+          await page.getByRole("button", { name: "Place order" }).click();
+          await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^Order #\d+$/);
+          const number = Number(
+            (await page.getByRole("heading", { level: 1 }).textContent())?.replace(/\D/g, ""),
+          );
+          const { downloads } = await markOrderPaid(workspace.tenant, number);
+          await page.reload();
+          await expect(
+            page.getByRole("link", { name: "Download Brewing handbook.pdf" }),
+          ).toBeVisible();
+          await expectAccessible(page);
+          await page.goto(`${store}/downloads/${downloads?.token}`);
+          await expectAccessible(page);
         },
       );
 
@@ -130,7 +158,8 @@ test.describe("Feature: accessibility (axe, WCAG 2.2 AA)", () => {
         "Scenario: the workspace sections have no violations",
         async ({ page, workspace, expectAccessible }) => {
           const order = await placeSampleOrder(workspace, { name: "Ana Mora", reference: "1" });
-          for (const section of [...workspaceSections, `/orders/${order}`]) {
+          const { id: ebook } = await sellEbook(workspace);
+          for (const section of [...workspaceSections, `/orders/${order}`, `/downloads/${ebook}`]) {
             await page.goto(`/app/${workspace.slug}${section}`);
             await expectAccessible(page);
           }

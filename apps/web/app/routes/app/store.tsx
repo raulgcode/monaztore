@@ -43,8 +43,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     // Electronic invoicing is for stores in Costa Rica only.
     einvoicing: einvoicing.available ? { enabled: einvoicing.enabled } : null,
     i18n: einvoicing.available
-      ? translations(context, "store", "forms", "einvoicing")
-      : translations(context, "store", "forms"),
+      ? translations(context, "store", "forms", "einvoicing", "digital")
+      : translations(context, "store", "forms", "digital"),
   };
 }
 
@@ -123,6 +123,13 @@ export default function Store({ loaderData, actionData, params }: Route.Componen
         </p>
       )}
       <div className="grid gap-6">
+        <Link
+          to={href("/app/:workspace/downloads", { workspace: params.workspace })}
+          className="grid min-h-14 gap-1 rounded-xl border bg-card p-4 text-card-foreground hover:bg-muted"
+        >
+          <span className="font-medium">{t("digital.openCard")}</span>
+          <span className="text-sm text-muted-foreground">{t("digital.openCardHint")}</span>
+        </Link>
         {loaderData.einvoicing ? (
           <Link
             to={href("/app/:workspace/invoicing", { workspace: params.workspace })}

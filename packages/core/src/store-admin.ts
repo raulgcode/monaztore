@@ -157,7 +157,7 @@ export async function renewDownloadsLink(
   number: number,
 ): Promise<DownloadsLink | undefined> {
   const found = await findOrder(ctx, number);
-  if (!found || found.status !== "paid") return undefined;
+  if (found?.status !== "paid") return undefined;
   return (await newDownloadsLink(ctx.db, found)) ?? undefined;
 }
 

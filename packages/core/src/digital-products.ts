@@ -88,6 +88,32 @@ async function storeFile(ctx: TenantContext, deps: DigitalFileDeps, upload: File
   return { key, fileName, contentType, size: upload.bytes.byteLength };
 }
 
+/** The store's currency (ISO 4217), for the prices its forms show and read. */
+export async function storeCurrency(ctx: TenantContext): Promise<string> {
+  const [settings] = await ctx.db
+    .select({ currency: schema.storeSettings.currency })
+    .from(schema.storeSettings)
+    .where(eq(schema.storeSettings.organizationId, ctx.organizationId));
+  return settings?.currency ?? "CRC";
+}
+
+/** The store's name and main domain, for what it sends shoppers (the downloads email). */
+export async function storeIdentity(
+  ctx: TenantContext,
+): Promise<{ name: string; hostname: string | null }> {
+  const [found] = await ctx.db
+    .select({ name: schema.organization.name })
+    .from(schema.organization)
+    .where(eq(schema.organization.id, ctx.organizationId));
+  const [domain] = await ctx.db
+    .select({ hostname: schema.storeDomain.hostname })
+    .from(schema.storeDomain)
+    .where(eq(schema.storeDomain.organizationId, ctx.organizationId))
+    .orderBy(desc(schema.storeDomain.primary), asc(schema.storeDomain.hostname))
+    .limit(1);
+  return { name: found?.name ?? "", hostname: domain?.hostname ?? null };
+}
+
 /** The store's digital products (those with files), newest first. */
 export async function listDigitalProducts(ctx: TenantContext): Promise<DigitalProductRow[]> {
   return ctx.db

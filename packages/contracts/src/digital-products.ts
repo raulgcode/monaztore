@@ -76,6 +76,16 @@ const file = z
     z.maxSize(DIGITAL_FILE_MAX_BYTES, message("forms.digitalFileTooBig")),
   );
 
+/** The cover photo of a new digital product: optional, a usual image of up to 5 MB. */
+const photo = z.optional(
+  z
+    .file()
+    .check(
+      z.maxSize(5 * 1024 * 1024, message("forms.photoInvalid")),
+      z.mime(["image/jpeg", "image/png", "image/webp"], message("forms.photoInvalid")),
+    ),
+);
+
 /** "New digital product": what it's called, its price, a few words and the file it delivers. */
 export const newDigitalProductSchema = z.object({
   name: z
@@ -91,6 +101,7 @@ export const newDigitalProductSchema = z.object({
     "",
   ),
   file,
+  photo,
   ...downloadRules,
 });
 export type NewDigitalProductInput = z.infer<typeof newDigitalProductSchema>;

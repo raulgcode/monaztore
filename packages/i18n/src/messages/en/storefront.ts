@@ -144,4 +144,26 @@ export const storefront = {
   einvoiceTicket: "Electronic receipt {consecutive}",
   einvoiceDocument: "Download the invoice (XML)",
   einvoiceResponse: "Download Hacienda's answer (XML)",
+  digitalProduct: "Digital download: you get the file as soon as the store confirms your payment.",
+  digitalCheckout:
+    "Nothing to ship: you'll download what you bought from your order's page, and we'll email you the link, once the store confirms your payment.",
+  downloadsHeading: "Your downloads",
+  downloadsWaiting:
+    "Your files will be here as soon as the store confirms your payment. We'll also email you the link.",
+  downloadsReady: "Download them now and keep them on your device.",
+  download: "Download {name}",
+  downloadsLeft: { one: "{count} download left", other: "{count} downloads left" },
+  downloadsUnlimited: "No download limit",
+  downloadsUntil: "until {date}",
+  downloadsUsedUp: "No downloads left",
+  downloadsExpired: "Expired on {date}",
+  downloadsHelp: "If you need it again, write to the store.",
+  downloadRefused_not_paid: "This file opens once the store confirms your payment.",
+  downloadRefused_expired:
+    "This file's time to download is over. Write to the store if you need it again.",
+  downloadRefused_used_up:
+    "You already downloaded this file as many times as it allows. Write to the store if you need it again.",
+  downloadRefused_not_found: "That file isn't here.",
+  downloadsTitle: "Downloads of order #{number}",
+  downloadsIntro: "Hi, {name}: here's what you bought.",
 } as const;

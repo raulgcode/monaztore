@@ -79,4 +79,5 @@ export const forms = {
   downloadLimitInvalid: "Escribe un número del 1 al 100, o déjalo vacío para no poner límite",
   downloadDaysInvalid:
     "Escribe un número de días del 1 al 3650, o déjalo vacío para no poner límite",
+  photoInvalid: "Esa foto no sirvió: usa un JPG, PNG o WebP de hasta 5 MB.",
 } as const satisfies Translation<typeof en>["forms"];

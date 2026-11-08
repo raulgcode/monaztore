@@ -29,6 +29,8 @@ export {
   removeProductFile,
   safeContentType,
   setDownloadRules,
+  storeCurrency,
+  storeIdentity,
 } from "./digital-products";
 export {
   type AcceptedEinvoice,
