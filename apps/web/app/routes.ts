@@ -17,6 +17,8 @@ export default [
     route("orders/:token/downloads/:id", "routes/store/order-download.ts"),
     route("downloads/:token", "routes/store/downloads.tsx"),
     route("downloads/:token/:id", "routes/store/link-download.ts"),
+    // What the search box suggests as the shopper types (JSON, read with a fetcher).
+    route("search", "routes/store/search.ts"),
     route("sitemap.xml", "routes/store/sitemap.ts"),
     route("robots.txt", "routes/store/robots.ts"),
     // Last: old addresses of a migrated shop (301) and every other 404.

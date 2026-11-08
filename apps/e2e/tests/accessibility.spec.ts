@@ -166,6 +166,12 @@ test.describe("Feature: accessibility (axe, WCAG 2.2 AA)", () => {
             await page.goto(`${store}${path}`);
             await expectAccessible(page);
           }
+          // The search box with its suggestions open, one marked.
+          const box = page.getByRole("combobox", { name: "Search products" });
+          await box.pressSequentially("co");
+          await expect(page.getByRole("listbox", { name: "Suggestions" })).toBeVisible();
+          await box.press("ArrowDown");
+          await expectAccessible(page);
         }
       });
 

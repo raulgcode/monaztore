@@ -305,6 +305,48 @@ export async function listStoreProducts(
   };
 }
 
+/** A product in the search box's list as the shopper types: a small photo, its name and price. */
+export interface ProductSuggestion {
+  slug: string;
+  name: string;
+  price: number | null;
+  imageUrl: string | null;
+}
+
+/** Fewer letters than this match too much to be worth a list. */
+export const SUGGEST_MIN_LENGTH = 2;
+export const SUGGEST_LIMIT = 6;
+
+/**
+ * What the search box offers while the shopper types: active products whose name has the text,
+ * the ones that start with it first (YouTube style), then the shortest names. The same match as
+ * the results page (`listStoreProducts` with `q`), so a suggestion is always among the results.
+ */
+export async function suggestStoreProducts(
+  ctx: StorefrontContext,
+  text: string,
+  limit = SUGGEST_LIMIT,
+): Promise<ProductSuggestion[]> {
+  const q = text.trim();
+  if (q.length < SUGGEST_MIN_LENGTH) return [];
+  const escaped = q.replace(/[%_\\]/g, "\\$&");
+  return ctx.db
+    .select({
+      slug: schema.product.slug,
+      name: schema.product.name,
+      price: fromPrice,
+      imageUrl: firstImage("url"),
+    })
+    .from(schema.product)
+    .where(conditions(ctx, { q }, undefined))
+    .orderBy(
+      sql`${schema.product.name} ilike ${`${escaped}%`} desc`,
+      sql`length(${schema.product.name})`,
+      asc(schema.product.name),
+    )
+    .limit(Math.min(Math.max(1, limit), SUGGEST_LIMIT));
+}
+
 /** Options a store uses on fewer products than this aren't worth a filter. */
 const FACET_OPTIONS = 6;
 // Every value, so the search inside a long filter (dozens of designs) finds any of them.
