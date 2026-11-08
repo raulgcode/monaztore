@@ -14,6 +14,7 @@ import {
   plainText,
   type StorefrontContext,
   sitemapEntries,
+  suggestStoreProducts,
 } from "./storefront";
 import { addStoreDomain, resolveStoreByHost } from "./stores";
 import { resolveTenant } from "./workspaces";
@@ -156,6 +157,41 @@ describe("storefront", () => {
       "taza",
     ]);
     expect((await listStoreProducts(ctx, { q: "%" })).total).toBe(0);
+  });
+
+  it("suggests products as the shopper types: names that start with it first, never drafts", async () => {
+    const ctx = await storeWithCatalog();
+
+    expect(await suggestStoreProducts(ctx, "ta")).toEqual([
+      { slug: "taza", name: "Taza Pura Vida", price: 500_000, imageUrl: null },
+      {
+        slug: "camiseta",
+        name: "Camiseta Tica",
+        price: 900_000,
+        imageUrl: "https://shop.example/a.jpg",
+      },
+    ]);
+    expect((await suggestStoreProducts(ctx, "  PURA ")).map((p) => p.slug)).toEqual(["taza"]);
+    expect(await suggestStoreProducts(ctx, "gorra")).toEqual([]);
+    expect(await suggestStoreProducts(ctx, "%")).toEqual([]);
+    expect(await suggestStoreProducts(ctx, "t")).toEqual([]);
+    expect(await suggestStoreProducts(ctx, "ta", 1)).toHaveLength(1);
+  });
+
+  it("never suggests another store's products", async () => {
+    const mine = await storeWithCatalog();
+    const tenant = await createTestTenant(db);
+    const owner = await resolveTenant(db, tenant.userId, tenant.slug);
+    if (!owner) throw new Error("no tenant");
+    await importCatalog(owner, {
+      ...catalog,
+      categories: [],
+      products: [product({ slug: "taza-ajena", name: "Taza ajena" })],
+    });
+
+    const suggestions = await suggestStoreProducts(mine, "taza");
+
+    expect(suggestions.map((p) => p.slug)).toEqual(["taza"]);
   });
 
   it("shows a product with variants and clean HTML, and hides drafts", async () => {

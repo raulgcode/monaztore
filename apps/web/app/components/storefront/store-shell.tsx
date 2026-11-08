@@ -1,14 +1,13 @@
 import type { StoreTheme } from "@monaztore/core";
-import { SearchIcon, ShoppingBagIcon } from "lucide-react";
+import { ShoppingBagIcon } from "lucide-react";
 import type * as React from "react";
-import { Form, href, Link, NavLink } from "react-router";
+import { href, Link, NavLink } from "react-router";
 import { NavigationProgress } from "~/components/navigation-progress";
 import { ThemeToggle } from "~/components/theme-toggle";
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
 import { ScrollShadow } from "~/components/ui/scroll-shadow";
 import { useT } from "~/lib/i18n";
 import { cn } from "~/lib/utils";
+import { StoreSearch } from "./store-search";
 
 export interface StoreShellProps {
   name: string;
@@ -18,6 +17,8 @@ export interface StoreShellProps {
   /** The store's theme (from core): its colors, logo and announcement. */
   theme?: Pick<StoreTheme, "id" | "style" | "logoUrl" | "announcement">;
   cartCount: number;
+  /** The store's currency, for the prices in the search box's suggestions. */
+  currency: string;
   children: React.ReactNode;
 }
 
@@ -35,31 +36,10 @@ export function StoreShell({
   pages = [],
   theme,
   cartCount,
+  currency,
   children,
 }: StoreShellProps) {
   const t = useT();
-  const search = (
-    <Form
-      method="get"
-      action={href("/products")}
-      role="search"
-      className="order-last flex w-full gap-2 md:order-none md:w-auto md:max-w-xl md:flex-1"
-    >
-      <label htmlFor="store-search" className="sr-only">
-        {t("storefront.searchLabel")}
-      </label>
-      <Input
-        id="store-search"
-        type="search"
-        name="q"
-        placeholder={t("storefront.searchPlaceholder")}
-        className="h-11"
-      />
-      <Button type="submit" size="icon" aria-label={t("storefront.searchSubmit")}>
-        <SearchIcon aria-hidden className="size-5" />
-      </Button>
-    </Form>
-  );
   return (
     <div
       // A page with its main action fixed at the bottom of the phone leaves room for it.
@@ -94,7 +74,10 @@ export function StoreShell({
               </span>
             )}
           </Link>
-          {search}
+          <StoreSearch
+            currency={currency}
+            className="order-last w-full md:order-none md:w-auto md:max-w-xl md:flex-1"
+          />
           <div className="flex items-center gap-1 md:ml-auto">
             <ThemeToggle />
             <Link

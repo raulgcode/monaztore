@@ -184,6 +184,7 @@ export {
   type ProductCard,
   type ProductPage,
   type ProductQuery,
+  type ProductSuggestion,
   plainText,
   type SitemapEntry,
   STOREFRONT_PAGE_SIZE,
@@ -191,8 +192,11 @@ export {
   type StorefrontContext,
   type StoreInfo,
   type StoreProduct,
+  SUGGEST_LIMIT,
+  SUGGEST_MIN_LENGTH,
   sitemapEntries,
   sortOptionValues,
+  suggestStoreProducts,
 } from "./storefront";
 export {
   addStoreDomain,

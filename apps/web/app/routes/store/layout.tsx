@@ -34,6 +34,7 @@ export default function StoreLayout({ loaderData }: Route.ComponentProps) {
       pages={loaderData.shell.pages}
       theme={loaderData.shell.theme}
       cartCount={loaderData.cartCount ?? 0}
+      currency={loaderData.shell.currency}
     >
       <Outlet />
     </StoreShell>
@@ -69,6 +70,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
       pages={layout.shell.pages}
       theme={layout.shell.theme}
       cartCount={layout.cartCount ?? 0}
+      currency={layout.shell.currency}
     >
       {head}
       <div className="py-10 text-center">
