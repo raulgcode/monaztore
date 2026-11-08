@@ -47,7 +47,6 @@ export function AttributesEditor({
       </datalist>
       {attributes.map((attribute, index) => (
         <AttributeCard
-          // biome-ignore lint/suspicious/noArrayIndexKey: attributes have no id; the name is being typed.
           key={index}
           attribute={attribute}
           listId={listId}
