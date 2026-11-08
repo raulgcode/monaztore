@@ -32,7 +32,7 @@ export const storefront = {
   inCollections: "En",
   subcollectionOf: "Parte de {name}",
   footer: "© {year} {store}",
-  poweredBy: "Tienda hecha con Monaztore",
+  poweredBy: "Tienda hecha con Monazhop",
   pagesNav: "Información",
   cart: "Carrito",
   cartWithCount: { one: "Carrito, {count} artículo", other: "Carrito, {count} artículos" },

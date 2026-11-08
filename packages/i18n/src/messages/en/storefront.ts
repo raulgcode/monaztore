@@ -30,7 +30,7 @@ export const storefront = {
   inCollections: "In",
   subcollectionOf: "Part of {name}",
   footer: "© {year} {store}",
-  poweredBy: "Store made with Monaztore",
+  poweredBy: "Store made with Monazhop",
   pagesNav: "Information",
   cart: "Cart",
   cartWithCount: { one: "Cart, {count} item", other: "Cart, {count} items" },
