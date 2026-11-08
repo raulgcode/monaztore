@@ -323,7 +323,7 @@ export default function CouponEditor({ loaderData, actionData, params }: Route.C
           </label>
         </Section>
 
-        <div className="sticky bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-10 -mx-4 border-t bg-background px-4 py-3 md:bottom-0 md:mx-0 md:px-0">
+        <div className="sticky bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-10 -mx-4 flex justify-end border-t bg-background px-4 py-3 shadow-[0_-4px_16px_rgb(0_0_0/0.08)] md:bottom-4 md:mx-0 md:rounded-lg md:border">
           <Button type="submit" className="w-full sm:w-auto">
             {coupon ? t("coupons.save") : t("coupons.create")}
           </Button>
@@ -333,13 +333,19 @@ export default function CouponEditor({ loaderData, actionData, params }: Route.C
       {coupon ? (
         <Form
           method="post"
-          className="border-t pt-6"
+          className="flex justify-center"
           onSubmit={(event) => {
             if (!window.confirm(t("coupons.deleteConfirm", { code: coupon.code })))
               event.preventDefault();
           }}
         >
-          <Button type="submit" name="intent" value="delete" variant="destructive">
+          <Button
+            type="submit"
+            name="intent"
+            value="delete"
+            variant="ghost"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+          >
             <Trash2Icon aria-hidden className="size-4" />
             {t("coupons.delete")}
           </Button>
