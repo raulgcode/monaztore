@@ -80,7 +80,7 @@ export function CatalogView({
           <p className="text-sm text-muted-foreground" role="status">
             {t("storefront.productCount", { count: page.total })}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
             {facets ? (
               <Button
                 type="button"
@@ -118,8 +118,12 @@ function SortSelect({ query }: { query: CatalogQuery }) {
   const submit = useSubmit();
   const id = useId();
   return (
-    <div className="flex items-center gap-2">
-      <Label htmlFor={id} className="text-sm whitespace-nowrap text-muted-foreground">
+    <div className="flex min-w-0 items-center gap-2">
+      {/* On a phone the select says the order by itself; the label stays for screen readers. */}
+      <Label
+        htmlFor={id}
+        className="sr-only text-sm whitespace-nowrap text-muted-foreground sm:not-sr-only"
+      >
         {t("storefront.sortLabel")}
       </Label>
       <select
@@ -132,7 +136,7 @@ function SortSelect({ query }: { query: CatalogQuery }) {
           const form = event.currentTarget.form;
           if (form) submit(form, { preventScrollReset: true, replace: true });
         }}
-        className="h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        className="h-11 min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
       >
         {catalogSorts.map((sort) => (
           <option key={sort} value={sort}>
