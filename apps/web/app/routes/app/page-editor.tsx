@@ -28,6 +28,9 @@ import { storeOrigin } from "~/lib/store-seo";
 import { cn } from "~/lib/utils";
 import type { Route } from "./+types/page-editor";
 
+/** The editor and its preview side by side need more than a list's width. */
+export const handle = { wide: true };
+
 export function meta({ matches, loaderData }: Route.MetaArgs) {
   return [{ title: metaT(matches)("pages.editTitle", { title: loaderData?.page.title ?? "" }) }];
 }

@@ -7,7 +7,7 @@ import {
   StoreIcon,
 } from "lucide-react";
 import type * as React from "react";
-import { href, NavLink } from "react-router";
+import { href, NavLink, useMatches } from "react-router";
 import { Logo } from "~/components/logo";
 import { ThemeToggle } from "~/components/theme-toggle";
 import { useT } from "~/lib/i18n";
@@ -32,6 +32,8 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const t = useT();
+  // A screen with two columns (an editor and its preview) declares `handle = { wide: true }`.
+  const wide = useMatches().some((match) => (match.handle as { wide?: boolean } | undefined)?.wide);
   const items: NavItem[] = [
     {
       to: href("/app/:workspace", { workspace: workspace.slug }),
@@ -81,7 +83,13 @@ export function AppShell({
           <Logo name={workspace.name} className="min-w-0 truncate" />
           <ThemeToggle />
         </header>
-        <main id="content" className="mx-auto w-full max-w-4xl flex-1 px-4 py-6 md:px-8">
+        <main
+          id="content"
+          className={cn(
+            "mx-auto w-full flex-1 px-4 py-6 md:px-8",
+            wide ? "max-w-7xl" : "max-w-4xl",
+          )}
+        >
           {children}
         </main>
       </div>
