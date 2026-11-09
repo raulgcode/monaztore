@@ -35,6 +35,7 @@ const workspaceSections = [
   "/invoicing",
   "/settings",
   "/settings/security",
+  "/settings/ai",
 ];
 // The platform's /admin, after its second step. A new admin section goes here.
 const adminSections = ["", "/commission", "/log", "/security"];

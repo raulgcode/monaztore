@@ -1,3 +1,6 @@
+import { createHash } from "node:crypto";
+import { oauthProvider } from "@better-auth/oauth-provider";
+import { aiConnectionScopes, aiTokenPrefixes, mcpUrl } from "@monaztore/contracts";
 import { and, asc, type Database, desc, eq, isNotNull, schema, sql } from "@monaztore/db";
 import {
   AccountEmail,
@@ -101,6 +104,35 @@ export const disabledAdminPaths = [
   "/admin/update-user",
 ];
 
+/**
+ * The OAuth provider's management endpoints. Assistants (Claude, ChatGPT, the editors) register
+ * themselves at /oauth2/register and the person sees and removes their connections in Settings →
+ * AI assistants, which goes through @monaztore/core. Over HTTP these would let anyone with a
+ * session create clients, resources or consents by hand.
+ */
+export const disabledOAuthProviderPaths = [
+  "/oauth2/create-client",
+  "/oauth2/get-client",
+  "/oauth2/get-clients",
+  "/oauth2/update-client",
+  "/oauth2/delete-client",
+  "/oauth2/client/rotate-secret",
+  "/oauth2/get-consent",
+  "/oauth2/get-consents",
+  "/oauth2/update-consent",
+  "/oauth2/delete-consent",
+  "/admin/oauth2/create-client",
+  "/admin/oauth2/update-client",
+  "/admin/oauth2/resources",
+  "/admin/oauth2/resources/:identifier",
+  "/admin/oauth2/resources/:identifier/clients/:client_id",
+];
+
+/** The page that shows the person what the assistant asks for (apps/web). */
+export const AI_CONSENT_PAGE = "/oauth/consent";
+
+const sha256 = (token: string) => createHash("sha256").update(token).digest("hex");
+
 export interface CreateAuthOptions {
   db: Database;
   mailer: Mailer;
@@ -122,6 +154,16 @@ export interface CreateAuthOptions {
   clientIpHeader?: string;
   /** Local development only: enables `auth.api.devSignIn` (see dev-sign-in.ts). */
   devSignIn?: boolean;
+  /**
+   * The API (API_URL): its MCP server (`${apiUrl}/mcp`) is what the assistants' tokens are for.
+   * The web is the authorization server. Without it, the tokens are for `${baseURL}/mcp`.
+   */
+  apiUrl?: string;
+  /**
+   * How an assistant's token is kept: `hashOAuthToken` of @monaztore/core, the function the API
+   * looks tokens up with (SHA-256, so a copy of the database can't call the MCP server).
+   */
+  hashToken?: (token: string) => string;
 }
 
 export function createAuth({
@@ -136,7 +178,10 @@ export function createAuth({
   rateLimitStorage,
   clientIpHeader,
   devSignIn: devSignInEnabled = false,
+  apiUrl = baseURL,
+  hashToken = sha256,
 }: CreateAuthOptions) {
+  const mcpResource = mcpUrl(apiUrl);
   const password = methods.includes("password");
   if (methods.includes("google") && !google) {
     throw new Error("Google sign-in needs GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET");
@@ -161,7 +206,11 @@ export function createAuth({
     secret,
     trustedOrigins: [baseURL, ...trustedOrigins],
     rateLimit: { enabled: rateLimit, customStorage: rateLimitStorage },
-    disabledPaths: [...disabledOrganizationPaths, ...disabledAdminPaths],
+    disabledPaths: [
+      ...disabledOrganizationPaths,
+      ...disabledAdminPaths,
+      ...disabledOAuthProviderPaths,
+    ],
     database: drizzleAdapter(db, { provider: "pg", schema }),
     user: {
       additionalFields: {
@@ -239,6 +288,26 @@ export function createAuth({
         impersonationSessionDuration: 60 * 60,
       }),
       devSignIn(devSignInEnabled),
+      // AI assistants: the person connects Claude, ChatGPT or an editor to the API's MCP server.
+      oauthProvider({
+        loginPage: "/login",
+        consentPage: AI_CONSENT_PAGE,
+        scopes: [...aiConnectionScopes],
+        // Opaque tokens, checked by the API in Postgres: no signing keys to share or rotate.
+        disableJwtPlugin: true,
+        storeTokens: { hash: hashToken },
+        prefix: { ...aiTokenPrefixes },
+        // Assistants register themselves the first time (RFC 7591), with no account of theirs
+        // here: what protects the store is the sign-in, the second step and the consent.
+        allowDynamicClientRegistration: true,
+        allowUnauthenticatedClientRegistration: true,
+        // Editors (Cursor, VS Code) listen on http://127.0.0.1 and often leave the type out.
+        clientRegistrationDefaultApplicationType: "infer",
+        resources: [{ identifier: mcpResource, name: `${project.name} MCP` }],
+        clientRegistrationDefaultResources: [mcpResource],
+        // Someone reconnects after 90 days without using it, not every month.
+        refreshTokenExpiresIn: 90 * 24 * 60 * 60,
+      }),
     ],
   });
 }

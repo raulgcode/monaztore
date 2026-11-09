@@ -1,3 +1,4 @@
+export * from "./ai-connections";
 export * from "./auth";
 export * from "./catalog-import";
 export * from "./catalog-query";

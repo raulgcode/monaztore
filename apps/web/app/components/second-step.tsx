@@ -13,6 +13,7 @@ import {
   Form,
   Link,
   type ShouldRevalidateFunctionArgs,
+  useLocation,
   useNavigation,
   useSubmit,
 } from "react-router";
@@ -56,6 +57,7 @@ export function SecondStep({
   actionData: SecondStepResult | undefined;
 }) {
   const t = useT();
+  const location = useLocation();
   const navigation = useNavigation();
   const [form, fields] = useForm({
     lastResult: actionData?.result ?? undefined,
@@ -74,9 +76,10 @@ export function SecondStep({
             <li key={code}>{code}</li>
           ))}
         </ul>
-        {/* Back through the loader, which now finds the session verified and moves on. */}
+        {/* Back through the loader, which now finds the session verified and moves on to
+            `?redirectTo` (a bare "." would drop it). */}
         <Button asChild>
-          <Link to="." replace>
+          <Link to={{ search: location.search }} replace>
             {t("security.mfaContinue")}
           </Link>
         </Button>

@@ -4,6 +4,7 @@ packages:
 
 catalog:
   "@axe-core/playwright": ^4.14.0
+  "@better-auth/oauth-provider": 1.7.12
   "@biomejs/biome": ^2.6.3
   "@conform-to/react": ^1.21.2
   "@conform-to/zod": ^1.21.2
@@ -15,6 +16,7 @@ catalog:
   "@fastify/swagger": ^9.9.2
   "@juniorov/cr-locations": 1.0.1
   "@lhci/cli": ^0.15.1
+  "@modelcontextprotocol/sdk": ^1.32.2
   "@playwright/test": ^1.64.1
   "@react-router/dev": ^8.5.0
   "@react-router/node": ^8.5.0

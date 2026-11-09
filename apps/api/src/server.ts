@@ -9,9 +9,12 @@ const env = getServerEnv();
 const port = Number(process.env.PORT ?? 3001);
 const connection = createDatabase(env.DATABASE_URL);
 
+const mailer = createMailer(env);
 const app = await buildApp({
   db: connection.db,
   appUrl: env.APP_URL,
+  apiUrl: env.API_URL,
+  mailer,
   clientIpHeader: env.CLIENT_IP_HEADER,
   logger: env.NODE_ENV === "development" ? { transport: { target: "pino-pretty" } } : true,
 });
@@ -23,7 +26,7 @@ const stops = [
   scheduleEinvoiceDelivery({
     db: connection.db,
     log: app.log,
-    mailer: createMailer(env),
+    mailer,
     sealKey: deriveSecret(env.BETTER_AUTH_SECRET, "einvoicing"),
     providerId: env.HACIENDA_PROVIDER_ID,
   }),

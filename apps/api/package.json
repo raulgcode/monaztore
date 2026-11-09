@@ -12,6 +12,7 @@
     "@fastify/helmet": "catalog:",
     "@fastify/sensible": "catalog:",
     "@fastify/swagger": "catalog:",
+    "@modelcontextprotocol/sdk": "catalog:",
     "@monaztore/contracts": "workspace:*",
     "@monaztore/core": "workspace:*",
     "@monaztore/db": "workspace:*",
