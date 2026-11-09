@@ -246,6 +246,9 @@ the shop's own host (`imageSrc`). `files` (`services.server.ts`) is R2 with `R2_
 `FILES_DIR` on disk without them; `/media/*` serves only `organizations/…` keys, cached forever.
 Share cards and JSON-LD resolve them to the store's origin (`absoluteUrl`).
 
+Storefront themes (`core/src/theme-presets.ts`, `contracts/src/store-theme-ids.ts`): data, not
+templates (palettes and layout over the shared store pages); how to add one is in `docs/themes.md`.
+
 The store in the workspace (`core/src/store-admin.ts`): Orders (`/app/:workspace/orders`, filter
 by state in `?status=`) confirms a payment (`markOrderPaid`, which adds to the customer's orders
 and spend) or cancels an unpaid order (`cancelOrder`, which puts counted stock back); Store
