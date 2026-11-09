@@ -12,4 +12,7 @@ export const settings = {
   securityIntro:
     "El segundo paso que protege tu tienda: tu app de autenticación y tus huellas o llaves.",
   securityOpen: "Huellas y llaves",
+  ai: "Asistentes de IA",
+  aiIntro: "Claude, ChatGPT u otro asistente trabajando contigo en tus tiendas.",
+  aiOpen: "Conectar un asistente",
 } as const satisfies Translation<typeof en>["settings"];

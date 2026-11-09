@@ -1,5 +1,5 @@
 import { createAuth, type RateLimitStorage } from "@monaztore/auth";
-import { hitRateLimit } from "@monaztore/core";
+import { hashOAuthToken, hitRateLimit } from "@monaztore/core";
 import { createDatabase } from "@monaztore/db";
 import { createMailer } from "@monaztore/email";
 import { deriveSecret, getServerEnv, googleCredentials, r2Credentials } from "@monaztore/env";
@@ -56,6 +56,9 @@ export const auth = singleton("__monaztoreAuth", () =>
     clientIpHeader: env.CLIENT_IP_HEADER,
     // /dev/sign-in signs in as any user; false in every build, so production can't.
     devSignIn: import.meta.env.DEV,
+    // AI assistants: their tokens are for the API's MCP server, kept as the API looks them up.
+    apiUrl: env.API_URL,
+    hashToken: hashOAuthToken,
   }),
 );
 

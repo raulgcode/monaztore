@@ -9,4 +9,7 @@ export const settings = {
   securityIntro:
     "The second step that protects your store: your authenticator app and your fingerprints or keys.",
   securityOpen: "Fingerprints and keys",
+  ai: "AI assistants",
+  aiIntro: "Claude, ChatGPT or another assistant working in your stores with you.",
+  aiOpen: "Connect an assistant",
 } as const;

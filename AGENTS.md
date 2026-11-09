@@ -10,7 +10,7 @@ following these rules. If a rule doesn't apply, change it here first and then th
 | Path                            | What it is                                                                        |
 | ------------------------------- | --------------------------------------------------------------------------------- |
 | `apps/web`                      | React Router 8 (framework mode): pages, sign-in, the workspace                    |
-| `apps/api`                      | Fastify + Zod: public API, webhooks and scheduled jobs                            |
+| `apps/api`                      | Fastify + Zod: public API, the MCP for AI assistants, webhooks and jobs           |
 | `apps/e2e`                      | Playwright: BDD scenarios on phone and desktop, accessibility (axe)               |
 | `packages/core`                 | Multi-tenant use cases (stores, catalog, imports). All business logic lives here  |
 | `packages/contracts`            | `zod/mini` schemas shared by forms, actions, API and core                         |
@@ -91,6 +91,27 @@ description and errors with `aria-*`). Schema errors are i18n keys
 The one exception is a form with nothing to type, on a page that must stay light: the storefront's
 "Add to cart" (hidden ids and a list) validates only in the cart's `action`, so the product page
 doesn't load zod.
+
+### MCP: everything the backend does, an AI assistant can do
+
+**Every use case added to `core` ships with its MCP tool in the same change**, so the stores
+can be run from Claude, ChatGPT or any assistant. The tools live in `apps/api/src/mcp/tools/<area>.ts`
+(a `ToolModule` registered in `toolModules` of `mcp/server.ts`) and call the same `core` use cases
+and `contracts` schemas as the workspace: a change is a patch on the current form, checked by the
+form's schema, never a second set of rules.
+- `mcp/coverage.test.ts` fails when a function exported by `core` is neither called by a tool nor
+  listed in `mcp/coverage.ts` with its reason (the storefront, sign-in, secrets, helpers…).
+  Leaving one out is a decision written there, not an oversight.
+- Each tool has a `title`, a description that says when to use it and the three hints
+  (`readOnlyHint`, `destructiveHint`, `idempotentHint`; `annotations` in `mcp/kit.ts`), which
+  `mcp/server.test.ts` checks; every tool but `list_stores` takes the `store` slug.
+- The store comes from `kit.tenantFor(slug)`, which runs `resolveTenant` (membership, like
+  `requireTenant`); what only owners do in the workspace passes `{ owner: true }`. Errors the
+  assistant should explain go as `ToolError` in English; a schema error comes back as its message.
+- Rate limits are the web's: a tool that emails or calls Hacienda uses the same `hitRateLimit`
+  key as its action.
+- Its integration test goes in `routes/mcp.integration.test.ts` (or next to it): a real token,
+  the tool's result and that another store can't be reached.
 
 ### Intuitive and mobile first
 
@@ -374,6 +395,19 @@ app or passkey as /admin (`SecondStep`, `PasskeysManager`), and adds fingerprint
 Security (`/app/:workspace/settings/security`); support never sets them up on the owner's
 account. In e2e, `passSecondStep` (fixtures) sets the app up the first time and types the next
 code after.
+
+AI assistants (`apps/api/src/routes/mcp.ts`, `core/src/ai-connections.ts`): `API_URL/mcp` is a
+remote MCP server (Streamable HTTP, stateless, JSON answers; 60 calls a minute per person).
+Assistants sign in with OAuth 2.1: the web's Better Auth is the authorization server
+(`@better-auth/oauth-provider`, dynamic client registration, PKCE, `resource` = the MCP's address,
+metadata at `/.well-known/oauth-authorization-server/api/auth` on the web and
+`/.well-known/oauth-protected-resource/mcp` on the API). The person allows it at `/oauth/consent`
+(signed in, past the team's second step, never during a support visit), which lists the stores
+it will reach. Tokens are opaque (`mcp_at_`/`mcp_rt_`) and only their SHA-256 is stored
+(`hashOAuthToken`), so the API checks them in Postgres with `authenticateAiToken`. The connection
+belongs to the person, not a store: each tool resolves the store and the role like the workspace.
+Settings → AI assistants (`/app/:workspace/settings/ai`) shows the address and the connected
+assistants; disconnecting one deletes its consent and tokens (401 at once).
 
 Every `core` use case takes a `TenantContext` and filters by `organizationId`.
 - The workspace goes in the URL (`/app/:workspace/…`) and `requireTenant` resolves it with

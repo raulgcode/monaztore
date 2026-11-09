@@ -10,6 +10,8 @@
     "auth:generate": "auth generate --config src/cli-config.ts --output ../db/src/schema/auth.ts --yes"
   },
   "dependencies": {
+    "@better-auth/oauth-provider": "catalog:",
+    "@monaztore/contracts": "workspace:*",
     "@monaztore/db": "workspace:*",
     "@monaztore/email": "workspace:*",
     "@monaztore/env": "workspace:*",

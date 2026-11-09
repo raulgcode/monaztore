@@ -1,4 +1,5 @@
 import { admin } from "./admin";
+import { ai } from "./ai";
 import { auth } from "./auth";
 import { common } from "./common";
 import { coupons } from "./coupons";
@@ -20,6 +21,7 @@ import { workspace } from "./workspace";
 /** The source language. A new namespace is added here and in `es/index.ts`. */
 export const en = {
   admin,
+  ai,
   auth,
   common,
   coupons,

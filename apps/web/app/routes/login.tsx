@@ -6,6 +6,7 @@ import { StandalonePage } from "~/components/standalone-page";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { metaT, richText, useT } from "~/lib/i18n";
 import { translations } from "~/lib/locale.server";
+import { authorizeContinuation } from "~/lib/oauth.server";
 import { auth, authMethods } from "~/lib/services.server";
 import { emailModeOf, signInAction } from "~/lib/sign-in.server";
 import type { Route } from "./+types/login";
@@ -16,21 +17,34 @@ export function meta({ matches }: Route.MetaArgs) {
 }
 
 export async function loader({ request, url, context }: Route.LoaderArgs) {
-  if (await auth.api.getSession({ headers: request.headers })) throw redirect(href("/app"));
+  const session = await auth.api.getSession({ headers: request.headers });
+  // An AI assistant asking to connect: once they sign in, its request goes on.
+  const continuation = await authorizeContinuation(url);
+  if (continuation) {
+    throw redirect(
+      session ? continuation : `${href("/login")}?redirectTo=${encodeURIComponent(continuation)}`,
+    );
+  }
+  if (session) throw redirect(href("/app"));
   return {
     google: authMethods.includes("google"),
     mode: emailModeOf(url),
     // Each email method links to the other, keeping where they were going.
-    other:
-      authMethods.includes("password") && authMethods.includes("magic-link")
-        ? emailModeOf(url) === "password"
-          ? "link"
-          : "password"
-        : null,
+    other: otherMethod(url),
     // Better Auth comes back with `?error=` when Google (or an expired link) fails.
     failed: url.searchParams.has("error"),
     i18n: translations(context, "auth", "forms"),
   };
+}
+
+/** The other email method, with the query they came with (`redirectTo` among it). */
+function otherMethod(url: URL): { label: "link" | "password"; search: string } | null {
+  if (!authMethods.includes("password") || !authMethods.includes("magic-link")) return null;
+  const label = emailModeOf(url) === "password" ? "link" : "password";
+  const query = new URLSearchParams(url.searchParams);
+  query.set("with", label);
+  query.delete("error");
+  return { label, search: `?${query}` };
 }
 
 export async function action(args: Route.ActionArgs) {
@@ -70,11 +84,11 @@ export default function Login({ loaderData, actionData }: Route.ComponentProps) 
           ) : null}
           {other ? (
             <Link
-              to={`?with=${other}`}
+              to={other.search}
               replace
               className="justify-self-center py-2 text-sm font-medium text-link underline underline-offset-4"
             >
-              {other === "link" ? t("auth.useMagicLink") : t("auth.usePassword")}
+              {other.label === "link" ? t("auth.useMagicLink") : t("auth.usePassword")}
             </Link>
           ) : null}
           {mode === "password" ? (

@@ -78,6 +78,13 @@
       "when": 1794152702351,
       "tag": "0010_products_and_coupons",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794203339765,
+      "tag": "0011_needy_william_stryker",
+      "breakpoints": true
     }
   ]
 }

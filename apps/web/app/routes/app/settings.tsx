@@ -47,6 +47,24 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
           <Card>
             <CardHeader>
               <CardTitle>
+                <h2>{t("settings.ai")}</h2>
+              </CardTitle>
+              <CardDescription>{t("settings.aiIntro")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link
+                to={href("/app/:workspace/settings/ai", { workspace })}
+                className={buttonVariants({ variant: "outline" })}
+              >
+                {t("settings.aiOpen")}
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+        {loaderData.support ? null : (
+          <Card>
+            <CardHeader>
+              <CardTitle>
                 <h2>{t("settings.security")}</h2>
               </CardTitle>
               <CardDescription>{t("settings.securityIntro")}</CardDescription>

@@ -1,4 +1,12 @@
 export {
+  type AiCaller,
+  type AiConnection,
+  authenticateAiToken,
+  hashOAuthToken,
+  listAiConnections,
+  removeAiConnection,
+} from "./ai-connections";
+export {
   type ConvertedImage,
   copyCatalogImages,
   type ImageCopyDeps,

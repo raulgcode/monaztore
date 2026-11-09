@@ -1,6 +1,7 @@
 import type { Translation } from "../../translate";
 import type { en } from "../en";
 import { admin } from "./admin";
+import { ai } from "./ai";
 import { auth } from "./auth";
 import { common } from "./common";
 import { coupons } from "./coupons";
@@ -21,6 +22,7 @@ import { workspace } from "./workspace";
 
 export const es = {
   admin,
+  ai,
   auth,
   common,
   coupons,
