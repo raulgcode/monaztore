@@ -1,5 +1,7 @@
 /**
- * Publishes a version to production: `pnpm release [patch|minor|major|1.2.3] [--yes] [--no-watch]`.
+ * Publishes a version to production:
+ * `pnpm release [patch|minor|major|1.2.3] [--yes] [--no-watch] [--check] [--notes "…"]`.
+ * `pnpm run deploy` is the same with `--check` (lint, typecheck and the unit tests first).
  *
  * It tags the latest commit of main (vX.Y.Z, annotated) and pushes the tag; the Deploy workflow
  * (.github/workflows/deploy.yml) sees the tag, waits for that commit's CI and deploys the API
@@ -8,7 +10,9 @@
  * ("Run workflow" in Deploy), so anyone with access to the repo can release without a terminal.
  *
  * Main must be clean and equal to origin/main: what goes out is exactly what is on GitHub. With
- * the GitHub CLI (`gh auth login`) it then follows the deploy until it ends.
+ * the GitHub CLI (`gh auth login`) it then follows the deploy until it ends. Once deployed, the
+ * workflow creates the version's GitHub Release: `--notes` on top (also kept in the tag's
+ * message), then the pull requests and commits since the previous version.
  */
 import { spawnSync } from "node:child_process";
 import { createInterface } from "node:readline/promises";
@@ -37,6 +41,8 @@ const { values, positionals } = parseArgs({
   options: {
     yes: { type: "boolean", short: "y", default: false },
     "no-watch": { type: "boolean", default: false },
+    check: { type: "boolean", default: false },
+    notes: { type: "string" },
   },
 });
 
@@ -53,6 +59,14 @@ if (!head || head !== main) {
 }
 if (capture("git", ["tag", "--points-at", head])?.match(/^v\d/m)) {
   fail("This commit already has a version: there is nothing new to release");
+}
+
+// What runs in CI, here: a version only goes out from a main that passes it.
+if (values.check) {
+  for (const args of [["lint"], ["typecheck"], ["vitest", "run", "--project", "unit"]]) {
+    console.log(`→ pnpm ${args.join(" ")}`);
+    if (run("pnpm", args) !== 0) fail(`pnpm ${args.join(" ")} failed: fix main first`);
+  }
 }
 
 const tags = (capture("git", ["tag", "--list", "v*"]) ?? "").split("\n").filter(Boolean);
@@ -72,7 +86,8 @@ if (!values.yes) {
   if (!/^(y|yes)$/i.test(answer.trim())) fail("Nothing was released");
 }
 
-if (run("git", ["tag", "--annotate", tag, "--message", `${tag}`, head]) !== 0) {
+const message = values.notes?.trim() ? `${tag}\n\n${values.notes.trim()}` : tag;
+if (run("git", ["tag", "--annotate", tag, "--message", message, head]) !== 0) {
   fail(`Couldn't create the tag ${tag}`);
 }
 if (run("git", ["push", "origin", `refs/tags/${tag}`]) !== 0) {

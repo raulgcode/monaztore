@@ -127,3 +127,47 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_WEB }}
           TAG: ${{ needs.ci.outputs.tag }}
         run: flyctl deploy --config fly.web.toml --remote-only --image-label "$TAG"
+
+  release:
+    name: Create the GitHub Release
+    needs: [ci, deploy]
+    if: ${{ !cancelled() && needs.deploy.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.ci.outputs.tag }}
+          fetch-depth: 0
+      # What went out: the notes written with `--notes` (the tag's message), then every commit
+      # since the previous version, and GitHub's list of the pull requests merged in between.
+      - name: Release notes
+        env:
+          TAG: ${{ needs.ci.outputs.tag }}
+        run: |
+          git fetch --force --tags origin
+          previous=$(git describe --tags --abbrev=0 --match 'v*.*.*' "$TAG^" 2>/dev/null || true)
+          {
+            notes=$(git tag --list --format='%(contents:body)' "$TAG")
+            if [ -n "$notes" ]; then printf '%s\n\n' "$notes"; fi
+            echo "## Commits"
+            echo
+            if [ -n "$previous" ]; then range="$previous..$TAG"; else range="$TAG"; fi
+            git log --no-merges --format='- %s (%h)' "$range"
+          } > notes.md
+          echo "previous=$previous" >> "$GITHUB_ENV"
+          cat notes.md
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.ci.outputs.tag }}
+        run: |
+          args=(--title "$TAG" --notes-file notes.md --generate-notes --verify-tag --latest)
+          if [ -n "$previous" ]; then args+=(--notes-start-tag "$previous"); fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$TAG" --notes-file notes.md
+          else
+            gh release create "$TAG" "${args[@]}"
+          fi

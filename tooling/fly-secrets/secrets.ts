@@ -49,10 +49,11 @@ export function planSecrets(
   }
 
   const database = secrets.DATABASE_URL;
-  if (!database) problems.push("DATABASE_URL is missing: the direct URL of Fly Managed Postgres");
+  if (!database)
+    problems.push("DATABASE_URL is missing: the URL that `fly postgres attach` gave monaztore-api");
   else if (isLocalHost(database)) {
     problems.push(
-      "DATABASE_URL points at your machine: use the direct URL of Fly Managed Postgres",
+      "DATABASE_URL points at your machine: use the URL that `fly postgres attach` gave monaztore-api",
     );
   }
 

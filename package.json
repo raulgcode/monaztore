@@ -18,6 +18,7 @@
     "test:e2e": "pnpm --filter @monaztore/e2e test",
     "e2e:remote": "tsx tooling/e2e-remote/index.ts",
     "release": "tsx tooling/release/index.ts",
+    "deploy": "tsx tooling/release/index.ts --check",
     "fly:secrets": "tsx tooling/fly-secrets/index.ts",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
