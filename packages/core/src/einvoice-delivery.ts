@@ -58,7 +58,7 @@ export function retryDelayMs(attempts: number): number {
   return Math.min(10_000 * 2 ** attempts, 60 * 60 * 1000);
 }
 
-const paymentCodes: Record<string, PaymentCode> = { sinpe: "06", transfer: "04" };
+const paymentCodes: Record<string, PaymentCode> = { sinpe: "06", transfer: "04", cash: "01" };
 
 type Einvoice = typeof schema.einvoice.$inferSelect;
 type Settings = typeof schema.storeEinvoicing.$inferSelect;

@@ -56,7 +56,7 @@ export const storeSettings = pgTable("store_settings", {
     .references(() => organization.id, { onDelete: "cascade" }),
   /** ISO 4217. Prices are stored in minor units (cents, céntimos) of this currency. */
   currency: text().notNull().default("CRC"),
-  /** How shoppers pay: SINPE Móvil and bank transfer for now (see `StorePayments`). */
+  /** How shoppers pay: SINPE Móvil, bank transfer and cash on delivery (see `StorePayments`). */
   payments: jsonb().$type<StorePayments>().notNull().default({}),
   /** How it delivers: the options the shopper picks from at checkout (see `StoreShipping`). */
   shipping: jsonb().$type<StoreShipping>().notNull().default({}),
@@ -109,9 +109,11 @@ export interface StoreThemeSettings {
 export interface StorePayments {
   sinpe?: { enabled: boolean; phone: string; holder: string };
   transfer?: { enabled: boolean; bank: string; iban: string; holder: string };
+  /** Cash on delivery: paid when the order arrives or is picked up; `note` says how. */
+  cash?: { enabled: boolean; note: string };
 }
 
-export type PaymentMethod = "sinpe" | "transfer";
+export type PaymentMethod = "sinpe" | "transfer" | "cash";
 
 /** A shipping option the store offers; prices in minor units. `contracts/src/shipping.ts`. */
 export interface StoreShippingMethod {

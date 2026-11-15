@@ -258,6 +258,9 @@ time. `placeOrder` prices again under lock, numbers the order from `store_settin
 lowers the stock it counts and keeps only the SHA-256 of the order link's token
 (`/orders/:token`, a secret path). Manual payments (SINPE Móvil, transfer) live in
 `store_settings.payments`; the shopper sends the reference and the store confirms it.
+Cash on delivery (`payments.cash`, with the store's note on how) is only for what is delivered
+or picked up, never for downloads: it sends no reference, the store marks it paid when the money
+comes in, and its electronic invoice says cash ("01").
 The shopper gets the order by email (what they bought, how to pay, its link) and the owners
 (`storeOwnerContacts`) are told of it, and again when a reference comes in
 (`lib/order-emails.server.ts`, never awaited: an email that fails doesn't stop the order).

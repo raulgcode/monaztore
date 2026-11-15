@@ -6,7 +6,7 @@ export const CART_LINE_MAX = 99;
 /** Different products in one cart. */
 export const CART_LINES_MAX = 50;
 
-export const paymentMethods = ["sinpe", "transfer"] as const;
+export const paymentMethods = ["sinpe", "transfer", "cash"] as const;
 export type CheckoutPaymentMethod = (typeof paymentMethods)[number];
 
 const text = (required: Parameters<typeof message>[0], max: number) =>

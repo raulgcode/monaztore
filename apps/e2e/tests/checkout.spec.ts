@@ -1,3 +1,4 @@
+import { updateStorePayments } from "@monaztore/core";
 import { eq, schema } from "@monaztore/db";
 import { expect, ownerTest as test } from "../support/fixtures";
 import { getEmail, uniqueEmail } from "../support/mailpit";
@@ -145,5 +146,42 @@ test.describe("Feature: buying with SINPE Móvil", () => {
     await expect(page.getByText("Enter your email")).toBeVisible();
     await expect(page.getByText("Enter a phone number we can reach you at")).toBeVisible();
     await expect(page).toHaveURL(`${store}/checkout`);
+  });
+
+  test("Scenario: a shopper pays on delivery and the order says to pay ₡5,990 when it arrives, with no reference to send", async ({
+    page,
+    workspace,
+    baseURL,
+  }) => {
+    const store = await test.step("Given a store that takes cash on delivery", async () => {
+      const store = await openStore(workspace, baseURL);
+      await updateStorePayments(workspace.tenant, {
+        sinpe: { enabled: true, phone: "8888-1234", holder: "My company S.A." },
+        cash: { enabled: true, note: "Cash or SINPE Móvil to the courier." },
+      });
+      return store;
+    });
+
+    await test.step("When a shopper orders a mug paying on delivery", async () => {
+      await page.goto(`${store}/products/pura-vida-mug`);
+      await page.getByRole("button", { name: "Add to cart" }).click();
+      await expect(page.getByRole("main").getByRole("status")).toContainText("Added to your cart.");
+      await page.goto(`${store}/checkout`);
+      await page.getByLabel("Email", { exact: true }).fill("ana@example.com");
+      await page.getByLabel("Full name").fill("Ana Mora");
+      await page.getByLabel("Phone", { exact: true }).fill("8888-0000");
+      await page.getByLabel("Address", { exact: true }).fill("100 m norte del parque");
+      await page.getByLabel("City or town").fill("Heredia");
+      await page.getByLabel("Province").fill("Heredia");
+      await page.getByRole("radio", { name: /Cash on delivery/ }).check();
+      await page.getByRole("button", { name: "Place order" }).click();
+    });
+
+    await test.step("Then the order says to pay when it arrives and asks for no reference", async () => {
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^Order #\d+$/);
+      await expect(page.getByRole("heading", { name: "Pay ₡5,990 when it arrives" })).toBeVisible();
+      await expect(page.getByText("Cash or SINPE Móvil to the courier.")).toBeVisible();
+      await expect(page.getByLabel("Payment reference number")).toHaveCount(0);
+    });
   });
 });

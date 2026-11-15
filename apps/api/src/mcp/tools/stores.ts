@@ -105,7 +105,7 @@ export const registerStoreTools: ToolModule = (server, kit) => {
     {
       title: "Set how the store gets paid",
       description:
-        "Turns SINPE Móvil and bank transfer on or off with what shoppers see (phone, bank, IBAN, holder). Owners only. Show the person the values and ask before saving.",
+        "Turns SINPE Móvil, bank transfer and cash on delivery on or off with what shoppers see (phone, bank, IBAN, holder, a note on paying on delivery). Owners only. Show the person the values and ask before saving.",
       inputSchema: {
         store: storeArg,
         sinpe: z
@@ -119,6 +119,12 @@ export const registerStoreTools: ToolModule = (server, kit) => {
             holder: z.string().max(80),
           })
           .describe("Bank transfer: the bank, the IBAN and whose name it is in"),
+        cash: z
+          .object({ enabled: z.boolean(), note: z.string().max(120) })
+          .optional()
+          .describe(
+            'Cash on delivery, paid when the order arrives or is picked up (never for downloads); the note says how, like "Cash or SINPE to the courier". Left out, it stays as it is',
+          ),
       },
       annotations: change,
     },
@@ -127,12 +133,15 @@ export const registerStoreTools: ToolModule = (server, kit) => {
         store,
         sinpe,
         transfer,
+        cash,
       }: {
         store: string;
         sinpe: { enabled: boolean; phone: string; holder: string };
         transfer: { enabled: boolean; bank: string; iban: string; holder: string };
+        cash?: { enabled: boolean; note: string };
       }) => {
         const tenant = await kit.tenantFor(store, { owner: true });
+        const kept = cash ?? (await getStorePayments(tenant)).cash;
         const form = paymentSettingsSchema.parse({
           sinpeEnabled: sinpe.enabled ? "on" : undefined,
           sinpePhone: sinpe.phone,
@@ -141,6 +150,8 @@ export const registerStoreTools: ToolModule = (server, kit) => {
           transferBank: transfer.bank,
           transferIban: transfer.iban,
           transferHolder: transfer.holder,
+          cashEnabled: kept?.enabled ? "on" : undefined,
+          cashNote: kept?.note ?? "",
         });
         await updateStorePayments(tenant, paymentsFromForm(form));
         return json({ saved: true, payments: await getStorePayments(tenant) });

@@ -19,6 +19,8 @@ export interface OrderEmailLine {
 export interface OrderEmailPayTo {
   sinpe?: { phone: string; holder: string };
   transfer?: { bank: string; iban: string; holder: string };
+  /** Cash on delivery: nothing to send ahead, the store's note on how. */
+  cash?: { note: string };
 }
 
 /** The shopper's copy of the order they just placed: what they bought, how to pay, its page. */
@@ -64,13 +66,24 @@ export function OrderPlacedEmail({
         </EmailText>
       ))}
       <EmailText>{t("email.orderTotal", { total })}</EmailText>
-      <EmailText>{t("email.orderPayHow", { total })}</EmailText>
+      {payTo.cash ? (
+        <>
+          <EmailText>{t("email.orderPayCash", { total })}</EmailText>
+          {payTo.cash.note ? <EmailText>{payTo.cash.note}</EmailText> : null}
+        </>
+      ) : (
+        <EmailText>{t("email.orderPayHow", { total })}</EmailText>
+      )}
       {payTo.sinpe ? <EmailText>{t("email.orderPaySinpe", payTo.sinpe)}</EmailText> : null}
       {payTo.transfer ? <EmailText>{t("email.orderPayTransfer", payTo.transfer)}</EmailText> : null}
       <EmailButton href={url} locale={locale}>
         {t("email.orderPlacedButton")}
       </EmailButton>
-      <EmailNote>{t("email.orderPlacedNote", { number: String(orderNumber) })}</EmailNote>
+      <EmailNote>
+        {t(payTo.cash ? "email.orderPlacedNoteCash" : "email.orderPlacedNote", {
+          number: String(orderNumber),
+        })}
+      </EmailNote>
     </EmailLayout>
   );
 }

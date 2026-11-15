@@ -219,6 +219,44 @@ describe("placeOrder", () => {
   });
 });
 
+describe("cash on delivery", () => {
+  it("places the order with the store's note and no reference to send", async () => {
+    const { store, owner, id } = await shop();
+    await updateStorePayments(owner, {
+      sinpe: { enabled: true, phone: "8888-1234", holder: "Tienda S.A." },
+      cash: { enabled: true, note: "Efectivo o SINPE al mensajero" },
+    });
+    expect((await getPaymentOptions(store)).cash).toEqual({
+      note: "Efectivo o SINPE al mensajero",
+    });
+
+    const placed = await placeOrder(store, {
+      cart: [{ productId: id("mug"), variantId: null, quantity: 1 }],
+      checkout: { ...checkout, paymentMethod: "cash" },
+      locale: "es",
+    });
+    expect(await getOrderByToken(store, placed.token)).toMatchObject({
+      status: "pending_payment",
+      paymentMethod: "cash",
+      payTo: { cash: { note: "Efectivo o SINPE al mensajero" } },
+    });
+    await expect(submitPaymentReference(store, placed.token, "123")).rejects.toMatchObject({
+      code: "order_closed",
+    });
+  });
+
+  it("isn't taken while the store has it off", async () => {
+    const { store, id } = await shop();
+    await expect(
+      placeOrder(store, {
+        cart: [{ productId: id("mug"), variantId: null, quantity: 1 }],
+        checkout: { ...checkout, paymentMethod: "cash" },
+        locale: "es",
+      }),
+    ).rejects.toMatchObject({ code: "payment_method_unavailable" });
+  });
+});
+
 describe("shipping", () => {
   const methods = [
     {

@@ -20,6 +20,7 @@ export const orders = {
   delivery: "Delivery",
   payment: "Payment",
   method_sinpe: "SINPE Móvil",
+  method_cash: "Cash on delivery",
   method_transfer: "Bank transfer",
   reference: "Reference: {reference}",
   noReference: "The shopper hasn't sent a reference yet.",

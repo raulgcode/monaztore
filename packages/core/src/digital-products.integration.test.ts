@@ -208,6 +208,20 @@ describe("buying a digital product", () => {
     });
   });
 
+  it("can't be paid on delivery: there is no one to hand the cash to", async () => {
+    const { store, owner, ebook } = await shop();
+    await updateStorePayments(owner, {
+      sinpe: { enabled: true, phone: "8888-1234", holder: "Tienda S.A." },
+      cash: { enabled: true, note: "" },
+    });
+    const cart = [{ productId: ebook, variantId: null, quantity: 1 }];
+    expect(
+      await code(
+        placeOrder(store, { cart, checkout: { ...contact, paymentMethod: "cash" }, locale: "es" }),
+      ),
+    ).toBe("payment_method_unavailable");
+  });
+
   it("opens the files only once the store marks it paid, and emails a link of its own", async () => {
     const { owner, store, ebook } = await shop();
     const placed = await placeOrder(store, {

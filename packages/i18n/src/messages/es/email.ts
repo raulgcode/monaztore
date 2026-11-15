@@ -42,6 +42,9 @@ export const email = {
   orderTotal: "Total: {total}",
   orderPayHow:
     "Para confirmarlo, paga {total} y manda el comprobante desde la página de tu pedido. La tienda lo prepara cuando llega el pago.",
+  orderPayCash: "Pagas {total} cuando lo recibas: la tienda te contacta para entregarlo.",
+  orderPlacedNoteCash:
+    "Guarda este correo: el botón abre tu pedido, con su estado, cuando quieras. Pedido #{number}.",
   orderPaySinpe: "SINPE Móvil al {phone}, a nombre de {holder}.",
   orderPayTransfer: "Transferencia a {bank}, IBAN {iban}, a nombre de {holder}.",
   orderPlacedButton: "Ver mi pedido",

@@ -140,6 +140,23 @@ describe("an order's emails", () => {
     expect(text).toContain("https://superchivacr.com/orders/abc");
   });
 
+  it("tells a shopper paying on delivery that they pay when it arrives, with the store's note", async () => {
+    const message = orderPlacedMessage({
+      locale: "es",
+      storeName: "Super Chiva",
+      orderNumber: 1002,
+      name: "Ana",
+      lines,
+      total: "₡15 000",
+      payTo: { cash: { note: "Efectivo o SINPE al mensajero" } },
+      url: "https://superchivacr.com/orders/abc",
+    });
+    const { text } = await renderEmail(message.react);
+    expect(text).toContain("Pagas ₡15 000 cuando lo recibas");
+    expect(text).toContain("Efectivo o SINPE al mensajero");
+    expect(text).not.toContain("comprobante");
+  });
+
   it("tells the store a new order came in, with who placed it and a link to it", async () => {
     const message = storeOrderMessage({
       locale: "en",

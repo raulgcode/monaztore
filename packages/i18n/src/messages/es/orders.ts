@@ -22,6 +22,7 @@ export const orders = {
   delivery: "Entrega",
   payment: "Pago",
   method_sinpe: "SINPE Móvil",
+  method_cash: "Pago contra entrega",
   method_transfer: "Transferencia bancaria",
   reference: "Referencia: {reference}",
   noReference: "Quien compró todavía no envió la referencia.",

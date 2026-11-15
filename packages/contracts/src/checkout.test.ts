@@ -47,7 +47,7 @@ describe("checkoutSchema", () => {
     expect(result.success && result.data).toMatchObject({ email: "ana@example.com", notes: "" });
   });
   it("says which field is wrong with a translation key", () => {
-    const result = checkoutSchema.safeParse({ ...valid, phone: "abc", paymentMethod: "cash" });
+    const result = checkoutSchema.safeParse({ ...valid, phone: "abc", paymentMethod: "card" });
     expect(result.success).toBe(false);
     const messages = result.error?.issues.map((issue) => issue.message);
     expect(messages).toEqual(

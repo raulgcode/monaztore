@@ -57,7 +57,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   if (cart.lines.length === 0) throw redirect(href("/cart"));
   return {
     cart,
-    methods: (["sinpe", "transfer"] as const).filter((method) => payments[method]),
+    // Cash on delivery only for what is delivered: a download has no one to pay.
+    methods: (["sinpe", "transfer", "cash"] as const).filter(
+      (method) => payments[method] && (method !== "cash" || cart.needsShipping),
+    ),
     // A store in Costa Rica with electronic invoicing on asks who the invoice is for.
     invoices,
     i18n: translations(context, "forms"),

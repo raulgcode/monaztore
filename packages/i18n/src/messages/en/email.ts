@@ -37,6 +37,9 @@ export const email = {
   orderTotal: "Total: {total}",
   orderPayHow:
     "To confirm it, pay {total} and send the reference from your order's page. The store prepares it once the payment arrives.",
+  orderPayCash: "You pay {total} when you get it: the store will get in touch to deliver it.",
+  orderPlacedNoteCash:
+    "Keep this email: the button opens your order, with its status, at any time. Order #{number}.",
   orderPaySinpe: "SINPE Móvil to {phone}, in the name of {holder}.",
   orderPayTransfer: "Transfer to {bank}, IBAN {iban}, in the name of {holder}.",
   orderPlacedButton: "See my order",

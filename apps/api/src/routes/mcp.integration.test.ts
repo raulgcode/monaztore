@@ -219,4 +219,31 @@ describe("the stores' tools", () => {
     const refused = await call(token, "set_store_shipping", { store: other.slug, methods: [] });
     expect(refused.error).toBeTruthy();
   });
+
+  it("turns on cash on delivery with its note, and keeps it when only SINPE changes", async () => {
+    const tenant = await createTestTenant(db);
+    const other = await createTestTenant(db);
+    const { token } = await connectAssistant(tenant.userId);
+    const sinpe = { enabled: true, phone: "8888-1234", holder: "Tienda S.A." };
+    const transfer = { enabled: false, bank: "", iban: "", holder: "" };
+    const saved = await call(token, "set_store_payments", {
+      store: tenant.slug,
+      sinpe,
+      transfer,
+      cash: { enabled: true, note: "Efectivo al mensajero" },
+    });
+    expect(saved.data.payments.cash).toEqual({ enabled: true, note: "Efectivo al mensajero" });
+    const again = await call(token, "set_store_payments", {
+      store: tenant.slug,
+      sinpe: { ...sinpe, phone: "8888-5678" },
+      transfer,
+    });
+    expect(again.data.payments.cash).toEqual({ enabled: true, note: "Efectivo al mensajero" });
+    const refused = await call(token, "set_store_payments", {
+      store: other.slug,
+      sinpe,
+      transfer,
+    });
+    expect(refused.error).toBeTruthy();
+  });
 });

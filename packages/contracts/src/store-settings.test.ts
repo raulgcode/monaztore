@@ -31,6 +31,14 @@ describe("paymentSettingsSchema", () => {
   });
 });
 
+describe("cash on delivery", () => {
+  it("is on with an optional note of how", () => {
+    const result = paymentSettingsSchema.parse({ cashEnabled: "on", cashNote: " Cash or SINPE " });
+    expect(paymentsFromForm(result).cash).toEqual({ enabled: true, note: "Cash or SINPE" });
+    expect(paymentsFromForm(paymentSettingsSchema.parse({})).cash.enabled).toBe(false);
+  });
+});
+
 describe("domainSchema", () => {
   it.each([
     ["MiTienda.com", true],

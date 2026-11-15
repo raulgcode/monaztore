@@ -15,7 +15,8 @@ const checkbox = z._default(
 
 /**
  * How the store gets paid. A method that is on needs what the shopper will see: the phone for
- * SINPE Móvil, the IBAN for a transfer, and whose name they are in.
+ * SINPE Móvil, the IBAN for a transfer, and whose name they are in. Cash on delivery needs
+ * nothing; its note ("cash or SINPE to the courier") is optional.
  */
 export const paymentSettingsSchema = z
   .object({
@@ -26,6 +27,8 @@ export const paymentSettingsSchema = z
     transferBank: optionalText(80),
     transferIban: optionalText(34),
     transferHolder: optionalText(80),
+    cashEnabled: checkbox,
+    cashNote: optionalText(120),
   })
   .check(
     z.superRefine((value, ctx) => {
@@ -61,6 +64,7 @@ export function paymentsFromForm(input: PaymentSettingsInput) {
       iban: input.transferIban.replace(/\s/g, "").toUpperCase(),
       holder: input.transferHolder,
     },
+    cash: { enabled: input.cashEnabled, note: input.cashNote },
   };
 }
 

@@ -61,7 +61,10 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
   const [search] = useSearchParams();
   const { order } = loaderData;
   const money = (minor: number) => formatPrice(minor, order.currency, locale);
-  const open = order.status === "pending_payment" || order.status === "payment_submitted";
+  // Cash is handed over on delivery: there is no reference to send.
+  const cash = order.paymentMethod === "cash";
+  const open =
+    !cash && (order.status === "pending_payment" || order.status === "payment_submitted");
   const [form, fields] = useForm({
     id: "payment-reference",
     lastResult: actionData?.result,
@@ -82,7 +85,19 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
         </p>
       </div>
 
-      {order.status === "pending_payment" ? (
+      {order.status === "pending_payment" && cash ? (
+        <section aria-labelledby="pay" className="grid gap-2 rounded-md border border-primary p-4">
+          <h2 id="pay" className="text-lg font-semibold">
+            {t(
+              order.shippingMethod?.pickup ? "storefront.payOnPickup" : "storefront.payOnDelivery",
+              {
+                amount: money(order.total),
+              },
+            )}
+          </h2>
+          {order.payTo.cash?.note ? <p>{order.payTo.cash.note}</p> : null}
+        </section>
+      ) : order.status === "pending_payment" ? (
         <section aria-labelledby="pay" className="grid gap-2 rounded-md border border-primary p-4">
           <h2 id="pay" className="text-lg font-semibold">
             {t("storefront.payNow", { amount: money(order.total) })}

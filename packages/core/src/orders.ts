@@ -30,6 +30,8 @@ import type { TenantContext } from "./tenant";
 export interface PaymentOptions {
   sinpe?: { phone: string; holder: string };
   transfer?: { bank: string; iban: string; holder: string };
+  /** Paid when it arrives or is picked up: only for what is delivered, never for downloads. */
+  cash?: { note: string };
 }
 
 async function storeSettingsOf(db: Database, organizationId: string) {
@@ -57,6 +59,7 @@ function enabledPayments(payments: StorePayments): PaymentOptions {
     const { bank, iban, holder } = payments.transfer;
     options.transfer = { bank, iban, holder };
   }
+  if (payments.cash?.enabled) options.cash = { note: payments.cash.note };
   return options;
 }
 
@@ -414,6 +417,10 @@ export async function placeOrder(
     }
     if (priced.removed > 0 || priced.shortOfStock > 0) {
       throw new DomainError("cart_changed", "Prices or stock changed: review the cart");
+    }
+    // Cash is paid to whoever hands it over: a download has no one to pay.
+    if (checkout.paymentMethod === "cash" && !priced.needsShipping) {
+      throw new DomainError("payment_method_unavailable", "Downloads can't be paid on delivery");
     }
     if (priced.shippingOptions.length > 0 && !priced.shipping) {
       throw new DomainError(
@@ -890,6 +897,9 @@ export async function submitPaymentReference(
 ): Promise<void> {
   const found = await orderByToken(ctx, token);
   if (!found) throw new DomainError("not_found", "No such order");
+  if (found.paymentMethod === "cash") {
+    throw new DomainError("order_closed", "Cash on delivery has no reference to send");
+  }
   const [updated] = await ctx.db
     .update(schema.order)
     .set({

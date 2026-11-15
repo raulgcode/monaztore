@@ -400,6 +400,8 @@ function Payments({
       transferBank: payments.transfer?.bank ?? "",
       transferIban: payments.transfer?.iban ?? "",
       transferHolder: payments.transfer?.holder ?? "",
+      cashEnabled: payments.cash?.enabled ? "on" : undefined,
+      cashNote: payments.cash?.note ?? "",
     },
   });
   const checkbox = (field: typeof fields.sinpeEnabled, label: string) => (
@@ -448,6 +450,16 @@ function Payments({
               spellCheck={false}
             />
             <TextField field={fields.transferHolder} label={t("store.holder")} />
+          </fieldset>
+          <fieldset className="grid gap-3" disabled={!owner}>
+            <legend className="sr-only">{t("store.cashLabel")}</legend>
+            {checkbox(fields.cashEnabled, t("store.cashLabel"))}
+            <TextField
+              field={fields.cashNote}
+              label={t("store.cashNote")}
+              description={t("store.cashNoteHint")}
+              placeholder={t("store.cashNotePlaceholder")}
+            />
           </fieldset>
           <FieldErrors id={form.errorId} errors={form.errors} />
           {owner ? (
