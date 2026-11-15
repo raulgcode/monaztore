@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { CheckoutInput, ImportedProduct } from "@monaztore/contracts";
 import { eq, schema } from "@monaztore/db";
-import { createTestDatabase, createTestTenant } from "@monaztore/db/testing";
+import { createTestDatabase, createTestTenant, createTestUser } from "@monaztore/db/testing";
 import { afterAll, describe, expect, it } from "vitest";
 import { importCatalog, listImportedProducts, listVariants } from "./catalog-import";
 import {
@@ -9,6 +9,7 @@ import {
   getPaymentOptions,
   placeOrder,
   priceCart,
+  storeOwnerContacts,
   submitPaymentReference,
   updateStorePayments,
 } from "./orders";
@@ -231,6 +232,27 @@ describe("submitPaymentReference", () => {
       status: "payment_submitted",
       paymentReference: "123456",
     });
+  });
+});
+
+describe("storeOwnerContacts", () => {
+  it("lists the store's owners, not the rest of the team nor another store's owners", async () => {
+    const { store, owner } = await shop();
+    await shop();
+    const teammate = await createTestUser(db);
+    await db.insert(schema.member).values({
+      organizationId: store.store.organizationId,
+      userId: teammate,
+      role: "member",
+      createdAt: new Date(),
+    });
+    await db.update(schema.user).set({ locale: "es" }).where(eq(schema.user.id, owner.userId));
+    const [me] = await db
+      .select({ email: schema.user.email, name: schema.user.name })
+      .from(schema.user)
+      .where(eq(schema.user.id, owner.userId));
+
+    expect(await storeOwnerContacts(store)).toEqual([{ ...me, locale: "es" }]);
   });
 });
 

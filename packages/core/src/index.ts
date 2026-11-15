@@ -111,6 +111,8 @@ export {
   type ShopperDownload,
   type ShopperEinvoice,
   type ShopperOrder,
+  type StoreOwnerContact,
+  storeOwnerContacts,
   submitPaymentReference,
   updateStorePayments,
 } from "./orders";

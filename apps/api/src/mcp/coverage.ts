@@ -33,6 +33,8 @@ const groups: Record<string, string[]> = {
     "resolveOnlyStore",
     "resolveStoreByHost",
     "sitemapEntries",
+    // Who the storefront emails about a new order or a payment reference; never shown.
+    "storeOwnerContacts",
     "submitPaymentReference",
     "suggestStoreProducts",
   ],

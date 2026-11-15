@@ -34,3 +34,15 @@ export {
   einvoiceSubject,
 } from "./templates/einvoice";
 export { MagicLinkEmail, type MagicLinkEmailProps, magicLinkSubject } from "./templates/magic-link";
+export {
+  type OrderEmailLine,
+  type OrderEmailPayTo,
+  OrderPlacedEmail,
+  type OrderPlacedEmailProps,
+  orderPlacedMessage,
+  orderPlacedSubject,
+  StoreOrderEmail,
+  type StoreOrderEmailProps,
+  storeOrderMessage,
+  storeOrderSubject,
+} from "./templates/orders";

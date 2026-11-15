@@ -258,6 +258,9 @@ time. `placeOrder` prices again under lock, numbers the order from `store_settin
 lowers the stock it counts and keeps only the SHA-256 of the order link's token
 (`/orders/:token`, a secret path). Manual payments (SINPE Móvil, transfer) live in
 `store_settings.payments`; the shopper sends the reference and the store confirms it.
+The shopper gets the order by email (what they bought, how to pay, its link) and the owners
+(`storeOwnerContacts`) are told of it, and again when a reference comes in
+(`lib/order-emails.server.ts`, never awaited: an email that fails doesn't stop the order).
 
 Photos (`core/src/catalog-images.ts`, `@monaztore/storage`): `pnpm import:woocommerce` copies
 every photo to the store's own files before importing (`copyCatalogImages`: downloaded once,
@@ -465,8 +468,10 @@ Every new variable goes in `.env.example` with a comment saying what it is, and 
   the change touches (`pnpm test:e2e`), all locally, and only then push and merge.
 - Agents may merge their own PRs into `main` without the owner's review, once the local checks
   pass.
-- Production on Fly.io (`docs/deploy.md`): `pnpm release [patch|minor|major|x.y.z]` creates the
-  tag and `.github/workflows/deploy.yml` deploys the API (with migrations) and then the web.
+- Production on Fly.io (`docs/deploy.md`): `pnpm release [patch|minor|major|x.y.z]` (or
+  `pnpm run deploy`, which runs lint, typecheck and the unit tests first) creates the tag and
+  `.github/workflows/deploy.yml` deploys the API (with migrations), then the web, and creates the
+  version's GitHub Release with its notes and commits.
   Secrets with `pnpm fly:secrets` from `.env.production` (never in git).
 - The pre-commit hook (Lefthook) only formats with Biome.
 - A new feature follows the `new-feature` skill (`.agents/skills/new-feature`).
@@ -486,6 +491,7 @@ pnpm db:generate && pnpm db:migrate   # after changing the schema
 pnpm admin:seed          # SUPER_ADMIN_EMAILS become super admins (/admin)
 pnpm admin:reset-2fa <email>  # someone lost their authenticator app and recovery codes
 pnpm release [patch|minor|major|x.y.z]  # publishes main to production (tag → Fly.io)
+pnpm run deploy [patch|…] [--notes "…"]  # checks, then the same release; the Release lands on GitHub
 pnpm fly:secrets [--check]  # sends .env.production to Fly's secrets
 pnpm --filter @monaztore/web lighthouse
 ```

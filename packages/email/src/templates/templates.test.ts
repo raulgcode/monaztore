@@ -6,6 +6,7 @@ import { AccountEmail, accountEmailSubject } from "./account";
 import { DownloadsEmail, downloadsMessage } from "./downloads";
 import { einvoiceMessage } from "./einvoice";
 import { MagicLinkEmail, magicLinkSubject } from "./magic-link";
+import { orderPlacedMessage, storeOrderMessage } from "./orders";
 
 const url = "https://app.monaztore.com/api/auth/verify?token=abc&x=1";
 
@@ -109,5 +110,69 @@ describe("the downloads of a paid order", () => {
     expect(text).toContain("Guía.pdf");
     expect(text).toContain("Plantillas.zip");
     expect(text).toContain("https://superchiva.cr/downloads/abc");
+  });
+});
+
+describe("an order's emails", () => {
+  const lines = [
+    { label: "Medias Animanía × 2", total: "₡9 000" },
+    { label: "Taza", total: "₡6 000" },
+  ];
+
+  it("gives the shopper what they bought, how to pay and their order's link, in their language", async () => {
+    const message = orderPlacedMessage({
+      locale: "es",
+      storeName: "Super Chiva",
+      orderNumber: 1001,
+      name: "Ana",
+      lines,
+      total: "₡15 000",
+      payTo: { sinpe: { phone: "8888-1234", holder: "Super Chiva S.A." } },
+      url: "https://superchivacr.com/orders/abc",
+    });
+    const { text } = await renderEmail(message.react);
+    expect(message.subject).toBe("Super Chiva: recibimos tu pedido #1001");
+    expect(text).toContain("Gracias, Ana");
+    expect(text).toContain("Medias Animanía × 2: ₡9 000");
+    expect(text).toContain("Total: ₡15 000");
+    expect(text).toContain("SINPE Móvil al 8888-1234, a nombre de Super Chiva S.A.");
+    expect(text).not.toContain("IBAN");
+    expect(text).toContain("https://superchivacr.com/orders/abc");
+  });
+
+  it("tells the store a new order came in, with who placed it and a link to it", async () => {
+    const message = storeOrderMessage({
+      locale: "en",
+      kind: "placed",
+      storeName: "Super Chiva",
+      orderNumber: 1001,
+      customerName: "Ana Mora",
+      customerEmail: "ana@example.com",
+      lines,
+      total: "₡15,000",
+      url: "https://app.monaztore.com/app/superchiva/orders/1001",
+    });
+    const { text } = await renderEmail(message.react);
+    expect(message.subject).toBe("Super Chiva: new order #1001");
+    expect(text).toContain("Ana Mora (ana@example.com) placed an order for ₡15,000:");
+    expect(text).toContain("https://app.monaztore.com/app/superchiva/orders/1001");
+  });
+
+  it("tells the store the shopper sent a payment reference to check", async () => {
+    const message = storeOrderMessage({
+      locale: "es",
+      kind: "reference",
+      storeName: "Super Chiva",
+      orderNumber: 1001,
+      customerName: "Ana Mora",
+      customerEmail: "ana@example.com",
+      lines,
+      total: "₡15 000",
+      reference: "123456",
+      url: "https://app.monaztore.com/app/superchiva/orders/1001",
+    });
+    const { text } = await renderEmail(message.react);
+    expect(message.subject).toBe("Super Chiva: el pedido #1001 dice que ya pagó");
+    expect(text).toContain("Ana Mora mandó el pago de ₡15 000 con el comprobante 123456.");
   });
 });

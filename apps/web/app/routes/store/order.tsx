@@ -9,6 +9,7 @@ import { Button } from "~/components/ui/button";
 import { metaT, useLocale, useT } from "~/lib/i18n";
 import { translations } from "~/lib/locale.server";
 import { formatPrice } from "~/lib/money";
+import { sendPaymentReferenceEmails } from "~/lib/order-emails.server";
 import { requestAddress, withinRateLimits } from "~/lib/rate-limit.server";
 import { requireStore } from "~/middleware/store.server";
 import type { Route } from "./+types/order";
@@ -40,6 +41,9 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   }
   try {
     await submitPaymentReference(store, params.token, submission.value.reference);
+    void sendPaymentReferenceEmails(store, params.token).catch((error) => {
+      console.error("The store's notice of a payment reference didn't go out", error);
+    });
   } catch (error) {
     if (error instanceof DomainError && error.code === "not_found") {
       throw data("Order not found", { status: 404 });

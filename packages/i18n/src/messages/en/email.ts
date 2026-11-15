@@ -28,4 +28,24 @@ export const email = {
   downloadsButton: "Download my files",
   downloadsNote:
     "The link is only for you: each file can be downloaded a limited number of times, for a limited number of days. Your order's page has them too.",
+  orderPlacedSubject: "{store}: we got your order #{number}",
+  orderPlacedHeading: "Thanks, {name}",
+  orderPlacedBody: "{store} got your order #{number}. This is what you asked for:",
+  orderTotal: "Total: {total}",
+  orderPayHow:
+    "To confirm it, pay {total} and send the reference from your order's page. The store prepares it once the payment arrives.",
+  orderPaySinpe: "SINPE Móvil to {phone}, in the name of {holder}.",
+  orderPayTransfer: "Transfer to {bank}, IBAN {iban}, in the name of {holder}.",
+  orderPlacedButton: "See my order",
+  orderPlacedNote:
+    "Keep this email: the button opens your order, with its status, at any time. Write the order number #{number} in the payment's description.",
+  storeOrderSubject: "{store}: new order #{number}",
+  storeOrderBody: "{name} ({email}) placed an order for {total}:",
+  storeOrderButton: "Open the order",
+  storeOrderNote:
+    "It waits for the payment: once the shopper sends the reference, you'll get another email to confirm it.",
+  storeReferenceSubject: "{store}: order #{number} says it's paid",
+  storeReferenceBody: "{name} sent the payment of {total} with the reference {reference}.",
+  storeReferenceNote:
+    "Check that the money arrived in your account and mark the order paid: only then is it ready to prepare.",
 } as const;

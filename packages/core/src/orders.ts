@@ -816,3 +816,28 @@ export async function submitPaymentReference(
     .returning({ id: schema.order.id });
   if (!updated) throw new DomainError("order_closed", "The order is already paid or cancelled");
 }
+
+/** Who hears about the store's orders: its owners, each in their own language. */
+export interface StoreOwnerContact {
+  email: string;
+  name: string;
+  locale: string | null;
+}
+
+/**
+ * The store's owners, to tell them an order came in or a shopper sent a payment reference.
+ * Only for the storefront's own notices: the addresses never reach the shopper.
+ */
+export async function storeOwnerContacts(ctx: StorefrontContext): Promise<StoreOwnerContact[]> {
+  return ctx.db
+    .select({ email: schema.user.email, name: schema.user.name, locale: schema.user.locale })
+    .from(schema.member)
+    .innerJoin(schema.user, eq(schema.user.id, schema.member.userId))
+    .where(
+      and(
+        eq(schema.member.organizationId, ctx.store.organizationId),
+        eq(schema.member.role, "owner"),
+      ),
+    )
+    .orderBy(asc(schema.member.createdAt));
+}

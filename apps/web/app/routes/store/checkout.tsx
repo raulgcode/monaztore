@@ -21,6 +21,7 @@ import { cartCookieHeader, couponCookieHeader, readCart, readCoupon } from "~/li
 import { metaT, useLocale, useT } from "~/lib/i18n";
 import { localeOf, translations } from "~/lib/locale.server";
 import { formatPrice } from "~/lib/money";
+import { sendOrderPlacedEmails } from "~/lib/order-emails.server";
 import { requestAddress, withinRateLimits } from "~/lib/rate-limit.server";
 import { requireStore } from "~/middleware/store.server";
 import type { Route } from "./+types/checkout";
@@ -80,12 +81,17 @@ export async function action({ request, context }: Route.ActionArgs) {
     );
   }
   try {
+    const locale = localeOf(context);
     const placed = await placeOrder(store, {
       cart,
       checkout: submission.value,
       taxId: invoiceTo(submission.value),
-      locale: localeOf(context),
+      locale,
       couponCode,
+    });
+    // The shopper's copy and the owners' notice go out in the background: the order is placed.
+    void sendOrderPlacedEmails(store, placed.token, locale, request.url).catch((error) => {
+      console.error(`The emails of order #${placed.number} didn't go out`, error);
     });
     const headers = new Headers();
     headers.append("Set-Cookie", await cartCookieHeader([]));

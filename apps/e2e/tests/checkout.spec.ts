@@ -1,4 +1,6 @@
+import { eq, schema } from "@monaztore/db";
 import { expect, ownerTest as test } from "../support/fixtures";
+import { getEmail, uniqueEmail } from "../support/mailpit";
 import { openStore } from "../support/storefront";
 
 test.describe("Feature: buying with SINPE Móvil", () => {
@@ -57,6 +59,73 @@ test.describe("Feature: buying with SINPE Móvil", () => {
         "Payment sent: the store is checking it",
       );
       await expect(page.getByText("Reference you sent: 202611080001")).toBeVisible();
+    });
+  });
+
+  test("Scenario: the shopper gets their order by email with how to pay, and the owner hears of it and of the payment", async ({
+    page,
+    workspace,
+    baseURL,
+    db,
+  }) => {
+    const store = await test.step("Given a store that takes SINPE Móvil", () =>
+      openStore(workspace, baseURL));
+    const shopper = uniqueEmail("shopper");
+
+    const number = await test.step("When a shopper orders a mug with SINPE Móvil", async () => {
+      await page.goto(`${store}/products/pura-vida-mug`);
+      await page.getByRole("button", { name: "Add to cart" }).click();
+      await expect(page.getByRole("main").getByRole("status")).toContainText("Added to your cart.");
+      await page.goto(`${store}/checkout`);
+      await page.getByLabel("Email", { exact: true }).fill(shopper);
+      await page.getByLabel("Full name").fill("Ana Mora");
+      await page.getByLabel("Phone", { exact: true }).fill("8888-0000");
+      await page.getByLabel("Address", { exact: true }).fill("100 m norte del parque");
+      await page.getByLabel("City or town").fill("Heredia");
+      await page.getByLabel("Province").fill("Heredia");
+      await page.getByRole("radio", { name: /SINPE Móvil/ }).check();
+      await page.getByRole("button", { name: "Place order" }).click();
+      const heading = page.getByRole("heading", { level: 1 });
+      await expect(heading).toHaveText(/^Order #\d+$/);
+      return (await heading.textContent())?.replace("Order #", "") ?? "";
+    });
+    const orderPage = page.url();
+
+    await test.step("Then the shopper's email has the mug, the total, where to pay and the order's link", async () => {
+      const email = await getEmail(shopper, {
+        subject: `My company: we got your order #${number}`,
+      });
+      expect(email.Text).toContain("Pura Vida mug × 1: ₡5,990");
+      expect(email.Text).toContain("Total: ₡5,990");
+      expect(email.Text).toContain("SINPE Móvil to 8888-1234, in the name of My company S.A.");
+      expect(email.Text).toContain(orderPage);
+    });
+
+    const [owner] = await db
+      .select({ email: schema.user.email })
+      .from(schema.user)
+      .where(eq(schema.user.id, workspace.tenant.userId));
+    const ownerEmail = owner?.email ?? "";
+
+    await test.step("And the owner is told who ordered and for how much", async () => {
+      const email = await getEmail(ownerEmail, { subject: `My company: new order #${number}` });
+      expect(email.Text).toContain(`Ana Mora (${shopper}) placed an order for ₡5,990:`);
+      expect(email.Text).toContain(`/app/${workspace.slug}/orders/${number}`);
+    });
+
+    await test.step("When the shopper sends the reference of their payment", async () => {
+      await page.getByLabel("Payment reference number").fill("202611150001");
+      await page.getByRole("button", { name: "I already paid" }).click();
+      await expect(page.getByText("Reference you sent: 202611150001")).toBeVisible();
+    });
+
+    await test.step("Then the owner is asked to check the payment", async () => {
+      const email = await getEmail(ownerEmail, {
+        subject: `My company: order #${number} says it's paid`,
+      });
+      expect(email.Text).toContain(
+        "Ana Mora sent the payment of ₡5,990 with the reference 202611150001.",
+      );
     });
   });
 
