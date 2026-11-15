@@ -101,6 +101,55 @@ and `Fly-Client-IP` stays the client's real IP for the rate limits.
 - `curl https://api.monaztore.com/health` → `{"status":"ok","database":"ok"}`
 - `https://app.monaztore.com/login` shows the methods in `AUTH_METHODS` and the email arrives.
 
+## A store on its own domain
+
+Each store answers on the domains connected in its workspace (Store → Domains,
+`store_domain`); the web finds the store from the request's Host. For `superchivacr.com`:
+
+1. In the workspace, connect `superchivacr.com` as the main domain (`www.` falls back to it).
+2. Certificates on the web app, for both names:
+
+   ```bash
+   fly ips list -a monaztore-web            # the IPv4 (shared) and IPv6 to point the apex at
+   fly certs add superchivacr.com -a monaztore-web
+   fly certs add www.superchivacr.com -a monaztore-web
+   ```
+
+3. In the domain's DNS: an `A` and an `AAAA` record for the apex (`@`) with those IPs (an apex
+   can't be a `CNAME`) and a `CNAME` from `www` → `monaztore-web.fly.dev`. On Cloudflare, **DNS
+   only** (grey cloud). Lower the TTL a day before the switch so going back is quick.
+4. `fly certs check superchivacr.com -a monaztore-web` says when it's ready.
+
+Until the DNS moves, the old shop keeps working; the switch is the DNS change itself.
+
+## Files (product photos)
+
+In production the photos go to a **private** Cloudflare R2 bucket: create it (e.g.
+`monaztore-files`) and an R2 API token with Object Read & Write on that bucket, and set
+`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_BUCKET` in
+`.env.production`. Without them the machines write to their own disk, which a deploy wipes.
+
+## Migrating a WooCommerce shop into production
+
+The importer runs from your machine against the production database and bucket (it never
+writes to the old shop):
+
+1. Sign in to `APP_URL` and create the store's workspace (the slug is `--store`).
+2. In a shell with the production values (`DATABASE_URL` = the direct URL, the `R2_*` above)
+   and the shop's read-only `WOOCOMMERCE_KEY`/`WOOCOMMERCE_SECRET`:
+
+   ```bash
+   pnpm import:woocommerce --url https://superchivacr.com --store superchiva --dry-run
+   pnpm import:woocommerce --url https://superchivacr.com --store superchiva
+   ```
+
+   It can run again right before the DNS switch: a second run updates what the first brought
+   (stock, prices, new products) and keeps the 301s for the old addresses.
+3. Review the drafts it notes (forms left out of pages, "Contáctanos") and set the payments in
+   Store. To try it before moving the DNS, connect a temporary domain too (e.g.
+   `superchiva.monaztore.com`: a `CNAME` to `monaztore-web.fly.dev` and its `fly certs add`) and
+   place a test order there.
+
 ## Every release
 
 ```bash
