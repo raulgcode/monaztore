@@ -7,11 +7,13 @@ import { importCatalog, listImportedProducts, listVariants } from "./catalog-imp
 import {
   getOrderByToken,
   getPaymentOptions,
+  getStoreShipping,
   placeOrder,
   priceCart,
   storeOwnerContacts,
   submitPaymentReference,
   updateStorePayments,
+  updateStoreShipping,
 } from "./orders";
 import type { StorefrontContext } from "./storefront";
 import type { TenantContext } from "./tenant";
@@ -53,6 +55,7 @@ const checkout: CheckoutInput = {
   province: "Heredia",
   notes: "",
   paymentMethod: "sinpe",
+  shippingMethod: "",
 };
 
 /** A store with a mug (2 in stock), a shirt in two sizes and a draft, taking SINPE. */
@@ -213,6 +216,100 @@ describe("placeOrder", () => {
       ).lines,
     ).toEqual([]);
     expect(await getOrderByToken(second.store, placed.token)).toBeUndefined();
+  });
+});
+
+describe("shipping", () => {
+  const methods = [
+    {
+      id: "correos",
+      name: "Correos de Costa Rica",
+      price: 250_000,
+      freeFrom: 2_000_000,
+      pickup: false,
+    },
+    { id: "pickup", name: "Retiro en la tienda", price: 0, freeFrom: null, pickup: true },
+  ];
+  const mug = (id: (slug: string) => string) => [
+    { productId: id("mug"), variantId: null, quantity: 1 },
+  ];
+
+  it("offers the store's options with their price for the cart, free from its amount", async () => {
+    const { store, owner, id, variant } = await shop();
+    await updateStoreShipping(owner, { methods });
+
+    const small = await priceCart(store, mug(id), { shippingMethod: "correos" });
+    expect(small.shippingOptions.map((o) => [o.name, o.price, o.free])).toEqual([
+      ["Correos de Costa Rica", 250_000, false],
+      ["Retiro en la tienda", 0, false],
+    ]);
+    expect(small).toMatchObject({ shippingFee: 250_000, total: 600_000 + 250_000 });
+
+    const big = await priceCart(
+      store,
+      [{ productId: id("shirt"), variantId: variant("s"), quantity: 2 }],
+      { shippingMethod: "correos" },
+    );
+    expect(big).toMatchObject({ shipping: { free: true, price: 0 }, total: 2_000_000 });
+    expect(await getStoreShipping(owner)).toEqual({ methods });
+  });
+
+  it("asks to choose an option, keeps it on the order and adds its price to the total", async () => {
+    const { store, owner, id } = await shop();
+    await updateStoreShipping(owner, { methods });
+
+    await expect(
+      placeOrder(store, { cart: mug(id), checkout, locale: "en" }),
+    ).rejects.toMatchObject({ code: "shipping_method_required" });
+
+    const placed = await placeOrder(store, {
+      cart: mug(id),
+      checkout: { ...checkout, shippingMethod: "correos" },
+      locale: "en",
+    });
+    expect(await getOrderByToken(store, placed.token)).toMatchObject({
+      shippingMethod: { name: "Correos de Costa Rica", pickup: false },
+      shippingFee: 250_000,
+      total: 850_000,
+      shippingAddress: { city: "Heredia" },
+    });
+  });
+
+  it("picks up at the store without an address", async () => {
+    const { store, owner, id } = await shop();
+    await updateStoreShipping(owner, { methods });
+
+    const placed = await placeOrder(store, {
+      cart: mug(id),
+      checkout: { ...checkout, line1: "", city: "", province: "", shippingMethod: "pickup" },
+      locale: "en",
+    });
+    expect(await getOrderByToken(store, placed.token)).toMatchObject({
+      shippingMethod: { name: "Retiro en la tienda", pickup: true },
+      shippingFee: 0,
+      total: 600_000,
+      shippingAddress: { line1: "", city: "" },
+    });
+  });
+
+  it("charges nothing for shipping in a store without options, as before", async () => {
+    const { store, id } = await shop();
+    const placed = await placeOrder(store, { cart: mug(id), checkout, locale: "en" });
+    expect(await getOrderByToken(store, placed.token)).toMatchObject({
+      shippingMethod: null,
+      shippingFee: 0,
+      total: 600_000,
+    });
+  });
+
+  it("only owners change the options, and only their store's", async () => {
+    const { owner } = await shop();
+    const other = await shop();
+    await expect(
+      updateStoreShipping({ ...owner, role: "member" }, { methods }),
+    ).rejects.toMatchObject({ code: "forbidden" });
+    await updateStoreShipping(owner, { methods });
+    expect(await getStoreShipping(other.owner)).toEqual({ methods: [] });
   });
 });
 

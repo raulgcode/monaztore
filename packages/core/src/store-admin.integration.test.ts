@@ -33,6 +33,7 @@ const checkout: CheckoutInput = {
   province: "Heredia",
   notes: "",
   paymentMethod: "sinpe",
+  shippingMethod: "",
 };
 
 /** A store with a mug (3 in stock) that takes SINPE, and one order of 2 mugs. */

@@ -261,6 +261,13 @@ lowers the stock it counts and keeps only the SHA-256 of the order link's token
 The shopper gets the order by email (what they bought, how to pay, its link) and the owners
 (`storeOwnerContacts`) are told of it, and again when a reference comes in
 (`lib/order-emails.server.ts`, never awaited: an email that fails doesn't stop the order).
+Shipping lives in `store_settings.shipping` (`contracts/src/shipping.ts`, Store in the workspace,
+`set_store_shipping` in the MCP): up to `SHIPPING_METHODS_MAX` options, each with its price, a
+"free from" amount (over the cart after its discount) and whether it's picked up at the store
+(then checkout asks no address). `priceCart` lists the options (`shippingOptions`) and adds the
+chosen one; `placeOrder` refuses an order without one when the store has some and keeps its
+name and fee on the order (`order.shippingMethod`, `order.shippingFee`), which the order's
+pages, emails and electronic invoice (one more line, with the store's CABYS) show.
 
 Photos (`core/src/catalog-images.ts`, `@monaztore/storage`): `pnpm import:woocommerce` copies
 every photo to the store's own files before importing (`copyCatalogImages`: downloaded once,

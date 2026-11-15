@@ -4,18 +4,41 @@ import {
   type StorefrontContext,
   storeOwnerContacts,
 } from "@monaztore/core";
-import { type OrderEmailLine, orderPlacedMessage, storeOrderMessage } from "@monaztore/email";
+import {
+  emailT,
+  type OrderEmailLine,
+  orderPlacedMessage,
+  storeOrderMessage,
+} from "@monaztore/email";
 import { defaultLocale, type Locale, parseLocale } from "@monaztore/i18n";
 import { href } from "react-router";
 import { formatPrice } from "./money";
 import { env, mailer } from "./services.server";
 import { storeOrigin } from "./store-seo";
 
+/** What they bought, then the discount and the shipping, so the lines add up to the total. */
 function orderLines(order: ShopperOrder, locale: Locale): OrderEmailLine[] {
-  return order.lines.map((line) => ({
+  const t = emailT(locale);
+  const lines = order.lines.map((line) => ({
     label: `${line.name}${line.variantTitle ? ` (${line.variantTitle})` : ""} × ${line.quantity}`,
     total: formatPrice(line.lineTotal, order.currency, locale),
   }));
+  if (order.discount > 0) {
+    lines.push({
+      label: t("email.orderDiscount", { code: order.couponCode ?? "" }),
+      total: `−${formatPrice(order.discount, order.currency, locale)}`,
+    });
+  }
+  if (order.shippingMethod) {
+    lines.push({
+      label: t("email.orderShipping", { name: order.shippingMethod.name }),
+      total:
+        order.shippingFee === 0
+          ? t("email.orderShippingFree")
+          : formatPrice(order.shippingFee, order.currency, locale),
+    });
+  }
+  return lines;
 }
 
 /** The order in the workspace, on APP_URL: where the owner confirms the payment. */
@@ -101,6 +124,6 @@ export async function sendPaymentReferenceEmails(
   token: string,
 ): Promise<void> {
   const order = await getOrderByToken(store, token);
-  if (!order || order.status !== "payment_submitted") return;
+  if (order?.status !== "payment_submitted") return;
   await tellOwners(store, order, "reference");
 }

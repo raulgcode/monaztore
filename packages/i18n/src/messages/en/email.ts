@@ -31,6 +31,9 @@ export const email = {
   orderPlacedSubject: "{store}: we got your order #{number}",
   orderPlacedHeading: "Thanks, {name}",
   orderPlacedBody: "{store} got your order #{number}. This is what you asked for:",
+  orderDiscount: "Discount ({code})",
+  orderShipping: "Shipping: {name}",
+  orderShippingFree: "Free",
   orderTotal: "Total: {total}",
   orderPayHow:
     "To confirm it, pay {total} and send the reference from your order's page. The store prepares it once the payment arrives.",

@@ -11,6 +11,7 @@ export * from "./message";
 export * from "./pages";
 export * from "./platform-admin";
 export * from "./products";
+export * from "./shipping";
 export * from "./store-settings";
 export * from "./store-theme";
 export * from "./workspace";

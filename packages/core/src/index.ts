@@ -100,6 +100,7 @@ export {
   getOrderByToken,
   getPaymentOptions,
   getShopperEinvoiceFile,
+  getStoreShipping,
   openLinkDownload,
   openOrderDownload,
   type PaymentOptions,
@@ -115,6 +116,7 @@ export {
   storeOwnerContacts,
   submitPaymentReference,
   updateStorePayments,
+  updateStoreShipping,
 } from "./orders";
 export {
   blockProducts,

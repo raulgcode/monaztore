@@ -103,4 +103,7 @@ export const forms = {
   couponGone:
     "Tu código de descuento dejó de funcionar y el total cambió. Revísalo y vuelve a hacer el pedido",
   couponUsedByYou: "Ya usaste este código de descuento. Quítalo en tu carrito para hacer el pedido",
+  shippingNameRequired: "Ponle nombre a la opción, como Correos de Costa Rica",
+  shippingTooMany: "Hasta 8 opciones",
+  shippingMethodRequired: "Elige cómo te llega tu pedido",
 } as const satisfies Translation<typeof en>["forms"];

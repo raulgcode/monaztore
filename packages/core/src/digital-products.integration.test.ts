@@ -47,6 +47,7 @@ const contact: CheckoutInput = {
   province: "",
   notes: "",
   paymentMethod: "sinpe",
+  shippingMethod: "",
 };
 
 const mug = (): ImportedProduct => ({

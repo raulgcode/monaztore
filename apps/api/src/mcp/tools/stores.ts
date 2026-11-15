@@ -1,7 +1,11 @@
+import { randomUUID } from "node:crypto";
 import {
   domainSchema,
   paymentSettingsSchema,
   paymentsFromForm,
+  SHIPPING_METHODS_MAX,
+  shippingFromForm,
+  shippingSettingsSchema,
   storeLocaleSchema,
 } from "@monaztore/contracts";
 import {
@@ -11,6 +15,7 @@ import {
   countOrdersToReview,
   getStoreLocale,
   getStorePayments,
+  getStoreShipping,
   getWorkspace,
   listMemberships,
   listStoreDomains,
@@ -18,6 +23,7 @@ import {
   setPrimaryDomain,
   updateStoreLocale,
   updateStorePayments,
+  updateStoreShipping,
 } from "@monaztore/core";
 import { locales } from "@monaztore/i18n";
 import { z } from "zod";
@@ -52,22 +58,31 @@ export const registerStoreTools: ToolModule = (server, kit) => {
     {
       title: "See a store",
       description:
-        "A store's name, address, domains, language, currency, time zone, manual payments (SINPE Móvil, transfer) and what is waiting: orders to review and electronic invoices with a problem.",
+        "A store's name, address, domains, language, currency, time zone, manual payments (SINPE Móvil, transfer), shipping options (prices in minor units) and what is waiting: orders to review and electronic invoices with a problem.",
       inputSchema: { store: storeArg },
       annotations: readOnly,
     },
     kit.tool(async ({ store }: { store: string }) => {
       const tenant = await kit.tenantFor(store);
-      const [workspace, domains, locale, settings, payments, ordersToReview, einvoicesToReview] =
-        await Promise.all([
-          getWorkspace(tenant),
-          listStoreDomains(tenant),
-          getStoreLocale(tenant),
-          catalogSettings(tenant),
-          getStorePayments(tenant),
-          countOrdersToReview(tenant),
-          countEinvoicesToReview(tenant),
-        ]);
+      const [
+        workspace,
+        domains,
+        locale,
+        settings,
+        payments,
+        shipping,
+        ordersToReview,
+        einvoicesToReview,
+      ] = await Promise.all([
+        getWorkspace(tenant),
+        listStoreDomains(tenant),
+        getStoreLocale(tenant),
+        catalogSettings(tenant),
+        getStorePayments(tenant),
+        getStoreShipping(tenant),
+        countOrdersToReview(tenant),
+        countEinvoicesToReview(tenant),
+      ]);
       return json({
         ...workspace,
         role: tenant.role,
@@ -77,6 +92,7 @@ export const registerStoreTools: ToolModule = (server, kit) => {
         currency: settings.currency,
         timeZone: settings.timeZone,
         payments,
+        shipping: shipping.methods,
         ordersToReview,
         einvoicesToReview,
         workspace: kit.workspace(store),
@@ -128,6 +144,65 @@ export const registerStoreTools: ToolModule = (server, kit) => {
         });
         await updateStorePayments(tenant, paymentsFromForm(form));
         return json({ saved: true, payments: await getStorePayments(tenant) });
+      },
+    ),
+  );
+
+  server.registerTool(
+    "set_store_shipping",
+    {
+      title: "Set the store's shipping options",
+      description: `Replaces the shipping options shoppers pick from at checkout (up to ${SHIPPING_METHODS_MAX}), in order: each with its name, its price, optionally an amount from which it's free, and whether it's picked up at the store (no address asked). An empty list charges nothing for shipping. Prices are written as the person says them ("2500", "12.50"), in the store's currency. Keep the id of an option that stays (from get_store) and leave it out for a new one. Owners only. Show the person the whole list and ask before saving.`,
+      inputSchema: {
+        store: storeArg,
+        methods: z
+          .array(
+            z.object({
+              id: z
+                .string()
+                .max(40)
+                .optional()
+                .describe("The id of an existing option; none for a new one"),
+              name: z.string().max(60).describe('What shoppers read: "Correos de Costa Rica"'),
+              price: z.string().max(20).describe('Its price, like "2500"; "0" for free'),
+              freeFrom: z
+                .string()
+                .max(20)
+                .optional()
+                .describe("Free when the cart (after its coupon) reaches this amount"),
+              pickup: z.boolean().optional().describe("Picked up at the store: no address"),
+            }),
+          )
+          .max(SHIPPING_METHODS_MAX),
+      },
+      annotations: change,
+    },
+    kit.tool(
+      async ({
+        store,
+        methods,
+      }: {
+        store: string;
+        methods: {
+          id?: string;
+          name: string;
+          price: string;
+          freeFrom?: string;
+          pickup?: boolean;
+        }[];
+      }) => {
+        const tenant = await kit.tenantFor(store, { owner: true });
+        const form = shippingSettingsSchema.parse({
+          methods: methods.map((method) => ({
+            id: method.id ?? "",
+            name: method.name,
+            price: method.price,
+            freeFrom: method.freeFrom ?? "",
+            pickup: method.pickup ? "on" : "",
+          })),
+        });
+        await updateStoreShipping(tenant, shippingFromForm(form, randomUUID));
+        return json({ saved: true, shipping: (await getStoreShipping(tenant)).methods });
       },
     ),
   );

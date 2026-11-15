@@ -93,4 +93,7 @@ export const forms = {
   couponGone:
     "Your discount code stopped working, so the total changed. Check it and place the order again",
   couponUsedByYou: "You already used this discount code. Remove it in your cart to place the order",
+  shippingNameRequired: "Name the option, like Correos de Costa Rica",
+  shippingTooMany: "Up to 8 options",
+  shippingMethodRequired: "Choose how you get your order",
 } as const;

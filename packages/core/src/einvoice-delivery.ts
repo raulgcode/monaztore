@@ -123,7 +123,12 @@ async function signedDocument(
 ): Promise<string> {
   if (!doc.orderId) throw new InvalidDocument("The order no longer exists");
   const [order] = await db
-    .select({ paymentMethod: schema.order.paymentMethod, currency: schema.order.currency })
+    .select({
+      paymentMethod: schema.order.paymentMethod,
+      currency: schema.order.currency,
+      shippingMethod: schema.order.shippingMethod,
+      shippingFee: schema.order.shippingFee,
+    })
     .from(schema.order)
     .where(eq(schema.order.id, doc.orderId));
   if (!order) throw new InvalidDocument("The order no longer exists");
@@ -169,14 +174,28 @@ async function signedDocument(
       exchangeRate: "1",
       payment: paymentCodes[order.paymentMethod] ?? "99",
       // A coupon's share lowers the line's price, so the document adds up to what was paid.
-      lines: lines.flatMap((line) =>
-        discountedUnits(line).map((units) => ({
-          detail: line.variantTitle ? `${line.name} (${line.variantTitle})` : line.name,
-          cabys: settings.cabys,
-          quantity: units.quantity,
-          unitPriceMinor: units.unitPrice,
-        })),
-      ),
+      lines: [
+        ...lines.flatMap((line) =>
+          discountedUnits(line).map((units) => ({
+            detail: line.variantTitle ? `${line.name} (${line.variantTitle})` : line.name,
+            cabys: settings.cabys,
+            quantity: units.quantity,
+            unitPriceMinor: units.unitPrice,
+          })),
+        ),
+        // The shipping charged is one more line, so the document adds up to the order's total.
+        // It uses the store's CABYS code too, like everything it sells (one code for now).
+        ...(order.shippingMethod && Number(order.shippingFee) > 0
+          ? [
+              {
+                detail: order.shippingMethod.name,
+                cabys: settings.cabys,
+                quantity: 1,
+                unitPriceMinor: Number(order.shippingFee),
+              },
+            ]
+          : []),
+      ],
     });
   } catch (error) {
     throw new InvalidDocument(error instanceof Error ? error.message : String(error));

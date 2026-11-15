@@ -79,6 +79,8 @@ const contactFields = {
     ),
   notes: z._default(z.string().check(z.trim(), z.maxLength(500, message("forms.textTooLong"))), ""),
   paymentMethod: z.enum(paymentMethods, { error: message("forms.paymentMethodRequired") }),
+  /** One of the store's shipping options (`ShippingMethod.id`); checked against them in core. */
+  shippingMethod: z._default(z.string().check(z.trim(), z.maxLength(40)), ""),
 };
 
 /** The checkout form: who buys, where it goes and how they pay. */

@@ -58,6 +58,8 @@ export const storeSettings = pgTable("store_settings", {
   currency: text().notNull().default("CRC"),
   /** How shoppers pay: SINPE Móvil and bank transfer for now (see `StorePayments`). */
   payments: jsonb().$type<StorePayments>().notNull().default({}),
+  /** How it delivers: the options the shopper picks from at checkout (see `StoreShipping`). */
+  shipping: jsonb().$type<StoreShipping>().notNull().default({}),
   /**
    * The language shoppers see (`en`, `es`) unless they pick another at the foot of the store;
    * Spanish while the owner hasn't chosen. Never the browser's: the store speaks its own language.
@@ -111,6 +113,25 @@ export interface StorePayments {
 
 export type PaymentMethod = "sinpe" | "transfer";
 
+/** A shipping option the store offers; prices in minor units. `contracts/src/shipping.ts`. */
+export interface StoreShippingMethod {
+  id: string;
+  name: string;
+  price: number;
+  freeFrom: number | null;
+  pickup: boolean;
+}
+
+export interface StoreShipping {
+  methods?: StoreShippingMethod[];
+}
+
+/** The option an order goes with, copied then: renaming it later doesn't change the order. */
+export interface OrderShipping {
+  name: string;
+  pickup: boolean;
+}
+
 /**
  * pending_payment → the shopper still has to pay; payment_submitted → they sent the reference and
  * the store checks it; paid; cancelled. Shipping states come later.
@@ -162,11 +183,15 @@ export const order = pgTable(
     currency: text().notNull(),
     /** Minor units. */
     subtotal: bigint({ mode: "number" }).notNull(),
-    /** What the coupon took off (minor units); `total` = `subtotal` − `discount`. */
+    /** What the coupon took off (minor units). */
     discount: bigint({ mode: "number" }).notNull().default(0),
     /** The coupon used, as typed then (uppercase): it stays if the coupon is deleted. */
     couponCode: text(),
     couponId: uuid().references(() => coupon.id, { onDelete: "set null" }),
+    /** The shipping option chosen, or null when the store has none (or nothing ships). */
+    shippingMethod: jsonb().$type<OrderShipping>(),
+    /** What the shipping costs (minor units); `total` = `subtotal` − `discount` + this. */
+    shippingFee: bigint({ mode: "number" }).notNull().default(0),
     total: bigint({ mode: "number" }).notNull(),
     locale: text().notNull().default("en"),
     ...timestamps,

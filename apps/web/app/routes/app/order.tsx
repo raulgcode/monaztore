@@ -225,14 +225,21 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
             </a>
           </p>
           <h2 className="mt-3 mb-1 font-medium">{t("orders.delivery")}</h2>
-          {order.needsShipping ? (
+          {order.shippingMethod ? (
+            <p className="text-sm font-medium">
+              {order.shippingMethod.pickup
+                ? t("orders.pickup", { name: order.shippingMethod.name })
+                : order.shippingMethod.name}
+            </p>
+          ) : null}
+          {order.needsShipping && !order.shippingMethod?.pickup ? (
             <>
               <p className="text-sm">{order.shippingAddress.line1}</p>
               <p className="text-sm">
                 {order.shippingAddress.city}, {order.shippingAddress.province}
               </p>
             </>
-          ) : (
+          ) : order.needsShipping ? null : (
             <p className="text-sm">{t("orders.noShipping")}</p>
           )}
           {order.shippingAddress.notes ? (
@@ -255,16 +262,28 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
               </li>
             ))}
           </ul>
-          {order.discount > 0 ? (
+          {order.discount > 0 || order.shippingMethod ? (
             <dl className="grid gap-1 border-t pt-3 text-sm">
               <div className="flex justify-between">
                 <dt>{t("orders.subtotal")}</dt>
                 <dd>{money(order.subtotal)}</dd>
               </div>
-              <div className="flex justify-between">
-                <dt>{t("orders.discount", { code: order.couponCode ?? "" })}</dt>
-                <dd>−{money(order.discount)}</dd>
-              </div>
+              {order.discount > 0 ? (
+                <div className="flex justify-between">
+                  <dt>{t("orders.discount", { code: order.couponCode ?? "" })}</dt>
+                  <dd>−{money(order.discount)}</dd>
+                </div>
+              ) : null}
+              {order.shippingMethod ? (
+                <div className="flex justify-between gap-2">
+                  <dt>{t("orders.shippingLine", { name: order.shippingMethod.name })}</dt>
+                  <dd>
+                    {Number(order.shippingFee) === 0
+                      ? t("orders.shippingFree")
+                      : money(Number(order.shippingFee))}
+                  </dd>
+                </div>
+              ) : null}
             </dl>
           ) : null}
           <p className="flex justify-between border-t pt-3 font-semibold">

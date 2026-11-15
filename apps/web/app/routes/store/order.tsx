@@ -156,16 +156,28 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
             </li>
           ))}
         </ul>
-        {order.discount > 0 ? (
+        {order.discount > 0 || order.shippingMethod ? (
           <dl className="grid gap-1 border-t pt-3 text-sm">
             <div className="flex justify-between">
               <dt>{t("storefront.subtotal")}</dt>
               <dd>{money(order.subtotal)}</dd>
             </div>
-            <div className="flex justify-between">
-              <dt>{t("storefront.discount", { code: order.couponCode ?? "" })}</dt>
-              <dd>−{money(order.discount)}</dd>
-            </div>
+            {order.discount > 0 ? (
+              <div className="flex justify-between">
+                <dt>{t("storefront.discount", { code: order.couponCode ?? "" })}</dt>
+                <dd>−{money(order.discount)}</dd>
+              </div>
+            ) : null}
+            {order.shippingMethod ? (
+              <div className="flex justify-between gap-2">
+                <dt>{t("storefront.shippingLine", { name: order.shippingMethod.name })}</dt>
+                <dd>
+                  {order.shippingFee === 0
+                    ? t("storefront.shippingFree")
+                    : money(order.shippingFee)}
+                </dd>
+              </div>
+            ) : null}
           </dl>
         ) : null}
         <p className="flex justify-between border-t pt-3 font-semibold">
@@ -174,11 +186,19 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
         </p>
       </section>
 
-      {order.needsShipping ? (
+      {order.needsShipping && order.shippingMethod?.pickup ? (
+        <section aria-labelledby="deliver" className="grid gap-1 text-sm">
+          <h2 id="deliver" className="font-medium">
+            {t("storefront.pickupHeading")}
+          </h2>
+          <p>{t("storefront.pickupBody", { name: order.shippingMethod.name })}</p>
+        </section>
+      ) : order.needsShipping ? (
         <section aria-labelledby="deliver" className="grid gap-1 text-sm">
           <h2 id="deliver" className="font-medium">
             {t("storefront.deliverTo")}
           </h2>
+          {order.shippingMethod ? <p>{order.shippingMethod.name}</p> : null}
           <p>{order.shippingAddress.line1}</p>
           <p>
             {order.shippingAddress.city}, {order.shippingAddress.province}

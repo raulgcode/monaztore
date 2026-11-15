@@ -62,6 +62,7 @@ const checkout: CheckoutInput = {
   province: "Heredia",
   notes: "",
   paymentMethod: "sinpe",
+  shippingMethod: "",
 };
 
 /** A store with a mug (₡10 000) and a plate on offer (₡6 000, was ₡8 000), taking SINPE. */

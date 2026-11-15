@@ -5,6 +5,8 @@ import {
   checkoutWithInvoiceSchema,
   digitalCheckoutSchema,
   digitalCheckoutWithInvoiceSchema,
+  pickShippingOption,
+  type ShippingOption,
   taxIdFromForm,
 } from "@monaztore/contracts";
 import {
@@ -27,6 +29,11 @@ import { requireStore } from "~/middleware/store.server";
 import type { Route } from "./+types/checkout";
 
 /** The form's schema: no address for a cart of downloads, "invoice in my name" where it applies. */
+/** The option the form picked is picked up at the store: then nothing asks for an address. */
+function picksUp(formData: FormData, options: readonly ShippingOption[]) {
+  return pickShippingOption(options, String(formData.get("shippingMethod") ?? ""))?.pickup ?? false;
+}
+
 function schemaFor({ invoices, needsShipping }: { invoices: boolean; needsShipping: boolean }) {
   if (needsShipping) return invoices ? checkoutWithInvoiceSchema : checkoutSchema;
   return invoices ? digitalCheckoutWithInvoiceSchema : digitalCheckoutSchema;
@@ -64,9 +71,13 @@ export async function action({ request, context }: Route.ActionArgs) {
     readCart(request),
     readCoupon(request),
   ]);
-  const { needsShipping } = await priceCart(store, cart);
-  const submission = parseWithZod(await request.formData(), {
-    schema: schemaFor({ invoices, needsShipping }),
+  const { needsShipping, shippingOptions } = await priceCart(store, cart);
+  const formData = await request.formData();
+  const submission = parseWithZod(formData, {
+    schema: schemaFor({
+      invoices,
+      needsShipping: needsShipping && !picksUp(formData, shippingOptions),
+    }),
   });
   if (submission.status !== "success") {
     return data({ result: submission.reply(), cartChanged: false }, { status: 400 });
@@ -128,6 +139,17 @@ export async function action({ request, context }: Route.ActionArgs) {
         },
       );
     }
+    if (error.code === "shipping_method_required") {
+      return data(
+        {
+          result: submission.reply({
+            fieldErrors: { shippingMethod: ["forms.shippingMethodRequired"] },
+          }),
+          cartChanged: false,
+        },
+        { status: 400 },
+      );
+    }
     if (error.code === "payment_method_unavailable") {
       return data(
         {
@@ -166,10 +188,17 @@ export default function Checkout({ loaderData, actionData }: Route.ComponentProp
     shouldRevalidate: "onInput",
     onValidate: ({ formData }) =>
       parseWithZod(formData, {
-        schema: schemaFor({ invoices, needsShipping: cart.needsShipping }),
+        schema: schemaFor({
+          invoices,
+          needsShipping: cart.needsShipping && !picksUp(formData, cart.shippingOptions),
+        }),
       }),
-    defaultValue: { paymentMethod: methods[0] },
+    // The store's first option comes chosen: most orders go the usual way.
+    defaultValue: { paymentMethod: methods[0], shippingMethod: cart.shippingOptions[0]?.id ?? "" },
   });
+  const shipping = pickShippingOption(cart.shippingOptions, fields.shippingMethod.value);
+  const deliver = cart.needsShipping && !shipping?.pickup;
+  const total = cart.subtotal - cart.discount + (shipping?.price ?? 0);
 
   return (
     <>
@@ -211,7 +240,54 @@ export default function Checkout({ loaderData, actionData }: Route.ComponentProp
                 autoComplete="tel"
               />
             </fieldset>
-            {cart.needsShipping ? (
+            {cart.shippingOptions.length > 0 ? (
+              <fieldset
+                className="grid gap-3"
+                aria-describedby={
+                  fields.shippingMethod.errors ? fields.shippingMethod.errorId : undefined
+                }
+              >
+                <legend className="mb-2 text-lg font-medium">
+                  {t("storefront.deliverySection")}
+                </legend>
+                {cart.shippingOptions.map((option) => (
+                  <label
+                    key={option.id}
+                    className="flex min-h-11 cursor-pointer items-start gap-3 rounded-md border p-3 has-[:checked]:border-primary"
+                  >
+                    <input
+                      type="radio"
+                      name={fields.shippingMethod.name}
+                      value={option.id}
+                      defaultChecked={fields.shippingMethod.initialValue === option.id}
+                      className="mt-1 size-4 accent-primary"
+                    />
+                    <span className="grid flex-1 gap-0.5">
+                      <span className="flex justify-between gap-2 font-medium">
+                        <span>{option.name}</span>
+                        <span>
+                          {option.price === 0 ? t("storefront.shippingFree") : money(option.price)}
+                        </span>
+                      </span>
+                      {option.pickup ? (
+                        <span className="text-sm text-muted-foreground">
+                          {t("storefront.shippingPickupHint")}
+                        </span>
+                      ) : option.freeFrom !== null && !option.free && option.price > 0 ? (
+                        <span className="text-sm text-muted-foreground">
+                          {t("storefront.shippingFreeFrom", { amount: money(option.freeFrom) })}
+                        </span>
+                      ) : null}
+                    </span>
+                  </label>
+                ))}
+                <FieldErrors
+                  id={fields.shippingMethod.errorId}
+                  errors={fields.shippingMethod.errors}
+                />
+              </fieldset>
+            ) : null}
+            {deliver ? (
               <fieldset className="grid gap-4">
                 <legend className="mb-2 text-lg font-medium">
                   {t("storefront.shippingSection")}
@@ -234,6 +310,8 @@ export default function Checkout({ loaderData, actionData }: Route.ComponentProp
                 />
                 <TextField field={fields.notes} label={t("storefront.notesLabel")} />
               </fieldset>
+            ) : cart.needsShipping ? (
+              <TextField field={fields.notes} label={t("storefront.notesLabel")} />
             ) : (
               <p role="note" className="rounded-md border p-3 text-sm">
                 {t("storefront.digitalCheckout")}
@@ -299,21 +377,31 @@ export default function Checkout({ loaderData, actionData }: Route.ComponentProp
               </li>
             ))}
           </ul>
-          {cart.discount > 0 ? (
+          {cart.discount > 0 || shipping ? (
             <dl className="grid gap-1 border-t pt-3 text-sm">
               <div className="flex justify-between">
                 <dt>{t("storefront.subtotal")}</dt>
                 <dd>{money(cart.subtotal)}</dd>
               </div>
-              <div className="flex justify-between">
-                <dt>{t("storefront.discount", { code: cart.coupon?.code ?? "" })}</dt>
-                <dd>−{money(cart.discount)}</dd>
-              </div>
+              {cart.discount > 0 ? (
+                <div className="flex justify-between">
+                  <dt>{t("storefront.discount", { code: cart.coupon?.code ?? "" })}</dt>
+                  <dd>−{money(cart.discount)}</dd>
+                </div>
+              ) : null}
+              {shipping ? (
+                <div className="flex justify-between gap-2">
+                  <dt>{t("storefront.shippingLine", { name: shipping.name })}</dt>
+                  <dd>
+                    {shipping.price === 0 ? t("storefront.shippingFree") : money(shipping.price)}
+                  </dd>
+                </div>
+              ) : null}
             </dl>
           ) : null}
           <p className="flex justify-between border-t pt-3 font-semibold">
             <span>{t("storefront.total")}</span>
-            <span>{money(cart.total)}</span>
+            <span>{money(total)}</span>
           </p>
         </section>
       </div>

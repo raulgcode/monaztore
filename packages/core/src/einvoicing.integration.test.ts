@@ -21,7 +21,13 @@ import {
   saveEinvoicingProduct,
   setEinvoicingEnabled,
 } from "./einvoicing";
-import { getOrderByToken, getShopperEinvoiceFile, placeOrder, updateStorePayments } from "./orders";
+import {
+  getOrderByToken,
+  getShopperEinvoiceFile,
+  placeOrder,
+  updateStorePayments,
+  updateStoreShipping,
+} from "./orders";
 import { markOrderPaid } from "./store-admin";
 import type { StorefrontContext } from "./storefront";
 import type { TenantContext } from "./tenant";
@@ -65,6 +71,7 @@ const checkout: CheckoutInput = {
   province: "Heredia",
   notes: "",
   paymentMethod: "sinpe",
+  shippingMethod: "",
 };
 
 async function newStore() {
@@ -380,6 +387,29 @@ describe("sending to Hacienda", () => {
     });
     const file = await getShopperEinvoiceFile(store, placed.token, "response");
     expect(file?.xml).toBe("<MensajeHacienda/>");
+  });
+
+  it("adds the shipping charged as a line, so the document's total is the order's", async () => {
+    const { owner, store } = await readyStore();
+    await updateStoreShipping(owner, {
+      methods: [
+        { id: "c", name: "Correos de Costa Rica", price: 250_000, freeFrom: null, pickup: false },
+      ],
+    });
+    const [shirt] = await listImportedProducts(owner, "woocommerce");
+    const placed = await placeOrder(store, {
+      cart: [{ productId: shirt?.id as string, variantId: null, quantity: 2 }],
+      checkout: { ...checkout, shippingMethod: "c" },
+      locale: "es",
+    });
+    expect((await getOrderByToken(store, placed.token))?.total).toBe(2_510_000);
+    await markOrderPaid(owner, placed.number);
+    const hacienda = fakeHacienda();
+    await deliverAll(owner.organizationId, hacienda.gateway);
+
+    const xml = hacienda.submitted[0]?.signedXml ?? "";
+    expect(xml).toContain("<Detalle>Correos de Costa Rica</Detalle>");
+    expect(xml).toContain("<TotalComprobante>25100.00000</TotalComprobante>");
   });
 
   it("shows Hacienda's reason when it rejects, and a new document can be issued", async () => {

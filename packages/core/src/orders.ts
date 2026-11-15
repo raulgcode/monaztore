@@ -6,9 +6,19 @@ import {
   type CouponProblem,
   couponDiscount,
   currentPrice,
+  pickShippingOption,
+  type ShippingOption,
+  shippingOptions,
 } from "@monaztore/contracts";
 import { and, asc, type Database, eq, inArray, schema, sql } from "@monaztore/db";
-import type { EinvoiceKind, OrderStatus, OrderTaxId, StorePayments } from "@monaztore/db/schema";
+import type {
+  EinvoiceKind,
+  OrderShipping,
+  OrderStatus,
+  OrderTaxId,
+  StorePayments,
+  StoreShipping,
+} from "@monaztore/db/schema";
 import { couponUsesBy, findCouponByCode } from "./coupons";
 import { digitalProductIds } from "./digital-products";
 import { storeIssuesInvoices } from "./einvoicing";
@@ -24,10 +34,18 @@ export interface PaymentOptions {
 
 async function storeSettingsOf(db: Database, organizationId: string) {
   const [settings] = await db
-    .select({ currency: schema.storeSettings.currency, payments: schema.storeSettings.payments })
+    .select({
+      currency: schema.storeSettings.currency,
+      payments: schema.storeSettings.payments,
+      shipping: schema.storeSettings.shipping,
+    })
     .from(schema.storeSettings)
     .where(eq(schema.storeSettings.organizationId, organizationId));
-  return { currency: settings?.currency ?? "CRC", payments: settings?.payments ?? {} };
+  return {
+    currency: settings?.currency ?? "CRC",
+    payments: settings?.payments ?? {},
+    shipping: settings?.shipping ?? {},
+  };
 }
 
 function enabledPayments(payments: StorePayments): PaymentOptions {
@@ -57,6 +75,28 @@ export async function updateStorePayments(
     .insert(schema.storeSettings)
     .values({ organizationId: ctx.organizationId, payments })
     .onConflictDoUpdate({ target: schema.storeSettings.organizationId, set: { payments } });
+}
+
+/** The store's shipping options, as it set them. */
+export async function getStoreShipping(ctx: TenantContext): Promise<Required<StoreShipping>> {
+  const { shipping } = await storeSettingsOf(ctx.db, ctx.organizationId);
+  return { methods: shipping.methods ?? [] };
+}
+
+/** Replaces the store's shipping options (`shippingFromForm`). Owners only. */
+export async function updateStoreShipping(
+  ctx: TenantContext,
+  shipping: Required<StoreShipping>,
+): Promise<void> {
+  if (ctx.role !== "owner") throw new DomainError("forbidden", "Only owners manage shipping");
+  const ids = new Set(shipping.methods.map((method) => method.id));
+  if (ids.size !== shipping.methods.length) {
+    throw new DomainError("invalid_shipping", "Two shipping options share an id");
+  }
+  await ctx.db
+    .insert(schema.storeSettings)
+    .values({ organizationId: ctx.organizationId, shipping })
+    .onConflictDoUpdate({ target: schema.storeSettings.organizationId, set: { shipping } });
 }
 
 export interface PricedLine {
@@ -97,8 +137,14 @@ export interface PricedCart {
   shortOfStock: number;
   /** Something has to be shipped; false when every line is a download (no address asked). */
   needsShipping: boolean;
-  /** What the coupon takes off; `total` = `subtotal` − `discount`. */
+  /** What the coupon takes off. */
   discount: number;
+  /** The store's shipping options for this cart (empty when nothing ships or it has none). */
+  shippingOptions: ShippingOption[];
+  /** The one the shopper picked, if it's still offered. */
+  shipping: ShippingOption | null;
+  /** `total` = `subtotal` − `discount` + `shippingFee`. */
+  shippingFee: number;
   total: number;
   /** The coupon that applies, or null. */
   coupon: CartCoupon | null;
@@ -118,10 +164,20 @@ export async function priceCart(
   {
     lock = false,
     couponCode = null,
+    shippingMethod = null,
     now = new Date(),
-  }: { lock?: boolean; couponCode?: string | null; now?: Date } = {},
+  }: {
+    lock?: boolean;
+    couponCode?: string | null;
+    /** The shipping option picked at checkout (`ShippingMethod.id`). */
+    shippingMethod?: string | null;
+    now?: Date;
+  } = {},
 ): Promise<PricedCart> {
-  const { currency } = await storeSettingsOf(ctx.db, ctx.store.organizationId);
+  const { currency, shipping: storeShipping } = await storeSettingsOf(
+    ctx.db,
+    ctx.store.organizationId,
+  );
   const productIds = [...new Set(cart.map((line) => line.productId))];
   if (productIds.length === 0) {
     return {
@@ -132,6 +188,9 @@ export async function priceCart(
       shortOfStock: 0,
       needsShipping: false,
       discount: 0,
+      shippingOptions: [],
+      shipping: null,
+      shippingFee: 0,
       total: 0,
       coupon: null,
       couponProblem: null,
@@ -268,15 +327,24 @@ export async function priceCart(
       }
     }
   }
+  const needsShipping = lines.some((line) => !line.digital);
+  const options = needsShipping
+    ? shippingOptions(storeShipping.methods ?? [], subtotal - discount)
+    : [];
+  const shipping = pickShippingOption(options, shippingMethod);
+  const shippingFee = shipping?.price ?? 0;
   return {
     lines,
     subtotal,
     currency,
     removed,
     shortOfStock,
-    needsShipping: lines.some((line) => !line.digital),
+    needsShipping,
     discount,
-    total: subtotal - discount,
+    shippingOptions: options,
+    shipping,
+    shippingFee,
+    total: subtotal - discount + shippingFee,
     coupon,
     couponProblem,
   };
@@ -306,7 +374,8 @@ export async function placeOrder(
     couponCode = null,
   }: {
     cart: readonly CartLine[];
-    checkout: CheckoutInput;
+    /** The checkout form; `shippingMethod` only matters when the store has shipping options. */
+    checkout: Omit<CheckoutInput, "shippingMethod"> & { shippingMethod?: string };
     locale: string;
     /** The code the shopper applied in the cart; checked again here, with its limits. */
     couponCode?: string | null;
@@ -325,7 +394,11 @@ export async function placeOrder(
     const coupon = couponCode
       ? await findCouponByCode(store.db, organizationId, couponCode, { lock: true })
       : undefined;
-    const priced = await priceCart(store, cart, { lock: true, couponCode });
+    const priced = await priceCart(store, cart, {
+      lock: true,
+      couponCode,
+      shippingMethod: checkout.shippingMethod,
+    });
     if (priced.lines.length === 0) throw new DomainError("cart_empty", "Nothing to buy");
     if (couponCode && (!coupon || !priced.coupon)) {
       throw new DomainError("coupon_invalid", priced.couponProblem ?? "not_found");
@@ -342,7 +415,15 @@ export async function placeOrder(
     if (priced.removed > 0 || priced.shortOfStock > 0) {
       throw new DomainError("cart_changed", "Prices or stock changed: review the cart");
     }
-    if (priced.needsShipping && !(checkout.line1 && checkout.city && checkout.province)) {
+    if (priced.shippingOptions.length > 0 && !priced.shipping) {
+      throw new DomainError(
+        "shipping_method_required",
+        "Choose one of the store's shipping options",
+      );
+    }
+    // Picked up at the store: nothing to deliver, so no address.
+    const deliver = priced.needsShipping && !priced.shipping?.pickup;
+    if (deliver && !(checkout.line1 && checkout.city && checkout.province)) {
       throw new DomainError("address_required", "Something has to be shipped: it needs an address");
     }
 
@@ -383,7 +464,7 @@ export async function placeOrder(
         email: checkout.email,
         name: checkout.name,
         phone: checkout.phone,
-        shippingAddress: priced.needsShipping
+        shippingAddress: deliver
           ? {
               line1: checkout.line1,
               city: checkout.city,
@@ -397,6 +478,10 @@ export async function placeOrder(
         discount: priced.discount,
         couponCode: coupon && priced.coupon ? coupon.code : null,
         couponId: coupon && priced.coupon ? coupon.id : null,
+        shippingMethod: priced.shipping
+          ? ({ name: priced.shipping.name, pickup: priced.shipping.pickup } satisfies OrderShipping)
+          : null,
+        shippingFee: priced.shippingFee,
         total: priced.total,
         locale,
         taxId: taxId && (await storeIssuesInvoices(tx, organizationId)) ? taxId : null,
@@ -672,6 +757,9 @@ export interface ShopperOrder {
   shippingAddress: { line1: string; city: string; province: string; notes: string };
   /** False for an order of downloads only: nothing to deliver. */
   needsShipping: boolean;
+  /** The shipping option chosen (picked up = no address), and what it costs. */
+  shippingMethod: OrderShipping | null;
+  shippingFee: number;
   /** The files it delivers, once paid. */
   downloads: ShopperDownload[];
   lines: {
@@ -780,6 +868,8 @@ export async function getOrderByToken(
     createdAt: found.createdAt,
     shippingAddress: found.shippingAddress,
     needsShipping: found.needsShipping,
+    shippingMethod: found.shippingMethod,
+    shippingFee: found.shippingFee,
     downloads,
     lines,
     payTo: options[method] ? { [method]: options[method] } : {},

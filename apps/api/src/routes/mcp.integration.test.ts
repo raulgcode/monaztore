@@ -187,4 +187,36 @@ describe("the stores' tools", () => {
     const { data } = await call(token, "list_coupons", { store: tenant.slug });
     expect(data.coupons).toEqual([expect.objectContaining({ code: "VERANO10", active: false })]);
   });
+
+  it("sets the store's shipping options, keeps an option's id and stays in that store", async () => {
+    const tenant = await createTestTenant(db);
+    const other = await createTestTenant(db);
+    const { token } = await connectAssistant(tenant.userId);
+    const saved = await call(token, "set_store_shipping", {
+      store: tenant.slug,
+      methods: [
+        { name: "Correos de Costa Rica", price: "2500", freeFrom: "20000" },
+        { name: "Retiro en la tienda", price: "0", pickup: true },
+      ],
+    });
+    expect(saved.data.shipping).toEqual([
+      expect.objectContaining({
+        name: "Correos de Costa Rica",
+        price: 250_000,
+        freeFrom: 2_000_000,
+      }),
+      expect.objectContaining({ name: "Retiro en la tienda", price: 0, pickup: true }),
+    ]);
+    const correos = saved.data.shipping[0].id;
+    await call(token, "set_store_shipping", {
+      store: tenant.slug,
+      methods: [{ id: correos, name: "Correos", price: "3000" }],
+    });
+    const { data } = await call(token, "get_store", { store: tenant.slug });
+    expect(data.shipping).toEqual([
+      { id: correos, name: "Correos", price: 300_000, freeFrom: null, pickup: false },
+    ]);
+    const refused = await call(token, "set_store_shipping", { store: other.slug, methods: [] });
+    expect(refused.error).toBeTruthy();
+  });
 });

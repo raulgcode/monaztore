@@ -1,9 +1,13 @@
-import { getFormProps, getInputProps, useForm } from "@conform-to/react";
+import { getFieldsetProps, getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import {
   domainSchema,
   paymentSettingsSchema,
   paymentsFromForm,
+  SHIPPING_METHODS_MAX,
+  shippingFromForm,
+  shippingSettingsSchema,
+  shippingToForm,
   storeLocaleSchema,
 } from "@monaztore/contracts";
 import {
@@ -12,11 +16,13 @@ import {
   getEinvoicing,
   getStoreLocale,
   getStorePayments,
+  getStoreShipping,
   listStoreDomains,
   removeStoreDomain,
   setPrimaryDomain,
   updateStoreLocale,
   updateStorePayments,
+  updateStoreShipping,
 } from "@monaztore/core";
 import { localeNames, locales } from "@monaztore/i18n";
 import { data, Form, href, Link, useNavigation } from "react-router";
@@ -37,9 +43,10 @@ export function meta({ matches }: Route.MetaArgs) {
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const tenant = context.get(tenantContext);
-  const [domains, payments, einvoicing, storeLocale] = await Promise.all([
+  const [domains, payments, shipping, einvoicing, storeLocale] = await Promise.all([
     listStoreDomains(tenant),
     getStorePayments(tenant),
+    getStoreShipping(tenant),
     getEinvoicing(tenant),
     getStoreLocale(tenant),
   ]);
@@ -47,6 +54,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   return {
     domains,
     payments,
+    shipping,
     storeLocale,
     storeUrl: primary ? storeOrigin(primary.hostname, request.url) : null,
     owner: tenant.role === "owner",
@@ -80,6 +88,18 @@ export async function action({ request, context }: Route.ActionArgs) {
     }
     await updateStorePayments(tenant, paymentsFromForm(submission.value));
     return { intent, result: submission.reply(), done: "paymentsSaved" as const };
+  }
+
+  if (intent === "shipping") {
+    const submission = parseWithZod(formData, { schema: shippingSettingsSchema });
+    if (submission.status !== "success") {
+      return data({ intent, result: submission.reply(), done: null }, { status: 400 });
+    }
+    await updateStoreShipping(
+      tenant,
+      shippingFromForm(submission.value, () => crypto.randomUUID()),
+    );
+    return { intent, result: submission.reply(), done: "shippingSaved" as const };
   }
 
   if (intent === "add-domain") {
@@ -181,6 +201,11 @@ export default function Store({ loaderData, actionData, params }: Route.Componen
           payments={loaderData.payments}
           owner={owner}
           actionData={actionData?.intent === "payments" ? actionData : undefined}
+        />
+        <Shipping
+          shipping={loaderData.shipping}
+          owner={owner}
+          actionData={actionData?.intent === "shipping" ? actionData : undefined}
         />
       </div>
     </>
@@ -433,6 +458,128 @@ function Payments({
           {actionData?.done === "paymentsSaved" ? (
             <p role="status" className="text-sm">
               {t("store.paymentsSaved")}
+            </p>
+          ) : null}
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * How the store delivers: the options shoppers pick from at checkout, each with its price and,
+ * optionally, free from an amount. Rows are added and removed with the form's own buttons, so it
+ * works before the page's JavaScript loads.
+ */
+function Shipping({
+  shipping,
+  owner,
+  actionData,
+}: {
+  shipping: Route.ComponentProps["loaderData"]["shipping"];
+  owner: boolean;
+  actionData: ActionData;
+}) {
+  const t = useT();
+  const navigation = useNavigation();
+  const [form, fields] = useForm({
+    id: "shipping",
+    lastResult: actionData?.result,
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+    onValidate: ({ formData }) => parseWithZod(formData, { schema: shippingSettingsSchema }),
+    defaultValue: shippingToForm(shipping),
+  });
+  const methods = fields.methods.getFieldList();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <h2>{t("store.shippingHeading")}</h2>
+        </CardTitle>
+        <CardDescription>{t("store.shippingIntro")}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Form method="post" className="grid gap-6" {...getFormProps(form)}>
+          <input type="hidden" name="intent" value="shipping" />
+          {methods.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("store.shippingNone")}</p>
+          ) : null}
+          {methods.map((method, index) => {
+            const row = method.getFieldset();
+            return (
+              <fieldset
+                key={method.key}
+                {...getFieldsetProps(method)}
+                className="grid gap-3 rounded-lg border p-4"
+                disabled={!owner}
+              >
+                <legend className="px-1 font-medium">
+                  {t("store.shippingOption", { number: String(index + 1) })}
+                </legend>
+                <input {...getInputProps(row.id, { type: "hidden" })} />
+                <TextField
+                  field={row.name}
+                  label={t("store.shippingName")}
+                  placeholder={t("store.shippingNamePlaceholder")}
+                />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <TextField
+                    field={row.price}
+                    label={t("store.shippingPrice")}
+                    description={t("store.shippingPriceHint")}
+                    inputMode="decimal"
+                    placeholder="2500"
+                  />
+                  <TextField
+                    field={row.freeFrom}
+                    label={t("store.shippingFreeFrom")}
+                    description={t("store.shippingFreeFromHint")}
+                    inputMode="decimal"
+                  />
+                </div>
+                <div className="flex min-h-11 items-center gap-3">
+                  <input
+                    {...getInputProps(row.pickup, { type: "checkbox" })}
+                    className="size-5 accent-primary"
+                  />
+                  <Label htmlFor={row.pickup.id}>{t("store.shippingPickup")}</Label>
+                </div>
+                {owner ? (
+                  <Button
+                    variant="outline"
+                    className="justify-self-start"
+                    {...form.remove.getButtonProps({ name: fields.methods.name, index })}
+                  >
+                    {t("store.shippingRemove", { number: String(index + 1) })}
+                  </Button>
+                ) : null}
+              </fieldset>
+            );
+          })}
+          <FieldErrors id={fields.methods.errorId} errors={fields.methods.errors} />
+          <FieldErrors id={form.errorId} errors={form.errors} />
+          {owner ? (
+            <div className="grid gap-3 sm:flex sm:flex-wrap">
+              {methods.length < SHIPPING_METHODS_MAX ? (
+                <Button
+                  variant="outline"
+                  {...form.insert.getButtonProps({
+                    name: fields.methods.name,
+                    defaultValue: { id: "", name: "", price: "", freeFrom: "", pickup: "" },
+                  })}
+                >
+                  {t("store.shippingAdd")}
+                </Button>
+              ) : null}
+              <Button type="submit" disabled={navigation.state === "submitting"}>
+                {t("store.saveShipping")}
+              </Button>
+            </div>
+          ) : null}
+          {actionData?.done === "shippingSaved" ? (
+            <p role="status" className="text-sm">
+              {t("store.shippingSaved")}
             </p>
           ) : null}
         </Form>
