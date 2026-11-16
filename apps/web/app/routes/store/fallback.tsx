@@ -1,7 +1,9 @@
+import { isLandingPage } from "@monaztore/contracts";
 import { findRedirect, getStoreInfo, getStorePage, pagePath, plainText } from "@monaztore/core";
 import { data, redirect } from "react-router";
 import { faqJsonLd, PageBlocks } from "~/components/pages/page-blocks";
 import { storeContext } from "~/context";
+import { inquiryAction, inquiryFormContext } from "~/lib/inquiries.server";
 import { safeRedirect } from "~/lib/safe-redirect";
 import { pageMeta, storeOrigin } from "~/lib/store-seo";
 import type { Route } from "./+types/fallback";
@@ -32,11 +34,14 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   if (slug) {
     const [page, info] = await Promise.all([getStorePage(store, slug), getStoreInfo(store)]);
     if (page) {
+      // The front page has one address: the store's own.
+      if (page.isHome) throw redirect(`/${url.search}`, 301);
       // WordPress wrote addresses with a trailing slash: one address per page.
       if (path.endsWith("/")) throw redirect(`${pagePath(slug)}${url.search}`, 301);
       const firstText = page.blocks.find((block) => block.type === "text");
       return {
         page,
+        form: inquiryFormContext(page.blocks),
         currency: info.currency,
         storeName: info.name,
         canonical: `${storeOrigin(info.canonicalHost, request.url)}${pagePath(page.slug)}`,
@@ -52,6 +57,16 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const to = await findRedirect(store, path);
   if (to) throw redirect(safeRedirect(`${to}${url.search}`), 301);
   throw data("Not found", { status: 404 });
+}
+
+/** A request sent from one of the page's form blocks. */
+export async function action({ request, context }: Route.ActionArgs) {
+  const store = context.get(storeContext);
+  if (!store) throw data("Not found", { status: 404 });
+  const slug = pageSlugOfPath(new URL(request.url).pathname);
+  const formData = await request.formData();
+  if (!slug || formData.get("intent") !== "inquiry") throw data("Not found", { status: 404 });
+  return inquiryAction(request, store, slug, formData);
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -72,11 +87,30 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 /** A store's page; any other address redirects or throws before it renders. */
 export default function StorePage({ loaderData }: Route.ComponentProps) {
-  const { page, currency } = loaderData;
+  const { page, currency, form } = loaderData;
+  // A landing opens with its hero, which holds the page's h1.
+  if (isLandingPage(page.blocks)) {
+    return (
+      <article>
+        <PageBlocks
+          blocks={page.blocks}
+          products={page.products}
+          currency={currency}
+          form={form ?? undefined}
+          landing
+        />
+      </article>
+    );
+  }
   return (
     <article className="mx-auto grid max-w-3xl gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{page.title}</h1>
-      <PageBlocks blocks={page.blocks} products={page.products} currency={currency} />
+      <h1 className="font-heading text-3xl font-bold tracking-tight sm:text-4xl">{page.title}</h1>
+      <PageBlocks
+        blocks={page.blocks}
+        products={page.products}
+        currency={currency}
+        form={form ?? undefined}
+      />
     </article>
   );
 }

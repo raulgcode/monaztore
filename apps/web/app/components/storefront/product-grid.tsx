@@ -1,6 +1,8 @@
 import type { ProductCard, ThemeLayout } from "@monaztore/core";
-import { ImageIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, ImageIcon } from "lucide-react";
+import { useRef } from "react";
 import { href, Link } from "react-router";
+import { ScrollShadow } from "~/components/ui/scroll-shadow";
 import { useT } from "~/lib/i18n";
 import { photoSrc, photoSrcSet } from "~/lib/media";
 import { percentOff } from "~/lib/money";
@@ -13,6 +15,77 @@ type Variant = ThemeLayout["productCard"];
 const gridSizes = "(min-width: 1024px) 280px, (min-width: 640px) 33vw, 50vw";
 /** Values of the first option shown on a card; the rest are counted ("+3"). */
 const OPTION_VALUES_SHOWN = 5;
+
+/**
+ * Products in one row that slides sideways: a little more than two on a phone, so the next one
+ * peeks out, and four on a wide screen. The arrows move a screenful; a swipe works too.
+ */
+export function ProductCarousel({
+  products,
+  currency,
+  variant = "square",
+  label,
+}: {
+  products: ProductCard[];
+  currency: string;
+  variant?: Variant;
+  /** The row's name, for the arrows: "New in". */
+  label: string;
+}) {
+  const t = useT();
+  const scroller = useRef<HTMLUListElement>(null);
+  const slide = (by: -1 | 1) => {
+    const list = scroller.current;
+    if (!list) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    list.scrollBy({ left: by * list.clientWidth * 0.9, behavior: reduce ? "auto" : "smooth" });
+  };
+  const arrow =
+    "inline-flex size-11 items-center justify-center rounded-full border bg-background outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50";
+  return (
+    <div className="grid gap-3">
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          className={arrow}
+          aria-label={t("storefront.carouselPrevious", { name: label })}
+          onClick={() => slide(-1)}
+        >
+          <ChevronLeftIcon aria-hidden className="size-5" />
+        </button>
+        <button
+          type="button"
+          className={arrow}
+          aria-label={t("storefront.carouselNext", { name: label })}
+          onClick={() => slide(1)}
+        >
+          <ChevronRightIcon aria-hidden className="size-5" />
+        </button>
+      </div>
+      <ScrollShadow>
+        <ul
+          ref={scroller}
+          className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [scrollbar-width:none] sm:gap-5 [&::-webkit-scrollbar]:hidden"
+        >
+          {products.map((product) => (
+            <li
+              key={product.slug}
+              className="w-[42%] shrink-0 snap-start sm:w-[30%] lg:w-[calc(25%-0.95rem)]"
+            >
+              <Card
+                product={product}
+                currency={currency}
+                variant={variant === "row" ? "square" : variant}
+                eager={false}
+                priority={false}
+              />
+            </li>
+          ))}
+        </ul>
+      </ScrollShadow>
+    </div>
+  );
+}
 
 /**
  * Products as the store's theme shows them: square or tall (4:5, for clothes) cards, two per

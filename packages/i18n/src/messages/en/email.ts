@@ -82,4 +82,11 @@ export const email = {
   storeReferenceBody: "{name} sent the payment of {total} with the reference {reference}.",
   storeReferenceNote:
     "Check that the money arrived in your account and mark the order paid: only then is it ready to prepare.",
+  inquirySubject: "{store}: new request from {name}",
+  inquiryBody: "{name} ({email}) wrote from “{page}”:",
+  inquiryPhone: "Phone: {phone}",
+  inquiryWhatsapp: "Answer on WhatsApp",
+  inquiryButton: "See the requests",
+  inquiryNote:
+    "Reply to this email to answer them by email. Once you've answered, mark it done in Requests.",
 } as const;

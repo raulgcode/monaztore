@@ -49,6 +49,7 @@ const textPairs: [string, string][] = [
   ["foreground", "sidebar"],
   ["muted-foreground", "sidebar"],
   ["on-scrim", "scrim"],
+  ["whatsapp-foreground", "whatsapp"],
 ];
 
 // [graphic, surface]: icons, focus rings and input borders need 3:1 (WCAG 1.4.11).

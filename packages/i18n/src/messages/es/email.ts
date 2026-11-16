@@ -87,4 +87,11 @@ export const email = {
   storeReferenceBody: "{name} mandó el pago de {total} con el comprobante {reference}.",
   storeReferenceNote:
     "Revisa que el dinero llegó a tu cuenta y marca el pedido como pagado: solo entonces queda listo para preparar.",
+  inquirySubject: "{store}: nueva solicitud de {name}",
+  inquiryBody: "{name} ({email}) escribió desde “{page}”:",
+  inquiryPhone: "Teléfono: {phone}",
+  inquiryWhatsapp: "Responder por WhatsApp",
+  inquiryButton: "Ver las solicitudes",
+  inquiryNote:
+    "Responde este correo para contestarle por correo. Cuando le hayas respondido, márcala como atendida en Solicitudes.",
 } as const satisfies Translation<typeof en>["email"];

@@ -1,10 +1,18 @@
-import { getStoreInfo, getStoreTheme, listStoreProducts } from "@monaztore/core";
-import { href, Link } from "react-router";
+import {
+  getStoreHomePage,
+  getStoreInfo,
+  getStoreTheme,
+  listStoreProducts,
+  plainText,
+} from "@monaztore/core";
+import { data, href, Link } from "react-router";
+import { PageBlocks } from "~/components/pages/page-blocks";
 import { StandalonePage } from "~/components/standalone-page";
 import { StoreHome } from "~/components/storefront/store-home";
 import { buttonVariants } from "~/components/ui/button";
 import { storeContext } from "~/context";
 import { metaT, useT } from "~/lib/i18n";
+import { inquiryAction, inquiryFormContext } from "~/lib/inquiries.server";
 import { translations } from "~/lib/locale.server";
 import { auth } from "~/lib/services.server";
 import { pageMeta, storeOrigin } from "~/lib/store-seo";
@@ -12,6 +20,16 @@ import type { Route } from "./+types/home";
 
 export function meta({ loaderData, matches }: Route.MetaArgs) {
   const t = metaT(matches);
+  if (loaderData?.kind === "page") {
+    const { page } = loaderData;
+    return pageMeta({
+      title: page.seoTitle || loaderData.storeName,
+      description: page.seoDescription || loaderData.summary || loaderData.storeName,
+      canonical: `${loaderData.origin}/`,
+      image: loaderData.image,
+      siteName: loaderData.storeName,
+    });
+  }
   if (loaderData?.kind === "store") {
     return pageMeta({
       title: loaderData.storeName,
@@ -28,6 +46,35 @@ export function meta({ loaderData, matches }: Route.MetaArgs) {
 export async function loader({ request, context }: Route.LoaderArgs) {
   const store = context.get(storeContext);
   if (store) {
+    // The page the store built in Pages and made its front page; without one, the theme's.
+    const page = await getStoreHomePage(store);
+    if (page) {
+      const info = await getStoreInfo(store);
+      const firstText = page.blocks.find((block) => block.type === "text");
+      const hero = page.blocks.find((block) => block.type === "hero");
+      return {
+        kind: "page" as const,
+        page,
+        form: inquiryFormContext(page.blocks),
+        storeName: info.name,
+        currency: info.currency,
+        origin: storeOrigin(info.canonicalHost, request.url),
+        summary:
+          hero?.type === "hero"
+            ? hero.text
+            : firstText?.type === "text"
+              ? plainText(firstText.html)
+              : "",
+        image:
+          page.blocks.flatMap((block) =>
+            block.type === "image" && block.url
+              ? [block.url]
+              : block.type === "hero" && block.image
+                ? [block.image]
+                : [],
+          )[0] ?? null,
+      };
+    }
     const theme = await getStoreTheme(store);
     const { sections, homeProducts } = theme.layout;
     const [info, latest, sale] = await Promise.all([
@@ -55,7 +102,34 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   };
 }
 
+/** A request sent from a form block of the store's own front page. */
+export async function action({ request, context }: Route.ActionArgs) {
+  const store = context.get(storeContext);
+  const page = store ? await getStoreHomePage(store) : null;
+  const formData = await request.formData();
+  if (!store || !page || formData.get("intent") !== "inquiry") {
+    throw data("Not found", { status: 404 });
+  }
+  return inquiryAction(request, store, page.slug, formData);
+}
+
 export default function Home({ loaderData }: Route.ComponentProps) {
+  if (loaderData.kind === "page") {
+    const { page } = loaderData;
+    const landing = page.blocks[0]?.type === "hero";
+    return (
+      <div className="grid gap-6">
+        {landing ? null : <h1 className="sr-only">{loaderData.storeName}</h1>}
+        <PageBlocks
+          blocks={page.blocks}
+          products={page.products}
+          currency={loaderData.currency}
+          form={loaderData.form ?? undefined}
+          landing
+        />
+      </div>
+    );
+  }
   return loaderData.kind === "store" ? (
     <StoreHome {...loaderData} />
   ) : (

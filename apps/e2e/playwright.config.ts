@@ -40,6 +40,8 @@ export default defineConfig({
       APP_URL: baseURL,
       DATABASE_URL: testDatabaseUrl,
       AUTH_RATE_LIMIT: "off",
+      // A scenario fills a request form faster than a person: the timing check would drop it.
+      FORM_MIN_FILL_MS: "0",
       // Every way to sign in is on, whatever this project picked: the template tests them all.
       AUTH_METHODS: "magic-link,password,google",
       // Fake credentials: enough to render "Continue with Google" and build the redirect.

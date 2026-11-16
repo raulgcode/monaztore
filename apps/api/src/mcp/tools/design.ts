@@ -1,4 +1,12 @@
-import { HIGHLIGHTS_MAX, storeThemeIds, storeThemeSchema } from "@monaztore/contracts";
+import {
+  FOOTER_MENU_MAX,
+  HIGHLIGHTS_MAX,
+  STORE_MENU_MAX,
+  STORE_SUBMENU_MAX,
+  storeThemeIds,
+  storeThemeSchema,
+} from "@monaztore/contracts";
+import { storeIllustrationIds } from "@monaztore/contracts/illustrations";
 import { getThemeSettings, storeThemes, updateStoreTheme } from "@monaztore/core";
 import { z } from "zod";
 import { change, json, readOnly, storeArg, type ToolModule } from "../kit";
@@ -31,6 +39,54 @@ const designFields = {
     .max(HIGHLIGHTS_MAX)
     .optional()
     .describe('Up to three short promises ("Delivery in 24 h"); none: the theme\'s own'),
+  showHero: z
+    .boolean()
+    .optional()
+    .describe("false: the theme's front page starts with the products, without its cover"),
+  heroEyebrow: z.string().max(40).optional().describe('A short line above the title: "New"'),
+  heroButtonLabel: z.string().max(40).optional().describe('Empty: "See the catalog"'),
+  heroButtonHref: z
+    .string()
+    .max(500)
+    .optional()
+    .describe(
+      "Where the cover's button goes: /a-page, /collections/x, /products/y or https://…; empty: the catalog",
+    ),
+  heroIllustration: z
+    .union([z.enum(storeIllustrationIds), z.literal("")])
+    .optional()
+    .describe("A built-in drawing for a cover without a photo; empty: none"),
+  showHighlights: z.boolean().optional().describe("false: no strip of promises"),
+  menu: z
+    .array(
+      z.object({
+        label: z.string().min(1).max(40),
+        href: z.string().max(500),
+        children: z
+          .array(z.object({ label: z.string().min(1).max(40), href: z.string().max(500) }))
+          .max(STORE_SUBMENU_MAX)
+          .optional()
+          .describe("Links under this one (a submenu)"),
+      }),
+    )
+    .max(STORE_MENU_MAX)
+    .optional()
+    .describe(
+      "The top menu, replacing it whole: links to pages (/slug), categories (/collections/slug), products, /products or https://…; []: all products and categories",
+    ),
+  footerMenu: z
+    .array(z.object({ label: z.string().min(1).max(40), href: z.string().max(500) }))
+    .max(FOOTER_MENU_MAX)
+    .optional()
+    .describe("The footer's links, replacing them whole; []: the store's published pages"),
+  showCategoriesMenu: z
+    .boolean()
+    .optional()
+    .describe('false: no "Categories" panel in the top menu, only the store\'s links'),
+  categoryChips: z
+    .boolean()
+    .optional()
+    .describe("true: a row of category buttons under the search box"),
   removeLogo: z.boolean().optional(),
   removeHero: z.boolean().optional().describe("Takes the cover photo away"),
 };
@@ -43,7 +99,7 @@ export const registerDesignTools: ToolModule = (server, kit) => {
     {
       title: "See the store's design",
       description:
-        "The store's theme, palette, brand color, cover texts, announcement and highlights, and the themes and palettes it can pick.",
+        "The store's theme, palette, brand color, cover, announcement, highlights, top and footer menus, and the themes and palettes it can pick. A front page built in Pages (set_front_page) takes the place of the theme's cover and sections.",
       inputSchema: { store: storeArg },
       annotations: readOnly,
     },
@@ -84,6 +140,17 @@ export const registerDesignTools: ToolModule = (server, kit) => {
         highlight1: highlights[0] ?? "",
         highlight2: highlights[1] ?? "",
         highlight3: highlights[2] ?? "",
+        hideHero: (changes.showHero ?? !current.hideHero) ? undefined : "on",
+        hideHighlights: (changes.showHighlights ?? !current.hideHighlights) ? undefined : "on",
+        heroEyebrow: changes.heroEyebrow ?? current.heroEyebrow ?? "",
+        heroButtonLabel: changes.heroButtonLabel ?? current.heroButtonLabel ?? "",
+        heroButtonHref: changes.heroButtonHref ?? current.heroButtonHref ?? "",
+        heroIllustration: changes.heroIllustration ?? current.heroIllustration ?? "",
+        categoryChips: (changes.categoryChips ?? current.categoryChips) ? "on" : undefined,
+        hideCategoriesMenu:
+          (changes.showCategoriesMenu ?? !current.hideCategoriesMenu) ? undefined : "on",
+        menu: JSON.stringify(changes.menu ?? current.menu ?? []),
+        footerMenu: JSON.stringify(changes.footerMenu ?? current.footerMenu ?? []),
         removeLogo: changes.removeLogo ? "on" : undefined,
         removeHero: changes.removeHero ? "on" : undefined,
       });

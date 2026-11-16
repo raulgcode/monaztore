@@ -81,6 +81,17 @@ export {
 } from "./einvoicing";
 export { DomainError, NotFoundError } from "./errors";
 export {
+  countNewInquiries,
+  deleteInquiry,
+  getInquiry,
+  INQUIRIES_PAGE_SIZE,
+  type InquiryList,
+  type InquiryRow,
+  listInquiries,
+  setInquiryStatus,
+  submitInquiry,
+} from "./inquiries";
+export {
   ADMIN_MFA_TTL_MS,
   confirmTotpEnrollment,
   type MfaActor,
@@ -124,6 +135,7 @@ export {
   createPage,
   deletePage,
   getPage,
+  getStoreHomePage,
   getStorePage,
   importPages,
   listPages,
@@ -135,6 +147,7 @@ export {
   previewBlockProducts,
   type StorefrontPage,
   type StorePage,
+  setHomePage,
   updatePage,
 } from "./pages";
 export {

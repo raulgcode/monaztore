@@ -96,4 +96,7 @@ export const forms = {
   shippingNameRequired: "Name the option, like Correos de Costa Rica",
   shippingTooMany: "Up to 8 options",
   shippingMethodRequired: "Choose how you get your order",
+  inquiryMessageRequired: "Tell us what you'd like",
+  tooManyLinks: "Leave out the links, at most 2",
+  menuInvalid: "Each menu link needs its text and an address of your store (/…) or https://…",
 } as const;

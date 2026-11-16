@@ -50,6 +50,9 @@
   /* Text over a photo (a storefront's cover): the photo is darkened with the scrim. */
   --scrim: light-dark(#09090b, #09090b);
   --on-scrim: light-dark(#ffffff, #ffffff);
+  /* WhatsApp's own green, so a shopper knows the button at a glance; dark text keeps it AA. */
+  --whatsapp: light-dark(#25d366, #25d366);
+  --whatsapp-foreground: light-dark(#052e16, #052e16);
   /* Headings: a storefront theme may pick the system's serif (no font to download). */
   --heading-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   /* Edge shadow of horizontal scrollers (<ScrollShadow>): there is more to see that way. */
@@ -98,6 +101,8 @@
   --color-scroll-shadow: var(--scroll-shadow);
   --color-scrim: var(--scrim);
   --color-on-scrim: var(--on-scrim);
+  --color-whatsapp: var(--whatsapp);
+  --color-whatsapp-foreground: var(--whatsapp-foreground);
 }
 
 @layer base {

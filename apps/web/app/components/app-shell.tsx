@@ -1,6 +1,7 @@
 import {
   FileTextIcon,
   HomeIcon,
+  InboxIcon,
   type LucideIcon,
   PackageIcon,
   PaletteIcon,
@@ -60,6 +61,13 @@ export function AppShell({
       label: t("workspace.navPages"),
       icon: FileTextIcon,
       // On the phone, Pages opens from Store.
+      phone: false,
+    },
+    {
+      to: href("/app/:workspace/inquiries", { workspace: workspace.slug }),
+      label: t("workspace.navInquiries"),
+      icon: InboxIcon,
+      // On the phone, Requests opens from Store and the home.
       phone: false,
     },
     {

@@ -1,4 +1,5 @@
 import {
+  type AnyPgColumn,
   bigint,
   boolean,
   index,
@@ -71,6 +72,11 @@ export const storeSettings = pgTable("store_settings", {
   nextOrderNumber: integer().notNull().default(1001),
   /** The storefront's theme and the brand it carries (see `StoreThemeSettings`). */
   theme: jsonb().$type<StoreThemeSettings>().notNull().default({}),
+  /**
+   * The page (built with blocks in Pages) the store opens with at `/`; null, or a draft, = the
+   * theme's own front page.
+   */
+  homePageId: uuid().references((): AnyPgColumn => page.id, { onDelete: "set null" }),
   ...timestamps,
 });
 
@@ -92,6 +98,25 @@ export interface StoreThemeSettings {
   heroImageSmallUrl?: string;
   heroTitle?: string;
   heroSubtitle?: string;
+  /** No cover on the front page: it starts with the products. */
+  hideHero?: boolean;
+  /** No strip of promises on the front page. */
+  hideHighlights?: boolean;
+  /** A short line above the cover's title ("New", "Made for you"). */
+  heroEyebrow?: string;
+  /** The cover's button, and where it goes (a page, a product…); empty = the catalog. */
+  heroButtonLabel?: string;
+  heroButtonHref?: string;
+  /** A built-in drawing (`storeIllustrationIds`) for a cover without a photo. */
+  heroIllustration?: string;
+  /** The row of category buttons under the search box. Off unless the store turns it on. */
+  categoryChips?: boolean;
+  /** The store's menu: its own links ("Socks", "Mugs"); none = all products and categories. */
+  menu?: { label: string; href: string; children?: { label: string; href: string }[] }[];
+  /** No "Categories" panel in the menu. */
+  hideCategoriesMenu?: boolean;
+  /** The footer's links; none = the store's published pages. */
+  footerMenu?: { label: string; href: string }[];
   /** A line above the header: "Free shipping over ₡30 000". */
   announcement?: string;
   /**
@@ -447,6 +472,29 @@ export const page = pgTable(
       table.externalId,
     ),
   ],
+);
+
+/**
+ * A request a shopper sent from a page's form ("socks with my dog"): the store answers it by
+ * email or WhatsApp and marks it done. Only the owners see it, in the workspace's Requests.
+ */
+export const storeInquiry = pgTable(
+  "store_inquiry",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: organizationId(),
+    /** The page it came from; the title is copied, so deleting the page keeps the request. */
+    pageId: uuid().references(() => page.id, { onDelete: "set null" }),
+    pageTitle: text().notNull(),
+    name: text().notNull(),
+    email: text().notNull(),
+    phone: text().notNull().default(""),
+    message: text().notNull(),
+    /** new | done */
+    status: text().notNull().default("new"),
+    ...timestamps,
+  },
+  (table) => [index("store_inquiry_organization_idx").on(table.organizationId, table.createdAt)],
 );
 
 /** One run of an importer: what it brought and how it ended. */

@@ -5,6 +5,7 @@ import { renderEmail } from "../render";
 import { AccountEmail, accountEmailSubject } from "./account";
 import { DownloadsEmail, downloadsMessage } from "./downloads";
 import { einvoiceMessage } from "./einvoice";
+import { storeInquiryMessage } from "./inquiries";
 import { MagicLinkEmail, magicLinkSubject } from "./magic-link";
 import { orderUpdateMessage } from "./order-updates";
 import { orderPlacedMessage, storeOrderMessage } from "./orders";
@@ -269,5 +270,28 @@ describe("an order's updates to the shopper", () => {
   it("says it was cancelled", async () => {
     const message = orderUpdateMessage({ ...base, locale: "es", kind: "cancelled" });
     expect(message.subject).toBe("Super Chiva: tu pedido #1001 fue cancelado");
+  });
+});
+
+describe("a request from a store's page", () => {
+  it("tells the owners who wrote, from which page and what they want, in their language", async () => {
+    const message = storeInquiryMessage({
+      locale: "es",
+      storeName: "Super Chiva",
+      pageTitle: "Medias personalizadas",
+      name: "Ana",
+      email: "ana@example.com",
+      phone: "8888 1234",
+      message: "Quiero medias con mi perro\nSon para regalo",
+      url: "https://app.example.com/app/super-chiva/inquiries",
+      whatsappUrl: "https://wa.me/50688881234",
+    });
+    expect(message.subject).toBe("Super Chiva: nueva solicitud de Ana");
+    const { html, text } = await renderEmail(message.react);
+    expect(text).toContain("ana@example.com");
+    expect(text).toContain("Medias personalizadas");
+    expect(text).toContain("Quiero medias con mi perro");
+    expect(html).toContain('href="https://wa.me/50688881234"');
+    expect(text).toContain("https://app.example.com/app/super-chiva/inquiries");
   });
 });

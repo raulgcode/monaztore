@@ -5,6 +5,7 @@ import {
   normalizeHex,
   readableOn,
 } from "@monaztore/contracts/color";
+import { type StoreIllustrationId, storeIllustrationIds } from "@monaztore/contracts/illustrations";
 import {
   defaultStoreThemeId,
   type StoreThemeId,
@@ -336,6 +337,24 @@ export interface StoreTheme {
   heroImageSmallUrl: string | null;
   heroTitle: string;
   heroSubtitle: string;
+  /** The front page starts with the products, without a cover. */
+  hideHero: boolean;
+  /** No strip of promises on the front page. */
+  hideHighlights: boolean;
+  heroEyebrow: string;
+  /** The cover's button; empty label = the web's "Shop now", empty link = the catalog. */
+  heroButtonLabel: string;
+  heroButtonHref: string;
+  /** A built-in drawing for a cover without a photo. */
+  heroIllustration: StoreIllustrationId | null;
+  /** The row of category buttons under the search box. */
+  categoryChips: boolean;
+  /** The store's own menu; empty = all products and its categories. */
+  menu: { label: string; href: string; children: { label: string; href: string }[] }[];
+  /** The footer's own links; empty = the store's published pages. */
+  footerMenu: { label: string; href: string }[];
+  /** Whether the menu has the "Categories" panel. */
+  categoriesMenu: boolean;
   announcement: string;
   /** The store's own; empty = the theme's (translated by the web). */
   highlights: string[];
@@ -393,6 +412,22 @@ export function resolveStoreTheme(settings: StoreThemeSettings = {}): StoreTheme
     heroImageSmallUrl: (settings.heroImageUrl && settings.heroImageSmallUrl) || null,
     heroTitle: settings.heroTitle ?? "",
     heroSubtitle: settings.heroSubtitle ?? "",
+    hideHero: settings.hideHero === true,
+    hideHighlights: settings.hideHighlights === true,
+    heroEyebrow: settings.heroEyebrow ?? "",
+    heroButtonLabel: settings.heroButtonLabel ?? "",
+    heroButtonHref: settings.heroButtonHref ?? "",
+    heroIllustration: storeIllustrationIds.includes(
+      settings.heroIllustration as StoreIllustrationId,
+    )
+      ? (settings.heroIllustration as StoreIllustrationId)
+      : null,
+    categoryChips: settings.categoryChips === true,
+    menu: (settings.menu ?? [])
+      .slice(0, 8)
+      .map((item) => ({ ...item, children: (item.children ?? []).slice(0, 8) })),
+    footerMenu: (settings.footerMenu ?? []).slice(0, 12),
+    categoriesMenu: !settings.hideCategoriesMenu,
     announcement: settings.announcement ?? "",
     highlights: (settings.highlights ?? []).filter(Boolean).slice(0, 3),
     hiddenFilters: settings.hiddenFilters ?? [],

@@ -22,6 +22,13 @@ describe("securityHeaders", () => {
     expect(policy).toContain("object-src 'none'");
   });
 
+  it("lets Turnstile's script and frame in only when the instance turns it on", () => {
+    expect(contentSecurityPolicy("n")).not.toContain("challenges.cloudflare.com");
+    const policy = contentSecurityPolicy("n", { turnstile: true });
+    expect(policy).toContain("script-src 'self' 'nonce-n' https://challenges.cloudflare.com");
+    expect(policy).toContain("frame-src https://challenges.cloudflare.com");
+  });
+
   it("lets forms go on to Google sign-in", () => {
     expect(contentSecurityPolicy("n")).toContain("form-action 'self' https://accounts.google.com");
   });

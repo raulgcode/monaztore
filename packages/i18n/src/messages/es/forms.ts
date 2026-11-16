@@ -106,4 +106,8 @@ export const forms = {
   shippingNameRequired: "Ponle nombre a la opción, como Correos de Costa Rica",
   shippingTooMany: "Hasta 8 opciones",
   shippingMethodRequired: "Elige cómo te llega tu pedido",
+  inquiryMessageRequired: "Cuéntanos qué te gustaría",
+  tooManyLinks: "Quita los enlaces, máximo 2",
+  menuInvalid:
+    "Cada enlace del menú necesita su texto y una dirección de tu tienda (/…) o https://…",
 } as const satisfies Translation<typeof en>["forms"];

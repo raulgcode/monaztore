@@ -1,0 +1,2 @@
+ALTER TABLE "store_settings" ADD COLUMN "home_page_id" uuid;--> statement-breakpoint
+ALTER TABLE "store_settings" ADD CONSTRAINT "store_settings_home_page_id_page_id_fk" FOREIGN KEY ("home_page_id") REFERENCES "public"."page"("id") ON DELETE set null ON UPDATE no action;

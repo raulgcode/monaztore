@@ -10,6 +10,7 @@ import { registerInvoicingTools } from "./tools/invoicing";
 import { registerOrderTools } from "./tools/orders";
 import { registerPageTools } from "./tools/pages";
 import { registerProductTools } from "./tools/products";
+import { registerRequestTools } from "./tools/requests";
 import { registerStoreTools } from "./tools/stores";
 
 /**
@@ -24,6 +25,7 @@ export const toolModules: ToolModule[] = [
   registerCouponTools,
   registerOrderTools,
   registerPageTools,
+  registerRequestTools,
   registerDigitalProductTools,
   registerDesignTools,
   registerInvoicingTools,

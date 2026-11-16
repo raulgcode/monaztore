@@ -1,4 +1,5 @@
 import { z } from "zod/mini";
+import { storeIllustrationIds } from "./illustrations";
 import { message } from "./message";
 
 // A page the store builds in the workspace's block editor and the storefront shows at /<slug>.
@@ -8,13 +9,16 @@ const id = z.string().check(z.minLength(1), z.maxLength(40));
 const text = (max: number) => z.string().check(z.maxLength(max));
 
 /**
- * Where a link or photo may point: one of our own paths (`/products/…`, `/media/…`) or a web
- * address. Never `javascript:` or `data:`.
+ * Where a link or photo may point: one of our own paths (`/products/…`, `/media/…`), a web
+ * address or a block of the same page (`#request`). Never `javascript:` or `data:`.
  */
 export const linkTarget = z.string().check(
   z.maxLength(500),
   z.refine(
-    (value) => (value.startsWith("/") && !value.startsWith("//")) || /^https?:\/\//i.test(value),
+    (value) =>
+      (value.startsWith("/") && !value.startsWith("//")) ||
+      /^https?:\/\//i.test(value) ||
+      /^#[a-z0-9-]+$/i.test(value),
     message("forms.linkInvalid"),
   ),
 );
@@ -55,13 +59,100 @@ export const faqBlock = z.object({
   items: z.array(z.object({ question: text(300), answer: text(3000) })).check(z.maxLength(60)),
 });
 
-/** A row of the store's products: the newest, or those of one collection. */
+/** A row of the store's products: the newest, those on sale, or those of one collection. */
 export const productsBlock = z.object({
   type: z.literal("products"),
   id,
   title: text(120),
   collection: text(200),
+  /** Only what's on sale now (of the collection, when there is one). */
+  onSale: z._default(z.boolean(), false),
+  /** A grid, or one row that slides sideways. */
+  layout: z._default(z.enum(["grid", "carousel"]), "grid"),
   limit: z._default(z.int().check(z.minimum(2), z.maximum(12)), 4),
+});
+
+/** The store's categories as tiles with their photos, to start browsing. */
+export const collectionsBlock = z.object({
+  type: z.literal("collections"),
+  id,
+  title: text(120),
+  limit: z._default(z.int().check(z.minimum(2), z.maximum(12)), 8),
+});
+
+export const HIGHLIGHTS_BLOCK_MAX = 4;
+
+/** A strip of short promises: "Delivery in 24 h", "Pay with SINPE Móvil". */
+export const highlightsBlock = z.object({
+  type: z.literal("highlights"),
+  id,
+  items: z.array(text(60)).check(z.maxLength(HIGHLIGHTS_BLOCK_MAX)),
+});
+
+const illustration = z.enum(storeIllustrationIds);
+
+/**
+ * The top of a landing page: a short line above, the title (the page's h1), a few words, a
+ * photo or one of the built-in drawings, and its main button. A page that starts with one is
+ * drawn full width, as a landing.
+ */
+export const heroBlock = z.object({
+  type: z.literal("hero"),
+  id,
+  eyebrow: text(60),
+  title: text(120),
+  text: text(400),
+  image: z.union([z.literal(""), linkTarget]),
+  illustration: z._default(z.union([z.literal(""), illustration]), ""),
+  buttonLabel: text(60),
+  buttonHref: z.union([z.literal(""), linkTarget]),
+});
+
+export const STEPS_MAX = 8;
+
+/** How something works, step by step, each with its drawing: "Send your photo", "We make it"… */
+export const stepsBlock = z.object({
+  type: z.literal("steps"),
+  id,
+  title: text(120),
+  intro: text(400),
+  items: z
+    .array(z.object({ illustration, title: text(80), text: text(400) }))
+    .check(z.maxLength(STEPS_MAX)),
+});
+
+/** A phone WhatsApp opens: digits, spaces, dashes and an optional + at the start. */
+export const whatsappPhone = z.string().check(
+  z.trim(),
+  z.maxLength(20),
+  z.refine(
+    (value) => value === "" || /^\+?[\d\s()-]{8,20}$/.test(value),
+    message("forms.phoneInvalid"),
+  ),
+);
+
+/** A big WhatsApp button that opens a chat with the store, with the first message written. */
+export const whatsappBlock = z.object({
+  type: z.literal("whatsapp"),
+  id,
+  title: text(120),
+  text: text(300),
+  label: text(60),
+  phone: whatsappPhone,
+  message: text(300),
+});
+
+/**
+ * A request form: name, email, phone and what they want. It reaches the store's Requests
+ * (`store_inquiry`) and the owners' email; `messageLabel` names the big field ("Your idea").
+ */
+export const formBlock = z.object({
+  type: z.literal("form"),
+  id,
+  title: text(120),
+  text: text(400),
+  messageLabel: text(80),
+  buttonLabel: text(60),
 });
 
 export const pageBlockSchema = z.discriminatedUnion("type", [
@@ -71,6 +162,12 @@ export const pageBlockSchema = z.discriminatedUnion("type", [
   buttonBlock,
   faqBlock,
   productsBlock,
+  collectionsBlock,
+  highlightsBlock,
+  heroBlock,
+  stepsBlock,
+  whatsappBlock,
+  formBlock,
 ]);
 
 export const pageBlocksSchema = z.array(pageBlockSchema).check(z.maxLength(100));
@@ -84,6 +181,12 @@ export const pageBlockTypes: PageBlockType[] = [
   "button",
   "faq",
   "products",
+  "collections",
+  "highlights",
+  "hero",
+  "steps",
+  "whatsapp",
+  "form",
 ];
 
 /** A new, empty block of a type, with an id of its own. */
@@ -100,8 +203,55 @@ export function emptyBlock(type: PageBlockType, blockId: string): PageBlock {
     case "faq":
       return { type, id: blockId, items: [{ question: "", answer: "" }] };
     case "products":
-      return { type, id: blockId, title: "", collection: "", limit: 4 };
+      return {
+        type,
+        id: blockId,
+        title: "",
+        collection: "",
+        onSale: false,
+        layout: "grid",
+        limit: 4,
+      };
+    case "collections":
+      return { type, id: blockId, title: "", limit: 8 };
+    case "highlights":
+      return { type, id: blockId, items: ["", "", ""] };
+    case "hero":
+      return {
+        type,
+        id: blockId,
+        eyebrow: "",
+        title: "",
+        text: "",
+        image: "",
+        illustration: "",
+        buttonLabel: "",
+        buttonHref: "",
+      };
+    case "steps":
+      return {
+        type,
+        id: blockId,
+        title: "",
+        intro: "",
+        items: [{ illustration: "photo", title: "", text: "" }],
+      };
+    case "whatsapp":
+      return { type, id: blockId, title: "", text: "", label: "", phone: "", message: "" };
+    case "form":
+      return { type, id: blockId, title: "", text: "", messageLabel: "", buttonLabel: "" };
   }
+}
+
+/** A page that starts with a hero is a landing: drawn full width, its hero holds the h1. */
+export const isLandingPage = (blocks: PageBlock[]) => blocks[0]?.type === "hero";
+
+/** The WhatsApp chat a block opens, with its message written; null without a usable number. */
+export function whatsappChatUrl(phone: string, text: string, countryCode = "506"): string | null {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 8 || digits.length > 15) return null;
+  const number = digits.length === 8 ? countryCode + digits : digits;
+  return `https://wa.me/${number}${text.trim() ? `?text=${encodeURIComponent(text.trim())}` : ""}`;
 }
 
 /**
@@ -130,6 +280,7 @@ export const reservedPageSlugs = [
   "admin",
   "app",
   "dev",
+  "inquiries",
 ];
 
 export const pageSlugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;

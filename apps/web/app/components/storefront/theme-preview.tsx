@@ -19,6 +19,7 @@ export function ThemePreview({
   heroImageUrl,
   title,
   announcement,
+  hideHero = false,
   compact = false,
 }: {
   theme: StoreThemeId;
@@ -31,6 +32,8 @@ export function ThemePreview({
   heroImageUrl?: string | null;
   title?: string;
   announcement?: string;
+  /** The front page without its cover: the products come first. */
+  hideHero?: boolean;
   compact?: boolean;
 }) {
   const t = useT();
@@ -59,7 +62,7 @@ export function ThemePreview({
         <span className="size-3 rounded-full bg-primary" />
       </div>
       <div className="grid gap-2 p-2">
-        {layout.hero === "spotlight" ? (
+        {hideHero ? null : layout.hero === "spotlight" ? (
           <div
             className={cn(
               "relative grid overflow-hidden rounded-[var(--radius)] bg-primary text-primary-foreground",

@@ -26,6 +26,10 @@ export const rateLimits = {
   haciendaLookup: { limit: 60, windowMs: 15 * MINUTE },
   /** The downloads email sent again for one order: the shopper asked, not a mail bomb. */
   downloadsEmail: { limit: 3, windowMs: 60 * MINUTE },
+  /** Requests from a store page's form, from one IP: a person sends one or two. */
+  inquiryIp: { limit: 5, windowMs: 60 * MINUTE },
+  /** Requests signed with one email (they reach the store's owners by email). */
+  inquiryEmail: { limit: 3, windowMs: 60 * MINUTE },
   /** Payment references sent from one IP. */
   paymentReferenceIp: { limit: 20, windowMs: 15 * MINUTE },
   /**

@@ -4,7 +4,7 @@ import {
   pageBlocksSchema,
   reservedPageSlugs,
 } from "@monaztore/contracts";
-import { and, asc, desc, eq, schema, sql } from "@monaztore/db";
+import { and, asc, desc, eq, ne, schema, sql } from "@monaztore/db";
 import { DomainError, NotFoundError } from "./errors";
 import {
   cleanHtml,
@@ -31,6 +31,8 @@ export interface PageSummary {
   slug: string;
   status: PageStatus;
   updatedAt: Date;
+  /** The store opens with it at `/` (when published). */
+  isHome: boolean;
 }
 
 export interface StorePage extends PageSummary {
@@ -72,18 +74,53 @@ const summary = {
   updatedAt: schema.page.updatedAt,
 };
 
-/** The store's pages, the latest edited first. Every member may see them. */
+/** The page the store opens with, as the owner set it (published or not). */
+export async function getHomePageId(ctx: TenantContext): Promise<string | null> {
+  return homePageIdOf(ctx.db, ctx.organizationId);
+}
+
+async function homePageIdOf(db: TenantContext["db"], organizationId: string) {
+  const [row] = await db
+    .select({ homePageId: schema.storeSettings.homePageId })
+    .from(schema.storeSettings)
+    .where(eq(schema.storeSettings.organizationId, organizationId));
+  return row?.homePageId ?? null;
+}
+
+/** The store's pages, the front page first, then the latest edited. Every member may see them. */
 export async function listPages(ctx: TenantContext): Promise<PageSummary[]> {
-  const rows = await ctx.db
-    .select(summary)
-    .from(schema.page)
-    .where(eq(schema.page.organizationId, ctx.organizationId))
-    .orderBy(desc(schema.page.updatedAt));
-  return rows as PageSummary[];
+  const [rows, homeId] = await Promise.all([
+    ctx.db
+      .select(summary)
+      .from(schema.page)
+      .where(eq(schema.page.organizationId, ctx.organizationId))
+      .orderBy(desc(schema.page.updatedAt)),
+    getHomePageId(ctx),
+  ]);
+  return rows
+    .map((row) => ({ ...row, isHome: row.id === homeId }) as PageSummary)
+    .sort((a, b) => Number(b.isHome) - Number(a.isHome));
+}
+
+/**
+ * Makes a page the store's front page (`/`), or with null goes back to the theme's own. Only
+ * shows once the page is published, so a draft can be built calmly. Owners only.
+ */
+export async function setHomePage(ctx: TenantContext, id: string | null): Promise<void> {
+  requireOwner(ctx);
+  if (id && !(await getPage(ctx, id))) throw new NotFoundError("Page");
+  await ctx.db
+    .insert(schema.storeSettings)
+    .values({ organizationId: ctx.organizationId, homePageId: id })
+    .onConflictDoUpdate({
+      target: schema.storeSettings.organizationId,
+      set: { homePageId: id },
+    });
 }
 
 export async function getPage(ctx: TenantContext, id: string): Promise<StorePage | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const homeId = await getHomePageId(ctx);
   const [row] = await ctx.db
     .select({
       ...summary,
@@ -93,7 +130,9 @@ export async function getPage(ctx: TenantContext, id: string): Promise<StorePage
     })
     .from(schema.page)
     .where(and(eq(schema.page.organizationId, ctx.organizationId), eq(schema.page.id, id)));
-  return row ? ({ ...row, blocks: row.blocks as PageBlock[] } as StorePage) : null;
+  return row
+    ? ({ ...row, blocks: row.blocks as PageBlock[], isHome: row.id === homeId } as StorePage)
+    : null;
 }
 
 async function slugTaken(ctx: TenantContext, slug: string, exceptId?: string) {
@@ -239,19 +278,26 @@ export async function importPages(
 const published = (organizationId: string) =>
   and(eq(schema.page.organizationId, organizationId), eq(schema.page.status, "published"));
 
-/** Published pages, for the store's footer and sitemap. */
+/** Published pages, for the store's footer and sitemap; the front page is `/`, not one of them. */
 export async function listStorePages(
   ctx: StorefrontContext,
 ): Promise<{ slug: string; title: string; updatedAt: Date }[]> {
+  const homeId = await homePageIdOf(ctx.db, ctx.store.organizationId);
   return ctx.db
     .select({ slug: schema.page.slug, title: schema.page.title, updatedAt: schema.page.updatedAt })
     .from(schema.page)
-    .where(published(ctx.store.organizationId))
+    .where(
+      homeId
+        ? and(published(ctx.store.organizationId), ne(schema.page.id, homeId))
+        : published(ctx.store.organizationId),
+    )
     .orderBy(asc(schema.page.title))
     .limit(50);
 }
 
 export interface StorefrontPage {
+  /** It's the store's front page: its own address sends to `/`. */
+  isHome: boolean;
   title: string;
   slug: string;
   seoTitle: string | null;
@@ -268,19 +314,38 @@ export async function getStorePage(
   slug: string,
 ): Promise<StorefrontPage | null> {
   const [row] = await ctx.db
-    .select({
-      title: schema.page.title,
-      slug: schema.page.slug,
-      seoTitle: schema.page.seoTitle,
-      seoDescription: schema.page.seoDescription,
-      updatedAt: schema.page.updatedAt,
-      blocks: schema.page.blocks,
-    })
+    .select(storefrontColumns)
     .from(schema.page)
     .where(and(published(ctx.store.organizationId), eq(schema.page.slug, slug)));
   if (!row) return null;
+  const { id, ...page } = row;
   const blocks = row.blocks as PageBlock[];
-  return { ...row, blocks, products: await blockProducts(ctx, blocks) };
+  const homeId = await homePageIdOf(ctx.db, ctx.store.organizationId);
+  return { ...page, isHome: id === homeId, blocks, products: await blockProducts(ctx, blocks) };
+}
+
+const storefrontColumns = {
+  id: schema.page.id,
+  title: schema.page.title,
+  slug: schema.page.slug,
+  seoTitle: schema.page.seoTitle,
+  seoDescription: schema.page.seoDescription,
+  updatedAt: schema.page.updatedAt,
+  blocks: schema.page.blocks,
+};
+
+/** The page the store opens with, once published; null = the theme's own front page. */
+export async function getStoreHomePage(ctx: StorefrontContext): Promise<StorefrontPage | null> {
+  const homeId = await homePageIdOf(ctx.db, ctx.store.organizationId);
+  if (!homeId) return null;
+  const [row] = await ctx.db
+    .select(storefrontColumns)
+    .from(schema.page)
+    .where(and(published(ctx.store.organizationId), eq(schema.page.id, homeId)));
+  if (!row) return null;
+  const { id: _id, ...page } = row;
+  const blocks = row.blocks as PageBlock[];
+  return { ...page, isHome: true, blocks, products: await blockProducts(ctx, blocks) };
 }
 
 /** The products a page's product blocks show; also for the editor's preview. */
@@ -294,6 +359,7 @@ export async function blockProducts(
       .map(async (block) => {
         const page = await listStoreProducts(ctx, {
           collection: block.collection || undefined,
+          ...(block.onSale ? { onSale: true } : {}),
         });
         return [block.id, page.products.slice(0, block.limit)] as const;
       }),

@@ -11,6 +11,7 @@ import { einvoicing } from "./einvoicing";
 import { email } from "./email";
 import { forms } from "./forms";
 import { home } from "./home";
+import { inquiries } from "./inquiries";
 import { orders } from "./orders";
 import { pages } from "./pages";
 import { products } from "./products";
@@ -32,6 +33,7 @@ export const es = {
   email,
   forms,
   home,
+  inquiries,
   orders,
   pages,
   products,

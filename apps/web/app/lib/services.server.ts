@@ -22,6 +22,8 @@ export const secrets = {
   einvoicing: deriveSecret(env.BETTER_AUTH_SECRET, "einvoicing"),
   /** Seals the authenticator apps' secrets (`user_totp`). */
   mfa: deriveSecret(env.BETTER_AUTH_SECRET, "mfa"),
+  /** Signs when a store's request form was shown (`lib/bot-guard.server.ts`). */
+  forms: deriveSecret(env.BETTER_AUTH_SECRET, "forms"),
 };
 
 export const database = singleton("__monaztoreDatabase", () => createDatabase(env.DATABASE_URL));

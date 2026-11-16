@@ -30,6 +30,7 @@ export const securityMiddleware: MiddlewareFunction<Response> = async (
       production: !import.meta.env.DEV,
       https,
       pathname,
+      turnstile: Boolean(env.TURNSTILE_SITE_KEY),
     })) {
       response.headers.set(name, value);
     }

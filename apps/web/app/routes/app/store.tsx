@@ -12,6 +12,7 @@ import {
 } from "@monaztore/contracts";
 import {
   addStoreDomain,
+  countNewInquiries,
   DomainError,
   getEinvoicing,
   getStoreLocale,
@@ -43,12 +44,13 @@ export function meta({ matches }: Route.MetaArgs) {
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const tenant = context.get(tenantContext);
-  const [domains, payments, shipping, einvoicing, storeLocale] = await Promise.all([
+  const [domains, payments, shipping, einvoicing, storeLocale, newInquiries] = await Promise.all([
     listStoreDomains(tenant),
     getStorePayments(tenant),
     getStoreShipping(tenant),
     getEinvoicing(tenant),
     getStoreLocale(tenant),
+    countNewInquiries(tenant),
   ]);
   const primary = domains.find((domain) => domain.primary) ?? domains[0];
   return {
@@ -56,13 +58,14 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     payments,
     shipping,
     storeLocale,
+    newInquiries,
     storeUrl: primary ? storeOrigin(primary.hostname, request.url) : null,
     owner: tenant.role === "owner",
     // Electronic invoicing is for stores in Costa Rica only.
     einvoicing: einvoicing.available ? { enabled: einvoicing.enabled } : null,
     i18n: einvoicing.available
-      ? translations(context, "store", "forms", "einvoicing", "digital")
-      : translations(context, "store", "forms", "digital"),
+      ? translations(context, "store", "forms", "einvoicing", "digital", "inquiries")
+      : translations(context, "store", "forms", "digital", "inquiries"),
   };
 }
 
@@ -168,6 +171,17 @@ export default function Store({ loaderData, actionData, params }: Route.Componen
         >
           <span className="font-medium">{t("store.pagesCard")}</span>
           <span className="text-sm text-muted-foreground">{t("store.pagesCardHint")}</span>
+        </Link>
+        <Link
+          to={href("/app/:workspace/inquiries", { workspace: params.workspace })}
+          className="grid min-h-14 gap-1 rounded-xl border bg-card p-4 text-card-foreground hover:bg-muted"
+        >
+          <span className="font-medium">{t("inquiries.storeLink")}</span>
+          <span className="text-sm text-muted-foreground">
+            {loaderData.newInquiries > 0
+              ? t("inquiries.homeCard", { count: loaderData.newInquiries })
+              : t("inquiries.storeLinkHint")}
+          </span>
         </Link>
         <Link
           to={href("/app/:workspace/downloads", { workspace: params.workspace })}

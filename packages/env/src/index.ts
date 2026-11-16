@@ -112,6 +112,12 @@ export const serverEnvSchema = z
     // Costa Rica's electronic invoicing: the ID of whoever runs this instance, registered with
     // Hacienda as the software provider. Empty, each store is its own provider.
     HACIENDA_PROVIDER_ID: optionalString,
+    // Cloudflare Turnstile (free) on the stores' request forms, as one more lock after the
+    // honeypot, the timing and the rate limits. Both or neither; empty, the form goes without it.
+    TURNSTILE_SITE_KEY: optionalString,
+    TURNSTILE_SECRET_KEY: optionalString,
+    // A request form sent sooner than this after the page opened is a script (ms). e2e: 0.
+    FORM_MIN_FILL_MS: z.coerce.number().int().min(0).default(3000),
     ...databaseEnvSchema.shape,
     ...emailEnvSchema.shape,
     ...filesEnvSchema.shape,
@@ -125,6 +131,13 @@ export const serverEnvSchema = z
         code: "custom",
         path: ["BETTER_AUTH_SECRET"],
         message: "Use a secret of your own in production (openssl rand -base64 32)",
+      });
+    }
+    if (Boolean(env.TURNSTILE_SITE_KEY) !== Boolean(env.TURNSTILE_SECRET_KEY)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["TURNSTILE_SITE_KEY"],
+        message: "Turnstile needs both TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY",
       });
     }
     if (env.AUTH_METHODS.includes("google") && !googleCredentials(env)) {

@@ -33,6 +33,12 @@ export {
   einvoiceMessage,
   einvoiceSubject,
 } from "./templates/einvoice";
+export {
+  StoreInquiryEmail,
+  type StoreInquiryEmailProps,
+  storeInquiryMessage,
+  storeInquirySubject,
+} from "./templates/inquiries";
 export { MagicLinkEmail, type MagicLinkEmailProps, magicLinkSubject } from "./templates/magic-link";
 export {
   OrderUpdateEmail,

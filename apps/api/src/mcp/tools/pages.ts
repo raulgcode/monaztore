@@ -1,5 +1,13 @@
-import { pageFormSchema } from "@monaztore/contracts";
-import { createPage, deletePage, getPage, listPages, updatePage } from "@monaztore/core";
+import { pageFormSchema, STEPS_MAX } from "@monaztore/contracts";
+import { storeIllustrationIds } from "@monaztore/contracts/illustrations";
+import {
+  createPage,
+  deletePage,
+  getPage,
+  listPages,
+  setHomePage,
+  updatePage,
+} from "@monaztore/core";
 import { z } from "zod";
 import { change, destructive, json, readOnly, storeArg, ToolError, type ToolModule } from "../kit";
 
@@ -9,7 +17,21 @@ const blocksArg = z
   .array(z.record(z.string(), z.unknown()))
   .max(100)
   .describe(
-    'The page, block by block, each with a unique id: { type: "heading", id, text, level: 2|3 }, { type: "text", id, html }, { type: "image", id, url, alt, caption } (a url the store already has), { type: "button", id, label, href }, { type: "faq", id, items: [{ question, answer }] } or { type: "products", id, title, collection, limit: 2-12 }.',
+    [
+      "The page, block by block in order, each with a unique id (letters, digits and dashes; it is also the block's #anchor). Blocks:",
+      '{ type: "hero", id, eyebrow, title, text, image (a url the store already has, or ""), illustration (one of ' +
+        storeIllustrationIds.join(", ") +
+        ', or ""), buttonLabel, buttonHref } a big cover; first on the page, it makes a landing;',
+      '{ type: "heading", id, text, level: 2|3 }; { type: "text", id, html }; { type: "image", id, url, alt, caption };',
+      '{ type: "button", id, label, href }; { type: "faq", id, items: [{ question, answer }] };',
+      '{ type: "products", id, title, collection (a category slug or ""), onSale, layout: "grid"|"carousel", limit: 2-12 };',
+      '{ type: "collections", id, title, limit: 2-12 } the categories with their photos;',
+      '{ type: "highlights", id, items: [up to 4 short promises] };',
+      `{ type: "steps", id, title, intro, items: [{ illustration, title, text }] (up to ${STEPS_MAX}) } how it works;`,
+      '{ type: "whatsapp", id, title, text, label, phone (+506 8888 8888), message } a big WhatsApp button;',
+      '{ type: "form", id, title, text, messageLabel, buttonLabel } a request form (spam-protected); requests arrive by email and in list_requests.',
+      "Links (href) are /paths of the store, #anchors of a block or https://….",
+    ].join(" "),
   );
 
 const pageFields = {
@@ -34,7 +56,8 @@ export const registerPageTools: ToolModule = (server, kit) => {
     "list_pages",
     {
       title: "List pages",
-      description: "The store's pages with their address and whether they are published.",
+      description:
+        "The store's pages with their address, whether they are published and which one is the front page (isHome).",
       inputSchema: { store: storeArg },
       annotations: readOnly,
     },
@@ -118,6 +141,23 @@ export const registerPageTools: ToolModule = (server, kit) => {
         });
       },
     ),
+  );
+
+  server.registerTool(
+    "set_front_page",
+    {
+      title: "Choose the front page",
+      description:
+        "Makes a page the store's front page (what opens at /), built with its blocks; without pageId, the store goes back to the front page of its design. A draft front page doesn't show until it's published. Owners only. Ask before changing it.",
+      inputSchema: { store: storeArg, pageId: pageId.optional() },
+      annotations: change,
+    },
+    kit.tool(async ({ store, pageId: id }: { store: string; pageId?: string }) => {
+      const tenant = await owners(store);
+      if (id && !(await getPage(tenant, id))) throw new ToolError(`No page ${id} in this store.`);
+      await setHomePage(tenant, id ?? null);
+      return json({ saved: true, pages: await listPages(tenant) });
+    }),
   );
 
   server.registerTool(

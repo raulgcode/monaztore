@@ -1,27 +1,38 @@
 import {
   emptyBlock,
+  HIGHLIGHTS_BLOCK_MAX,
   type PageBlock,
   type PageBlockType,
   pageBlockTypes,
+  STEPS_MAX,
 } from "@monaztore/contracts";
+import { type StoreIllustrationId, storeIllustrationIds } from "@monaztore/contracts/illustrations";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
   BoldIcon,
+  FootprintsIcon,
+  GripVerticalIcon,
   ImageIcon,
   ItalicIcon,
+  LayersIcon,
   LayoutGridIcon,
   LinkIcon,
   ListIcon,
   type LucideIcon,
+  MailIcon,
+  MessageCircleIcon,
   MessageCircleQuestionIcon,
   MousePointerClickIcon,
+  PanelTopIcon,
   PlusIcon,
+  SparklesIcon,
   TextIcon,
   Trash2Icon,
   TypeIcon,
 } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
+import { illustrationKeys } from "~/components/pages/illustration-options";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -35,6 +46,12 @@ const blockIcons: Record<PageBlockType, LucideIcon> = {
   button: MousePointerClickIcon,
   faq: MessageCircleQuestionIcon,
   products: LayoutGridIcon,
+  collections: LayersIcon,
+  highlights: SparklesIcon,
+  hero: PanelTopIcon,
+  steps: FootprintsIcon,
+  whatsapp: MessageCircleIcon,
+  form: MailIcon,
 };
 
 const blockLabelKeys = {
@@ -44,6 +61,12 @@ const blockLabelKeys = {
   button: "pages.blockButton",
   faq: "pages.blockFaq",
   products: "pages.blockProducts",
+  collections: "pages.blockCollections",
+  highlights: "pages.blockHighlights",
+  hero: "pages.blockHero",
+  steps: "pages.blockSteps",
+  whatsapp: "pages.blockWhatsapp",
+  form: "pages.blockForm",
 } as const;
 
 const blockHintKeys = {
@@ -53,6 +76,12 @@ const blockHintKeys = {
   button: "pages.blockButtonHint",
   faq: "pages.blockFaqHint",
   products: "pages.blockProductsHint",
+  collections: "pages.blockCollectionsHint",
+  highlights: "pages.blockHighlightsHint",
+  hero: "pages.blockHeroHint",
+  steps: "pages.blockStepsHint",
+  whatsapp: "pages.blockWhatsappHint",
+  form: "pages.blockFormHint",
 } as const;
 
 export interface BlockEditorProps {
@@ -97,6 +126,28 @@ export function BlockEditor({
     if (moved) next.splice(index + by, 0, moved);
     onChange(next);
   };
+  // Dragging a block by its handle: the list reorders under the finger as it goes.
+  const list = useRef<HTMLOListElement>(null);
+  const [dragging, setDragging] = useState<string | null>(null);
+  const moveTo = (id: string, target: number) => {
+    const from = blocks.findIndex((block) => block.id === id);
+    if (from < 0 || from === target) return;
+    const next = [...blocks];
+    const [moved] = next.splice(from, 1);
+    if (moved) next.splice(target, 0, moved);
+    onChange(next);
+  };
+  const dragOver = (id: string, y: number) => {
+    // Its new place: how many of the other blocks have their middle above the finger.
+    const others = [...(list.current?.querySelectorAll<HTMLElement>("[data-block]") ?? [])].filter(
+      (item) => item.dataset.block !== id,
+    );
+    const index = others.filter((item) => {
+      const box = item.getBoundingClientRect();
+      return box.top + box.height / 2 < y;
+    }).length;
+    moveTo(id, index);
+  };
   const add = (type: PageBlockType) => {
     onChange([...blocks, emptyBlock(type, newId(blocks))]);
     setAdding(false);
@@ -109,15 +160,51 @@ export function BlockEditor({
           {t("pages.noBlocks")}
         </p>
       ) : null}
-      <ol className="grid gap-4">
+      <p className="text-sm text-muted-foreground">{t("pages.dragHint")}</p>
+      <ol ref={list} className="grid gap-4">
         {blocks.map((block, index) => {
           const Icon = blockIcons[block.type];
           const label = `${index + 1}. ${t(blockLabelKeys[block.type])}`;
           return (
-            <li key={block.id} className="rounded-md border bg-card">
+            <li
+              key={block.id}
+              data-block={block.id}
+              className={cn(
+                "rounded-md border bg-card transition-shadow motion-reduce:transition-none",
+                dragging === block.id &&
+                  "relative z-10 border-primary shadow-lg ring-2 ring-primary/40",
+              )}
+            >
               <fieldset disabled={disabled} className="grid gap-3 p-3">
                 <legend className="sr-only">{label}</legend>
                 <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    aria-label={t("pages.dragBlock", { block: label })}
+                    title={t("pages.dragBlock", { block: label })}
+                    className="-ml-1 inline-flex size-11 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 active:cursor-grabbing"
+                    onPointerDown={(event) => {
+                      event.currentTarget.setPointerCapture(event.pointerId);
+                      setDragging(block.id);
+                    }}
+                    onPointerMove={(event) => {
+                      if (dragging === block.id) dragOver(block.id, event.clientY);
+                    }}
+                    onPointerUp={() => setDragging(null)}
+                    onPointerCancel={() => setDragging(null)}
+                    onKeyDown={(event) => {
+                      // The keyboard moves it too: arrows up and down.
+                      if (event.key === "ArrowUp" && index > 0) {
+                        event.preventDefault();
+                        move(index, -1);
+                      } else if (event.key === "ArrowDown" && index < blocks.length - 1) {
+                        event.preventDefault();
+                        move(index, 1);
+                      }
+                    }}
+                  >
+                    <GripVerticalIcon aria-hidden className="size-5" />
+                  </button>
                   <Icon aria-hidden className="size-4 text-muted-foreground" />
                   <span aria-hidden className="flex-1 text-sm font-medium">
                     {label}
@@ -436,34 +523,86 @@ function BlockFields({
       );
     case "products":
       return (
-        <div className="grid gap-3 sm:grid-cols-[1fr_1fr_8rem]">
-          <Field label={t("pages.productsTitle")}>
-            {(props) => (
-              <Input
-                {...props}
-                value={block.title}
-                maxLength={120}
-                onChange={(event) => onChange({ ...block, title: event.target.value })}
-              />
-            )}
-          </Field>
-          <Field label={t("pages.productsCollection")}>
+        <div className="grid gap-3">
+          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_8rem]">
+            <Field label={t("pages.productsTitle")}>
+              {(props) => (
+                <Input
+                  {...props}
+                  value={block.title}
+                  maxLength={120}
+                  onChange={(event) => onChange({ ...block, title: event.target.value })}
+                />
+              )}
+            </Field>
+            <Field label={t("pages.productsCollection")}>
+              {(props) => (
+                <select
+                  {...props}
+                  className={selectClass}
+                  value={block.collection}
+                  onChange={(event) => onChange({ ...block, collection: event.target.value })}
+                >
+                  <option value="">{t("pages.productsNewest")}</option>
+                  {collections.map((collection) => (
+                    <option key={collection.slug} value={collection.slug}>
+                      {collection.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Field>
+            <Field label={t("pages.productsLimit")}>
+              {(props) => (
+                <select
+                  {...props}
+                  className={selectClass}
+                  value={block.limit}
+                  onChange={(event) => onChange({ ...block, limit: Number(event.target.value) })}
+                >
+                  {[2, 3, 4, 6, 8, 12].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Field>
+          </div>
+          <Field label={t("pages.productsLayout")}>
             {(props) => (
               <select
                 {...props}
                 className={selectClass}
-                value={block.collection}
-                onChange={(event) => onChange({ ...block, collection: event.target.value })}
+                value={block.layout}
+                onChange={(event) =>
+                  onChange({
+                    ...block,
+                    layout: event.target.value === "carousel" ? "carousel" : "grid",
+                  })
+                }
               >
-                <option value="">{t("pages.productsNewest")}</option>
-                {collections.map((collection) => (
-                  <option key={collection.slug} value={collection.slug}>
-                    {collection.name}
-                  </option>
-                ))}
+                <option value="grid">{t("pages.productsGrid")}</option>
+                <option value="carousel">{t("pages.productsCarousel")}</option>
               </select>
             )}
           </Field>
+          <CheckField
+            label={t("pages.productsOnSale")}
+            checked={block.onSale}
+            onChange={(onSale) => onChange({ ...block, onSale })}
+          />
+        </div>
+      );
+    case "collections":
+      return (
+        <div className="grid gap-3 sm:grid-cols-[1fr_8rem]">
+          <TextInput
+            label={t("pages.collectionsTitle")}
+            value={block.title}
+            max={120}
+            onChange={(title) => onChange({ ...block, title })}
+          />
           <Field label={t("pages.productsLimit")}>
             {(props) => (
               <select
@@ -482,7 +621,404 @@ function BlockFields({
           </Field>
         </div>
       );
+    case "highlights":
+      return (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: HIGHLIGHTS_BLOCK_MAX }, (_, index) => (
+            <TextInput
+              key={index}
+              label={t("pages.highlightItem", { n: String(index + 1) })}
+              value={block.items[index] ?? ""}
+              max={60}
+              onChange={(value) => {
+                const items = Array.from({ length: HIGHLIGHTS_BLOCK_MAX }, (_, at) =>
+                  at === index ? value : (block.items[at] ?? ""),
+                );
+                // Keeps the rows the person sees; empty ones at the end go away on save.
+                while (items.length > 0 && items.at(-1) === "") items.pop();
+                onChange({ ...block, items });
+              }}
+            />
+          ))}
+        </div>
+      );
+    case "hero":
+      return (
+        <div className="grid gap-3">
+          <TextInput
+            label={t("pages.heroEyebrow")}
+            hint={t("pages.heroEyebrowHint")}
+            value={block.eyebrow}
+            max={60}
+            onChange={(eyebrow) => onChange({ ...block, eyebrow })}
+          />
+          <TextInput
+            label={t("pages.heroTitle")}
+            value={block.title}
+            max={120}
+            onChange={(title) => onChange({ ...block, title })}
+          />
+          <TextArea
+            label={t("pages.heroText")}
+            value={block.text}
+            max={400}
+            onChange={(text) => onChange({ ...block, text })}
+          />
+          {block.image ? (
+            <div className="grid gap-2">
+              <img
+                src={block.image}
+                alt=""
+                className="max-h-48 w-full rounded-md bg-muted object-contain"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                className="justify-self-start"
+                onClick={() => onChange({ ...block, image: "" })}
+              >
+                <Trash2Icon aria-hidden />
+                {t("pages.heroRemoveImage")}
+              </Button>
+            </div>
+          ) : null}
+          <ImageUpload
+            label={t("pages.heroImage")}
+            hint={t("pages.heroImageHint")}
+            onFile={(file) => onUpload(block.id, file)}
+            uploading={uploading}
+            uploadFailed={uploadFailed}
+          />
+          <IllustrationSelect
+            label={t("pages.illustration")}
+            value={block.illustration}
+            allowNone
+            onChange={(illustration) => onChange({ ...block, illustration })}
+          />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextInput
+              label={t("pages.buttonLabel")}
+              value={block.buttonLabel}
+              max={60}
+              onChange={(buttonLabel) => onChange({ ...block, buttonLabel })}
+            />
+            <TextInput
+              label={t("pages.buttonHref")}
+              hint={t("pages.buttonHrefHint")}
+              value={block.buttonHref}
+              max={500}
+              inputMode="url"
+              onChange={(buttonHref) => onChange({ ...block, buttonHref: buttonHref.trim() })}
+            />
+          </div>
+        </div>
+      );
+    case "steps":
+      return (
+        <div className="grid gap-4">
+          <TextInput
+            label={t("pages.stepsTitle")}
+            value={block.title}
+            max={120}
+            onChange={(title) => onChange({ ...block, title })}
+          />
+          <TextArea
+            label={t("pages.stepsIntro")}
+            value={block.intro}
+            max={400}
+            onChange={(intro) => onChange({ ...block, intro })}
+          />
+          {block.items.map((item, index) => {
+            const n = String(index + 1);
+            const set = (patch: Partial<typeof item>) =>
+              onChange({
+                ...block,
+                items: block.items.map((other, at) =>
+                  at === index ? { ...other, ...patch } : other,
+                ),
+              });
+            return (
+              <div key={index} className="grid gap-2 border-l-2 pl-3">
+                <IllustrationSelect
+                  label={t("pages.stepIllustration", { n })}
+                  value={item.illustration}
+                  onChange={(illustration) => set({ illustration: illustration || "photo" })}
+                />
+                <TextInput
+                  label={t("pages.stepTitle", { n })}
+                  value={item.title}
+                  max={80}
+                  onChange={(title) => set({ title })}
+                />
+                <TextArea
+                  label={t("pages.stepText", { n })}
+                  value={item.text}
+                  max={400}
+                  onChange={(text) => set({ text })}
+                />
+                {block.items.length > 1 ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="justify-self-start"
+                    onClick={() =>
+                      onChange({ ...block, items: block.items.filter((_, at) => at !== index) })
+                    }
+                  >
+                    <Trash2Icon aria-hidden />
+                    {t("pages.removeStep", { n })}
+                  </Button>
+                ) : null}
+              </div>
+            );
+          })}
+          <Button
+            type="button"
+            variant="outline"
+            className="justify-self-start"
+            disabled={block.items.length >= STEPS_MAX}
+            onClick={() =>
+              onChange({
+                ...block,
+                items: [...block.items, { illustration: "photo", title: "", text: "" }],
+              })
+            }
+          >
+            <PlusIcon aria-hidden />
+            {t("pages.addStep")}
+          </Button>
+        </div>
+      );
+    case "whatsapp":
+      return (
+        <div className="grid gap-3">
+          <TextInput
+            label={t("pages.whatsappTitle")}
+            value={block.title}
+            max={120}
+            onChange={(title) => onChange({ ...block, title })}
+          />
+          <TextArea
+            label={t("pages.whatsappText")}
+            value={block.text}
+            max={400}
+            onChange={(text) => onChange({ ...block, text })}
+          />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextInput
+              label={t("pages.whatsappLabel")}
+              value={block.label}
+              max={60}
+              onChange={(label) => onChange({ ...block, label })}
+            />
+            <TextInput
+              label={t("pages.whatsappPhone")}
+              hint={t("pages.whatsappPhoneHint")}
+              value={block.phone}
+              max={20}
+              inputMode="tel"
+              onChange={(phone) => onChange({ ...block, phone })}
+            />
+          </div>
+          <TextArea
+            label={t("pages.whatsappMessage")}
+            value={block.message}
+            max={300}
+            onChange={(message) => onChange({ ...block, message })}
+          />
+        </div>
+      );
+    case "form":
+      return (
+        <div className="grid gap-3">
+          <TextInput
+            label={t("pages.formTitle")}
+            value={block.title}
+            max={120}
+            onChange={(title) => onChange({ ...block, title })}
+          />
+          <TextArea
+            label={t("pages.formText")}
+            value={block.text}
+            max={400}
+            onChange={(text) => onChange({ ...block, text })}
+          />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextInput
+              label={t("pages.formMessageLabel")}
+              hint={t("pages.formMessageLabelHint")}
+              value={block.messageLabel}
+              max={80}
+              onChange={(messageLabel) => onChange({ ...block, messageLabel })}
+            />
+            <TextInput
+              label={t("pages.formButtonLabel")}
+              value={block.buttonLabel}
+              max={60}
+              onChange={(buttonLabel) => onChange({ ...block, buttonLabel })}
+            />
+          </div>
+          <p className="text-sm text-muted-foreground">{t("pages.formNote")}</p>
+        </div>
+      );
   }
+}
+
+function TextInput({
+  label,
+  hint,
+  value,
+  max,
+  inputMode,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  value: string;
+  max: number;
+  inputMode?: "url" | "tel";
+  onChange: (value: string) => void;
+}) {
+  return (
+    <Field label={label} hint={hint}>
+      {(props) => (
+        <Input
+          {...props}
+          value={value}
+          maxLength={max}
+          inputMode={inputMode}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
+    </Field>
+  );
+}
+
+function TextArea({
+  label,
+  value,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  max: number;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <Field label={label}>
+      {(props) => (
+        <textarea
+          {...props}
+          rows={3}
+          maxLength={max}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+        />
+      )}
+    </Field>
+  );
+}
+
+function CheckField({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex min-h-11 items-center gap-3 text-sm">
+      <input
+        type="checkbox"
+        className="size-5 accent-primary"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      {label}
+    </label>
+  );
+}
+
+function IllustrationSelect({
+  label,
+  value,
+  allowNone = false,
+  onChange,
+}: {
+  label: string;
+  value: StoreIllustrationId | "";
+  allowNone?: boolean;
+  onChange: (value: StoreIllustrationId | "") => void;
+}) {
+  const t = useT();
+  return (
+    <Field label={label}>
+      {(props) => (
+        <select
+          {...props}
+          className={selectClass}
+          value={value}
+          onChange={(event) => onChange(event.target.value as StoreIllustrationId | "")}
+        >
+          {allowNone ? <option value="">{t("pages.illustrationNone")}</option> : null}
+          {storeIllustrationIds.map((id) => (
+            <option key={id} value={id}>
+              {t(illustrationKeys[id])}
+            </option>
+          ))}
+        </select>
+      )}
+    </Field>
+  );
+}
+
+function ImageUpload({
+  label,
+  hint,
+  onFile,
+  uploading,
+  uploadFailed,
+}: {
+  label: string;
+  hint?: string;
+  onFile: (file: File) => void;
+  uploading: boolean;
+  uploadFailed: boolean;
+}) {
+  const t = useT();
+  return (
+    <>
+      <Field label={label} hint={hint}>
+        {(props) => (
+          <Input
+            {...props}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/avif"
+            className="h-auto py-2"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) onFile(file);
+              event.target.value = "";
+            }}
+          />
+        )}
+      </Field>
+      {uploading ? (
+        <p role="status" className="text-sm text-muted-foreground">
+          {t("pages.imageUploading")}
+        </p>
+      ) : null}
+      {uploadFailed ? (
+        <p role="alert" className="text-sm text-destructive">
+          {t("pages.imageUploadFailed")}
+        </p>
+      ) : null}
+    </>
+  );
 }
 
 /**

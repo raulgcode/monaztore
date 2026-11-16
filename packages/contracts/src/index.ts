@@ -7,6 +7,8 @@ export * from "./color";
 export * from "./coupons";
 export * from "./digital-products";
 export * from "./einvoicing";
+export * from "./illustrations";
+export * from "./inquiries";
 export * from "./message";
 export * from "./order-fulfillment";
 export * from "./pages";

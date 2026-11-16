@@ -154,9 +154,13 @@ export default function PageEditor({ loaderData, params }: Route.ComponentProps)
     if (!uploaded?.url) return;
     setBlocks((current) =>
       current.map((block) =>
-        block.id === uploaded.blockId && block.type === "image"
-          ? { ...block, url: uploaded.url ?? "" }
-          : block,
+        block.id !== uploaded.blockId
+          ? block
+          : block.type === "image"
+            ? { ...block, url: uploaded.url ?? "" }
+            : block.type === "hero"
+              ? { ...block, image: uploaded.url ?? "" }
+              : block,
       ),
     );
     setDirty(true);
@@ -348,6 +352,9 @@ export default function PageEditor({ loaderData, params }: Route.ComponentProps)
               products={products}
               currency={currency}
               emptyHint={t("pages.emptyBlock")}
+              collections={collections}
+              landing={blocks[0]?.type === "hero"}
+              preview
             />
           </div>
         </section>

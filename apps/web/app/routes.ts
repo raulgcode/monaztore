@@ -80,6 +80,8 @@ export default [
         route("coupons/:couponId", "routes/app/coupon.tsx"),
         route("pages", "routes/app/pages.tsx"),
         route("pages/:pageId", "routes/app/page-editor.tsx"),
+        // What shoppers send from a page's request form.
+        route("inquiries", "routes/app/inquiries.tsx"),
         route("store", "routes/app/store.tsx"),
         // Digital products: files buyers download once paid (linked from Store, not a bar item).
         route("downloads", "routes/app/digital-products.tsx"),

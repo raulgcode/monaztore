@@ -19,21 +19,34 @@ export interface SecurityHeaderOptions {
   production: boolean;
   /** Served over HTTPS (APP_URL): HSTS, and any http:// asset is fetched over https. */
   https: boolean;
+  /** Turnstile on (TURNSTILE_SITE_KEY): its origin joins the policy. */
+  turnstile?: boolean;
   pathname: string;
 }
 
+/**
+ * Cloudflare Turnstile, the captcha of the stores' request forms: its script and its frame. Only
+ * when the instance turned it on (TURNSTILE_SITE_KEY), so the rest keep only our own scripts.
+ */
+export const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
+
 /** The Content-Security-Policy of an HTML page: only our own scripts, never inside a frame. */
-export function contentSecurityPolicy(nonce: string, { https = true } = {}): string {
+export function contentSecurityPolicy(
+  nonce: string,
+  { https = true, turnstile = false } = {},
+): string {
+  const captcha = turnstile ? ` ${TURNSTILE_ORIGIN}` : "";
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}'`,
+    `script-src 'self' 'nonce-${nonce}'${captcha}`,
     // React sets `style` attributes; no inline <style> of ours.
     "style-src 'self' 'unsafe-inline'",
     // Product photos live where each store keeps them (its CDN, or the shop it migrated from,
     // like wp-content/uploads) until they are copied to our storage: any HTTPS image.
     "img-src 'self' data: blob: https:",
     "font-src 'self'",
-    "connect-src 'self'",
+    `connect-src 'self'${captcha}`,
+    ...(turnstile ? [`frame-src ${TURNSTILE_ORIGIN}`] : []),
     "manifest-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
@@ -49,6 +62,7 @@ export function securityHeaders({
   production,
   https,
   pathname,
+  turnstile = false,
 }: SecurityHeaderOptions): [string, string][] {
   const secret = secretPaths.some((path) => pathname.startsWith(path));
   const headers: [string, string][] = [
@@ -67,7 +81,7 @@ export function securityHeaders({
     headers.push(["Strict-Transport-Security", "max-age=31536000; includeSubDomains"]);
   }
   if (production) {
-    headers.push(["Content-Security-Policy", contentSecurityPolicy(nonce, { https })]);
+    headers.push(["Content-Security-Policy", contentSecurityPolicy(nonce, { https, turnstile })]);
   }
   return headers;
 }
