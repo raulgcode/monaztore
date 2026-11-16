@@ -93,9 +93,18 @@ export async function seedSandbox(db: Database, options: SandboxOptions = sandbo
     },
     cash: { enabled: true, note: "Cash or SINPE Móvil to the courier." },
   });
-  // The usual way a shop in Costa Rica delivers: a courier, free from an amount, or pickup.
+  // Super Chiva's own rates: inside the Greater Metropolitan Area or outside it, plus a pickup
+  // and a free courier from an amount, so every kind of option can be tried here.
   await updateStoreShipping(owner, {
     methods: [
+      { id: "gam", name: "Envío dentro del GAM", price: 300_000, freeFrom: null, pickup: false },
+      {
+        id: "outside-gam",
+        name: "Envío fuera del GAM",
+        price: 350_000,
+        freeFrom: null,
+        pickup: false,
+      },
       {
         id: "courier",
         name: "Correos de Costa Rica",

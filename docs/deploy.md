@@ -165,7 +165,9 @@ writes to the old shop):
    It can run again right before the DNS switch: a second run updates what the first brought
    (stock, prices, new products) and keeps the 301s for the old addresses.
 3. Review the drafts it notes (forms left out of pages, "Contáctanos") and set the payments in
-   Store. To try it before moving the DNS, connect a temporary domain too (e.g.
+   Store. Shipping for Super Chiva (in Store, or `set_store_shipping` from an assistant): two
+   options, "Envío dentro del GAM" at ₡3 000 and "Envío fuera del GAM" at ₡3 500, with no "free
+   from" and no pickup. To try it before moving the DNS, connect a temporary domain too (e.g.
    `superchiva.monaztore.com`: a `CNAME` to `monaztore-web.fly.dev` and its `fly certs add`) and
    place a test order there.
 
