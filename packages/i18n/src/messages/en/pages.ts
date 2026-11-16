@@ -194,4 +194,12 @@ export const pages = {
   productsCarousel: "Carousel (slides sideways)",
   dragHint: "Drag a block by its ⠿ handle to move it, or use the arrows.",
   dragBlock: "Drag “{block}” (or use the up and down arrow keys)",
+  blockCta: "Call to action",
+  blockCtaHint: "A card with a drawing, a title and one big button",
+  ctaTitle: "Title",
+  ctaText: "A few words",
+  tplFrontCtaTitle: "Didn't find what you were looking for?",
+  tplFrontCtaText:
+    "Tell us your idea and we'll make it just for you, with your photo, your name or your design.",
+  tplFrontCtaButton: "Order a custom one",
 } as const;

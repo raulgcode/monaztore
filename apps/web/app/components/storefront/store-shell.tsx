@@ -77,7 +77,7 @@ export function StoreShell({
           {theme.announcement}
         </p>
       ) : null}
-      <header className="border-b">
+      <header className="relative z-30 border-b">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-2 gap-y-3 px-4 py-3 md:flex-nowrap md:gap-6">
           <MobileMenu
             name={name}
@@ -284,7 +284,7 @@ function SubMenu({ item }: { item: StoreMenuItem }) {
           className="size-4 transition-transform group-open:rotate-180 motion-reduce:transition-none"
         />
       </summary>
-      <ul className="absolute top-full left-0 z-50 mt-2 grid min-w-56 gap-1 rounded-xl border bg-popover p-2 text-popover-foreground shadow-lg">
+      <ul className="absolute top-full left-0 z-50 mt-2 grid min-w-56 gap-1 rounded-xl border bg-card p-2 text-card-foreground shadow-lg">
         <li>
           <PlainLink
             href={item.href}
@@ -398,7 +398,7 @@ function CategoriesMenu({
           className="size-4 transition-transform group-open:rotate-180 motion-reduce:transition-none"
         />
       </summary>
-      <div className="absolute top-full left-0 z-50 mt-2 grid w-[min(42rem,90vw)] gap-3 rounded-xl border bg-popover p-4 text-popover-foreground shadow-lg">
+      <div className="absolute top-full left-0 z-50 mt-2 grid w-[min(42rem,90vw)] gap-3 rounded-xl border bg-card p-4 text-card-foreground shadow-lg">
         <ul className="grid grid-cols-2 gap-1 lg:grid-cols-3">
           {collections.map((collection) => (
             <li key={collection.slug}>

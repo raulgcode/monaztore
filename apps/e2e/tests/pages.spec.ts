@@ -204,7 +204,7 @@ test.describe("Feature: the store's own pages", () => {
   );
 
   freshTest(
-    "Scenario: the owner makes a page from the front page template the store's front page, then goes back to the design's",
+    "Scenario: the owner makes a page from the front page template the store's front page, with its categories and a card for custom orders, then goes back to the design's",
     async ({ page, baseURL, newVisitor, signInWithWorkspace, workspaceOf }) => {
       const store = await freshTest.step("Given an owner with a store", async () => {
         await signInWithWorkspace(page, "Front Mugs");
@@ -229,11 +229,26 @@ test.describe("Feature: the store's own pages", () => {
       );
 
       const shopper = await newVisitor();
-      await freshTest.step("Then the store opens with it", async () => {
-        await shopper.goto(store);
-        await expect(shopper.getByRole("heading", { level: 1 })).toHaveText("Mugs made in Cartago");
-        await expect(shopper.getByRole("link", { name: "See the catalog" })).toBeVisible();
-      });
+      await freshTest.step(
+        "Then the store opens with it, a link to every category and the custom order card",
+        async () => {
+          await shopper.goto(store);
+          await expect(shopper.getByRole("heading", { level: 1 })).toHaveText(
+            "Mugs made in Cartago",
+          );
+          await expect(shopper.getByRole("link", { name: "See the catalog" })).toBeVisible();
+          await expect(
+            shopper.getByRole("heading", { name: "Didn't find what you were looking for?" }),
+          ).toBeVisible();
+          await expect(shopper.getByRole("link", { name: "Order a custom one" })).toHaveAttribute(
+            "href",
+            "/personalized",
+          );
+          await expect(
+            shopper.getByRole("link", { name: "See all the categories" }),
+          ).toHaveAttribute("href", "/collections");
+        },
+      );
 
       await freshTest.step(
         "When the owner goes back to the design's front page in Pages",

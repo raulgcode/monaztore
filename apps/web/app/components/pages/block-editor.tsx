@@ -21,6 +21,7 @@ import {
   ListIcon,
   type LucideIcon,
   MailIcon,
+  MegaphoneIcon,
   MessageCircleIcon,
   MessageCircleQuestionIcon,
   MousePointerClickIcon,
@@ -52,6 +53,7 @@ const blockIcons: Record<PageBlockType, LucideIcon> = {
   steps: FootprintsIcon,
   whatsapp: MessageCircleIcon,
   form: MailIcon,
+  cta: MegaphoneIcon,
 };
 
 const blockLabelKeys = {
@@ -67,6 +69,7 @@ const blockLabelKeys = {
   steps: "pages.blockSteps",
   whatsapp: "pages.blockWhatsapp",
   form: "pages.blockForm",
+  cta: "pages.blockCta",
 } as const;
 
 const blockHintKeys = {
@@ -82,6 +85,7 @@ const blockHintKeys = {
   steps: "pages.blockStepsHint",
   whatsapp: "pages.blockWhatsappHint",
   form: "pages.blockFormHint",
+  cta: "pages.blockCtaHint",
 } as const;
 
 export interface BlockEditorProps {
@@ -688,6 +692,45 @@ function BlockFields({
             onFile={(file) => onUpload(block.id, file)}
             uploading={uploading}
             uploadFailed={uploadFailed}
+          />
+          <IllustrationSelect
+            label={t("pages.illustration")}
+            value={block.illustration}
+            allowNone
+            onChange={(illustration) => onChange({ ...block, illustration })}
+          />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextInput
+              label={t("pages.buttonLabel")}
+              value={block.buttonLabel}
+              max={60}
+              onChange={(buttonLabel) => onChange({ ...block, buttonLabel })}
+            />
+            <TextInput
+              label={t("pages.buttonHref")}
+              hint={t("pages.buttonHrefHint")}
+              value={block.buttonHref}
+              max={500}
+              inputMode="url"
+              onChange={(buttonHref) => onChange({ ...block, buttonHref: buttonHref.trim() })}
+            />
+          </div>
+        </div>
+      );
+    case "cta":
+      return (
+        <div className="grid gap-3">
+          <TextInput
+            label={t("pages.ctaTitle")}
+            value={block.title}
+            max={120}
+            onChange={(title) => onChange({ ...block, title })}
+          />
+          <TextArea
+            label={t("pages.ctaText")}
+            value={block.text}
+            max={400}
+            onChange={(text) => onChange({ ...block, text })}
           />
           <IllustrationSelect
             label={t("pages.illustration")}

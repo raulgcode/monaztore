@@ -32,7 +32,8 @@
     "new": "node packages/create/src/index.ts --template .",
     "rename": "node packages/create/src/rename-cli.ts",
     "template:update": "node packages/create/src/update.ts",
-    "sandbox": "tsx tooling/sandbox/index.ts"
+    "sandbox": "tsx tooling/sandbox/index.ts",
+    "store:front-page": "tsx tooling/front-page/index.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",

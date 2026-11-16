@@ -197,4 +197,12 @@ export const pages = {
   productsCarousel: "Carrusel (se desliza de lado)",
   dragHint: "Arrastra un bloque por su agarradera ⠿ para moverlo, o usa las flechas.",
   dragBlock: "Arrastrar “{block}” (o usa las flechas arriba y abajo)",
+  blockCta: "Llamado a la acción",
+  blockCtaHint: "Una tarjeta con un dibujo, un título y un botón grande",
+  ctaTitle: "Título",
+  ctaText: "Unas palabras",
+  tplFrontCtaTitle: "¿No encontraste lo que buscabas?",
+  tplFrontCtaText:
+    "Cuéntanos tu idea y la hacemos solo para ti, con tu foto, tu nombre o tu diseño.",
+  tplFrontCtaButton: "Pedir uno personalizado",
 } as const satisfies Translation<typeof en>["pages"];

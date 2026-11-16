@@ -155,6 +155,20 @@ export const formBlock = z.object({
   buttonLabel: text(60),
 });
 
+/**
+ * A call to action: a card with a drawing, a title, a few words and one big button, such as
+ * "Didn't find what you were looking for?" → the personalized order page.
+ */
+export const ctaBlock = z.object({
+  type: z.literal("cta"),
+  id,
+  title: text(120),
+  text: text(400),
+  illustration: z._default(z.union([z.literal(""), illustration]), ""),
+  buttonLabel: text(60),
+  buttonHref: z.union([z.literal(""), linkTarget]),
+});
+
 export const pageBlockSchema = z.discriminatedUnion("type", [
   headingBlock,
   textBlock,
@@ -168,6 +182,7 @@ export const pageBlockSchema = z.discriminatedUnion("type", [
   stepsBlock,
   whatsappBlock,
   formBlock,
+  ctaBlock,
 ]);
 
 export const pageBlocksSchema = z.array(pageBlockSchema).check(z.maxLength(100));
@@ -187,6 +202,7 @@ export const pageBlockTypes: PageBlockType[] = [
   "steps",
   "whatsapp",
   "form",
+  "cta",
 ];
 
 /** A new, empty block of a type, with an id of its own. */
@@ -240,6 +256,16 @@ export function emptyBlock(type: PageBlockType, blockId: string): PageBlock {
       return { type, id: blockId, title: "", text: "", label: "", phone: "", message: "" };
     case "form":
       return { type, id: blockId, title: "", text: "", messageLabel: "", buttonLabel: "" };
+    case "cta":
+      return {
+        type,
+        id: blockId,
+        title: "",
+        text: "",
+        illustration: "heart",
+        buttonLabel: "",
+        buttonHref: "",
+      };
   }
 }
 

@@ -61,7 +61,9 @@ export function ScrollShadow({
           ? { role: "region", "aria-label": scrollerLabel, tabIndex: 0 }
           : undefined)}
         // Inline, not a class: scrolling is this component's job, whatever classes it gets.
-        style={{ overflowX: "auto" }}
+        // Positioned, so what's absolute inside (a screen reader's text) scrolls and is clipped
+        // with the rest instead of widening the page.
+        style={{ overflowX: "auto", position: "relative" }}
       >
         {children}
       </div>

@@ -118,7 +118,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     const { page } = loaderData;
     const landing = page.blocks[0]?.type === "hero";
     return (
-      <div className="grid gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {landing ? null : <h1 className="sr-only">{loaderData.storeName}</h1>}
         <PageBlocks
           blocks={page.blocks}

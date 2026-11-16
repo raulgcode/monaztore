@@ -1,7 +1,7 @@
 import { type PageBlock, whatsappChatUrl } from "@monaztore/contracts";
 import type { ProductCard } from "@monaztore/core";
-import { ChevronDownIcon, MessageCircleIcon } from "lucide-react";
-import { HeroPanel, heroButton } from "~/components/storefront/hero-panel";
+import { ArrowRightIcon, ChevronDownIcon, MessageCircleIcon } from "lucide-react";
+import { HeroPanel, heroButton, SmartLink } from "~/components/storefront/hero-panel";
 import { ProductCarousel, ProductGrid } from "~/components/storefront/product-grid";
 import { Collections, Highlights } from "~/components/storefront/store-home";
 import { useT } from "~/lib/i18n";
@@ -46,7 +46,9 @@ export function PageBlocks({
   const card = shell?.theme.layout.productCard ?? "square";
   const chat = firstWhatsapp(blocks);
   return (
-    <div className={cn("@container grid", landing ? "gap-14 md:gap-20" : "gap-6")}>
+    <div
+      className={cn("@container grid min-w-0 grid-cols-1", landing ? "gap-14 md:gap-20" : "gap-6")}
+    >
       {blocks.map((block, index) => (
         <div
           key={block.id}
@@ -265,6 +267,36 @@ function Block({
         </section>
       );
     }
+    case "cta":
+      if (!block.title && !block.buttonLabel) return <Empty hint={emptyHint} />;
+      return (
+        <section className="relative isolate grid justify-items-center gap-4 overflow-hidden rounded-3xl border bg-card px-5 py-10 text-center @2xl:px-10 @3xl:py-14">
+          <div
+            aria-hidden
+            className="absolute -bottom-24 left-1/2 -z-10 size-72 -translate-x-1/2 rounded-full bg-accent opacity-70 blur-3xl"
+          />
+          {block.illustration ? (
+            <Illustration id={block.illustration} className="w-28 @3xl:w-36" />
+          ) : null}
+          {block.title ? (
+            <h2 className="font-heading text-3xl font-bold tracking-tight text-balance @3xl:text-4xl">
+              {block.title}
+            </h2>
+          ) : null}
+          {block.text ? (
+            <p className="max-w-xl text-lg text-pretty text-muted-foreground">{block.text}</p>
+          ) : null}
+          {block.buttonLabel ? (
+            <SmartLink
+              href={block.buttonHref || "/products"}
+              className={cn(heroButton.primary, "mt-2 min-h-14 w-full px-8 text-lg @2xl:w-auto")}
+            >
+              {block.buttonLabel}
+              <ArrowRightIcon aria-hidden className="size-5" />
+            </SmartLink>
+          ) : null}
+        </section>
+      );
     case "form":
       return (
         <section className="grid gap-8 rounded-3xl border bg-card p-5 @2xl:p-10 @3xl:grid-cols-[1fr_1.4fr] @3xl:items-start">

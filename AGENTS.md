@@ -363,7 +363,9 @@ shop's WordPress pages (`wp/v2/pages`, `wordPressPageBlocks`: Flatsome accordion
 questions; forms are left out and noted) with a 301 from their old address.
 More blocks make a page a landing: cover (`hero`: title as the h1, a photo or a built-in
 drawing from `contracts/src/illustrations.ts`, its button), steps with drawings, promises,
-categories, a WhatsApp button (`whatsappChatUrl`) and a request form; products show as a grid or
+categories (with a button to all of them), a WhatsApp button (`whatsappChatUrl`), a request form
+and a call to action (`cta`: a card with a drawing and one button, "Didn't find what you were
+looking for?" in the front page template); products show as a grid or
 a carousel (`ProductCarousel`), newest, of a category or on offer. A page that starts with a
 cover is drawn full width (`isLandingPage`). Blocks are dragged by their handle (pointer, so a
 finger works too) or moved with the arrows and the keyboard. Blocks use container queries
@@ -372,6 +374,9 @@ template" (`lib/page-templates.server.ts`) makes a front page (from Design's cov
 or a personalized product's landing (steps, WhatsApp, form, questions). Any page can be the
 store's front page (`store_settings.home_page_id`, `setHomePage`, `getStoreHomePage`): `/`
 shows it once published, otherwise the theme's; it isn't listed again in the sitemap.
+`pnpm store:front-page --store <slug> [--title …] [--cta-href …]` (`tooling/front-page`) gives a
+store that front page, or sets the cover's texts and adds the card to the one it has, from a
+terminal.
 
 Requests (`core/src/inquiries.ts`, `contracts/src/inquiries.ts`, `/app/:workspace/inquiries`;
 on the phone it opens from Store and from a card on the home): what shoppers send from a
@@ -536,6 +541,7 @@ corepack enable && pnpm install
 pnpm run setup           # .env, secrets, sign-in methods, hooks, Chromium, Docker, migrations
 pnpm dev                 # web :5173, api :3001 · /dev/sign-in to sign in as anyone
 pnpm sandbox [--reset]   # a store to try things on, at sandbox.localhost (local database only)
+pnpm store:front-page --store <slug> [--title …]  # a store's front page: cover texts, custom order card
 pnpm test                # Vitest: unit + integration + browser
 pnpm test:e2e            # Playwright locally
 pnpm e2e:remote [branch] # Playwright on GitHub Actions

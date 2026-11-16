@@ -240,6 +240,7 @@ export function Collections({
   heading?: string;
   limit?: number;
 }) {
+  const t = useT();
   const shown = collections.slice(0, limit);
   const withPhotos = layout.productCard !== "row" && shown.some((c) => c.imageUrl);
   return (
@@ -295,6 +296,16 @@ export function Collections({
           ))}
         </ul>
       )}
+      <Link
+        to={href("/collections")}
+        className={buttonVariants({
+          variant: "outline",
+          className: "min-h-11 justify-self-center px-6",
+        })}
+      >
+        {t("storefront.allCategories")}
+        <ArrowRightIcon aria-hidden className="size-4" />
+      </Link>
     </Section>
   );
 }

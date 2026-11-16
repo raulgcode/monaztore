@@ -29,7 +29,8 @@ const blocksArg = z
       '{ type: "highlights", id, items: [up to 4 short promises] };',
       `{ type: "steps", id, title, intro, items: [{ illustration, title, text }] (up to ${STEPS_MAX}) } how it works;`,
       '{ type: "whatsapp", id, title, text, label, phone (+506 8888 8888), message } a big WhatsApp button;',
-      '{ type: "form", id, title, text, messageLabel, buttonLabel } a request form (spam-protected); requests arrive by email and in list_requests.',
+      '{ type: "form", id, title, text, messageLabel, buttonLabel } a request form (spam-protected); requests arrive by email and in list_requests;',
+      '{ type: "cta", id, title, text, illustration, buttonLabel, buttonHref } a card with one big button ("Didn\'t find what you were looking for?" → the custom order page).',
       "Links (href) are /paths of the store, #anchors of a block or https://….",
     ].join(" "),
   );

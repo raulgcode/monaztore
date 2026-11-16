@@ -47,7 +47,7 @@ export function ProductCarousel({
   const arrow =
     "inline-flex size-11 items-center justify-center rounded-full border bg-background outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50";
   return (
-    <div className="grid gap-3">
+    <div className="grid min-w-0 grid-cols-1 gap-3">
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">{heading}</div>
         <div className="flex shrink-0 gap-2">
@@ -72,7 +72,7 @@ export function ProductCarousel({
       <ScrollShadow>
         <ul
           ref={scroller}
-          className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [scrollbar-width:none] sm:gap-5 [&::-webkit-scrollbar]:hidden"
+          className="relative flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [scrollbar-width:none] sm:gap-5 [&::-webkit-scrollbar]:hidden"
         >
           {products.map((product) => (
             <li

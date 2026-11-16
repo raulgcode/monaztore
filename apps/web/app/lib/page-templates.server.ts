@@ -65,6 +65,15 @@ export function pageTemplate(
           layout: "grid",
           limit: 4,
         },
+        {
+          type: "cta",
+          id: "not-found",
+          title: t("pages.tplFrontCtaTitle"),
+          text: t("pages.tplFrontCtaText"),
+          illustration: "heart",
+          buttonLabel: t("pages.tplFrontCtaButton"),
+          buttonHref: `/${t("pages.tplCustomSlug")}`,
+        },
       ],
     };
   }

@@ -104,6 +104,22 @@ describe("landing blocks", () => {
     });
   });
 
+  it("takes a call to action that leads to another page, and refuses one that runs a script", () => {
+    const cta = {
+      ...emptyBlock("cta", "not-found"),
+      title: "¿No encontraste lo que buscabas?",
+      buttonLabel: "Pedir uno personalizado",
+      buttonHref: "/medias-personalizadas",
+    };
+    const result = parse([cta]);
+    expect(result.success && result.data.blocks[0]).toMatchObject({
+      type: "cta",
+      illustration: "heart",
+      buttonHref: "/medias-personalizadas",
+    });
+    expect(parse([{ ...cta, buttonHref: "javascript:alert(1)" }]).success).toBe(false);
+  });
+
   it("is a landing only when it opens with a cover", () => {
     expect(isLandingPage([emptyBlock("heading", "a"), emptyBlock("hero", "b")])).toBe(false);
     expect(isLandingPage([])).toBe(false);
