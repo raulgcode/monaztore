@@ -352,7 +352,12 @@ export default function Checkout({ loaderData, actionData }: Route.ComponentProp
             </fieldset>
             <FieldErrors id={form.errorId} errors={form.errors} />
             {/* On the phone it stays at the bottom while the form scrolls, within the thumb's reach. */}
-            <div className="sticky bottom-0 z-20 -mx-4 grid border-t bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:static md:mx-0 md:border-0 md:p-0">
+            <div className="sticky bottom-0 z-20 -mx-4 grid gap-2 border-t bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:static md:mx-0 md:border-0 md:p-0">
+              {/* The summary sits below the form on the phone: the amount travels with the button. */}
+              <p className="flex justify-between font-semibold md:hidden">
+                <span>{t("storefront.total")}</span>
+                <span>{money(total)}</span>
+              </p>
               <Button type="submit" size="lg" disabled={placing}>
                 {placing ? t("storefront.placingOrder") : t("storefront.placeOrder")}
               </Button>

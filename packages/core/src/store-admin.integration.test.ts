@@ -4,14 +4,16 @@ import { eq, schema } from "@monaztore/db";
 import { createTestDatabase, createTestTenant } from "@monaztore/db/testing";
 import { afterAll, describe, expect, it } from "vitest";
 import { importCatalog, listImportedProducts } from "./catalog-import";
-import { placeOrder, submitPaymentReference, updateStorePayments } from "./orders";
+import { getOrderByToken, placeOrder, submitPaymentReference, updateStorePayments } from "./orders";
 import {
   cancelOrder,
   countOrdersToReview,
   getOrder,
   listOrders,
   listStoreDomains,
+  markOrderDelivered,
   markOrderPaid,
+  markOrderShipped,
   removeStoreDomain,
   setPrimaryDomain,
 } from "./store-admin";
@@ -37,7 +39,7 @@ const checkout: CheckoutInput = {
 };
 
 /** A store with a mug (3 in stock) that takes SINPE, and one order of 2 mugs. */
-async function storeWithOrder() {
+async function storeWithOrder(paymentMethod: CheckoutInput["paymentMethod"] = "sinpe") {
   const tenant = await createTestTenant(db);
   const owner = (await resolveTenant(db, tenant.userId, tenant.slug)) as TenantContext;
   await importCatalog(owner, {
@@ -71,7 +73,10 @@ async function storeWithOrder() {
     customers: [],
     warnings: [],
   });
-  await updateStorePayments(owner, { sinpe: { enabled: true, phone: "8888", holder: "T" } });
+  await updateStorePayments(owner, {
+    sinpe: { enabled: true, phone: "8888", holder: "T" },
+    cash: { enabled: true, note: "" },
+  });
   const [mug] = await listImportedProducts(owner, "woocommerce");
   const store: StorefrontContext = {
     db,
@@ -79,7 +84,7 @@ async function storeWithOrder() {
   };
   const placed = await placeOrder(store, {
     cart: [{ productId: mug?.id as string, variantId: null, quantity: 2 }],
-    checkout,
+    checkout: { ...checkout, paymentMethod },
     locale: "es",
   });
   const stock = async () =>
@@ -145,6 +150,84 @@ describe("orders in the workspace", () => {
     expect((await listOrders(ctx)).total).toBe(0);
     expect(await getOrder(ctx, 1001)).toBeUndefined();
     await expect(markOrderPaid(ctx, 1001)).rejects.toMatchObject({ code: "order_closed" });
+  });
+});
+
+describe("sending orders", () => {
+  it("a paid order waits to be sent, and the shopper is told with a link that opens it", async () => {
+    const { owner, store, placed } = await storeWithOrder();
+
+    const { notice } = await markOrderPaid(owner, 1001);
+
+    expect(notice).toMatchObject({ kind: "paid", number: 1001, email: "ana@example.com" });
+    expect(await countOrdersToReview(owner)).toBe(1);
+    expect((await listOrders(owner, { status: "to_ship" })).orders).toMatchObject([
+      { number: 1001, fulfillment: "unfulfilled" },
+    ]);
+    // The email's own link opens the order, and the first one still does.
+    expect(await getOrderByToken(store, notice?.token as string)).toMatchObject({ number: 1001 });
+    expect(await getOrderByToken(store, placed.token)).toMatchObject({ number: 1001 });
+  });
+
+  it("sending it keeps the tracking number, tells the shopper once and leaves the list", async () => {
+    const { owner, store } = await storeWithOrder();
+    await markOrderPaid(owner, 1001);
+
+    const first = await markOrderShipped(owner, 1001, { trackingNumber: " RR123CR " });
+    const again = await markOrderShipped(owner, 1001, { trackingNumber: "RR123CR" });
+
+    expect(first.notice).toMatchObject({ kind: "shipped", trackingNumber: "RR123CR" });
+    expect(again.notice).toBeNull();
+    expect(await getOrder(owner, 1001)).toMatchObject({
+      fulfillment: "shipped",
+      trackingNumber: "RR123CR",
+    });
+    expect((await listOrders(owner, { status: "to_ship" })).total).toBe(0);
+    expect(await getOrderByToken(store, first.notice?.token as string)).toMatchObject({
+      fulfillment: "shipped",
+      trackingNumber: "RR123CR",
+    });
+  });
+
+  it("an unpaid SINPE order can't be sent, and a delivered one is closed", async () => {
+    const { owner } = await storeWithOrder();
+    await expect(markOrderShipped(owner, 1001)).rejects.toMatchObject({ code: "not_paid" });
+
+    await markOrderPaid(owner, 1001);
+    await markOrderDelivered(owner, 1001);
+
+    expect((await getOrder(owner, 1001))?.fulfillment).toBe("delivered");
+    await expect(cancelOrder(owner, 1001)).rejects.toMatchObject({ code: "order_closed" });
+  });
+
+  it("cash goes out before it's paid, and delivering it marks it paid", async () => {
+    const { owner } = await storeWithOrder("cash");
+    expect((await listOrders(owner, { status: "to_ship" })).total).toBe(1);
+
+    const { notice } = await markOrderShipped(owner, 1001);
+    expect(notice).toMatchObject({ kind: "shipped", payOnDelivery: true });
+    await markOrderDelivered(owner, 1001);
+
+    expect(await getOrder(owner, 1001)).toMatchObject({ status: "paid", fulfillment: "delivered" });
+    const [customer] = await db
+      .select({ orders: schema.customer.ordersCount })
+      .from(schema.customer)
+      .where(eq(schema.customer.organizationId, owner.organizationId));
+    expect(customer?.orders).toBe(1);
+  });
+
+  it("cancelling tells the shopper", async () => {
+    const { owner } = await storeWithOrder();
+    const { notice } = await cancelOrder(owner, 1001);
+    expect(notice).toMatchObject({ kind: "cancelled", number: 1001 });
+  });
+
+  it("another workspace can't send the order", async () => {
+    await storeWithOrder("cash");
+    const other = await createTestTenant(db);
+    const ctx = (await resolveTenant(db, other.userId, other.slug)) as TenantContext;
+    await expect(markOrderShipped(ctx, 1001)).rejects.toMatchObject({ code: "not_found" });
+    await expect(markOrderDelivered(ctx, 1001)).rejects.toMatchObject({ code: "not_found" });
   });
 });
 

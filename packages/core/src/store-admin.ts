@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
-import { and, asc, count, type Database, desc, eq, inArray, schema, sql } from "@monaztore/db";
-import type { OrderStatus, StorePayments } from "@monaztore/db/schema";
+import { and, asc, count, type Database, desc, eq, inArray, or, schema, sql } from "@monaztore/db";
+import type { OrderFulfillment, OrderStatus, StorePayments } from "@monaztore/db/schema";
 import { queueOrderEinvoice } from "./einvoicing";
 import { DomainError } from "./errors";
 import type { TenantContext } from "./tenant";
@@ -12,6 +12,8 @@ export const ADMIN_ORDERS_PAGE_SIZE = 25;
 export interface OrderRow {
   number: number;
   status: OrderStatus;
+  fulfillment: OrderFulfillment;
+  needsShipping: boolean;
   name: string;
   total: number;
   currency: string;
@@ -19,14 +21,30 @@ export interface OrderRow {
   createdAt: Date;
 }
 
-/** The store's orders, newest first; `status` narrows to one state. */
+/**
+ * Orders the store has to send: paid (or paid on delivery and not cancelled), with something to
+ * ship, and not sent yet.
+ */
+const toShip = and(
+  eq(schema.order.needsShipping, true),
+  eq(schema.order.fulfillment, "unfulfilled"),
+  or(
+    eq(schema.order.status, "paid"),
+    and(eq(schema.order.paymentMethod, "cash"), eq(schema.order.status, "pending_payment")),
+  ),
+);
+
+/** A filter of the order list: a payment state, or the ones still to send (`to_ship`). */
+export type OrderListFilter = OrderStatus | "to_ship";
+
+/** The store's orders, newest first; `status` narrows to one state, or to what's left to send. */
 export async function listOrders(
   ctx: TenantContext,
-  { status, page = 1 }: { status?: OrderStatus; page?: number } = {},
+  { status, page = 1 }: { status?: OrderListFilter; page?: number } = {},
 ): Promise<{ orders: OrderRow[]; total: number; page: number; pages: number }> {
   const where = and(
     eq(schema.order.organizationId, ctx.organizationId),
-    status ? eq(schema.order.status, status) : undefined,
+    status === "to_ship" ? toShip : status ? eq(schema.order.status, status) : undefined,
   );
   const [totals] = await ctx.db.select({ total: count() }).from(schema.order).where(where);
   const total = totals?.total ?? 0;
@@ -36,6 +54,8 @@ export async function listOrders(
     .select({
       number: schema.order.number,
       status: schema.order.status,
+      fulfillment: schema.order.fulfillment,
+      needsShipping: schema.order.needsShipping,
       name: schema.order.name,
       total: schema.order.total,
       currency: schema.order.currency,
@@ -50,7 +70,7 @@ export async function listOrders(
   return { orders, total, page: current, pages };
 }
 
-/** How many orders wait for the store: a payment to check, or one still unpaid. */
+/** How many orders wait for the store: a payment to check, or one to send. */
 export async function countOrdersToReview(ctx: TenantContext): Promise<number> {
   const [row] = await ctx.db
     .select({ total: count() })
@@ -58,7 +78,7 @@ export async function countOrdersToReview(ctx: TenantContext): Promise<number> {
     .where(
       and(
         eq(schema.order.organizationId, ctx.organizationId),
-        eq(schema.order.status, "payment_submitted"),
+        or(eq(schema.order.status, "payment_submitted"), toShip),
       ),
     );
   return row?.total ?? 0;
@@ -105,7 +125,12 @@ export async function getOrder(ctx: TenantContext, number: number) {
       ),
     )
     .orderBy(asc(schema.orderDownload.position));
-  const { tokenHash: _secret, downloadTokenHash: _link, ...order } = found;
+  const {
+    tokenHash: _secret,
+    followTokenHashes: _follow,
+    downloadTokenHash: _link,
+    ...order
+  } = found;
   return { ...order, lines, downloads };
 }
 
@@ -162,68 +187,222 @@ export async function renewDownloadsLink(
 }
 
 /**
+ * What the shopper is told when their order moves (payment confirmed, sent or ready to pick up,
+ * cancelled), with a new link to its page: only its SHA-256 is kept, so this is the one moment it
+ * exists. The links of earlier emails keep working (the last few).
+ */
+export interface OrderNotice {
+  kind: "paid" | "shipped" | "cancelled";
+  token: string;
+  number: number;
+  email: string;
+  name: string;
+  locale: string;
+  total: number;
+  currency: string;
+  /** The shipping option chosen; `pickup` = they collect it at the store. */
+  shippingMethod: { name: string; pickup: boolean } | null;
+  trackingNumber: string | null;
+  /** Paid on delivery and not paid yet: the shopper has the money ready when it arrives. */
+  payOnDelivery: boolean;
+}
+
+/** How many links of follow-up emails an order keeps (older ones stop working). */
+const FOLLOW_LINKS_MAX = 5;
+
+type OrderRowFull = typeof schema.order.$inferSelect;
+
+async function orderNotice(
+  db: Database,
+  order: OrderRowFull,
+  kind: OrderNotice["kind"],
+): Promise<OrderNotice> {
+  const token = randomBytes(24).toString("base64url");
+  const hashes = [...order.followTokenHashes, createHash("sha256").update(token).digest("hex")];
+  await db
+    .update(schema.order)
+    .set({ followTokenHashes: hashes.slice(-FOLLOW_LINKS_MAX) })
+    .where(eq(schema.order.id, order.id));
+  return {
+    kind,
+    token,
+    number: order.number,
+    email: order.email,
+    name: order.name,
+    locale: order.locale,
+    total: order.total,
+    currency: order.currency,
+    shippingMethod: order.shippingMethod
+      ? { name: order.shippingMethod.name, pickup: order.shippingMethod.pickup }
+      : null,
+    trackingNumber: order.trackingNumber,
+    payOnDelivery: order.paymentMethod === "cash" && order.status !== "paid",
+  };
+}
+
+/** The order of this store, locked until the transaction ends. */
+async function lockOrder(tx: Database, ctx: TenantContext, number: number) {
+  const [found] = await tx
+    .select()
+    .from(schema.order)
+    .where(
+      and(eq(schema.order.organizationId, ctx.organizationId), eq(schema.order.number, number)),
+    )
+    .for("update");
+  return found;
+}
+
+/** Marks a locked open order paid: downloads open, its invoice queues, the customer's spend grows. */
+async function payOrder(
+  tx: Database,
+  ctx: TenantContext,
+  found: OrderRowFull,
+  now: Date,
+): Promise<DownloadsLink | null> {
+  await tx
+    .update(schema.order)
+    .set({ status: "paid", paidAt: now })
+    .where(eq(schema.order.id, found.id));
+  // Digital products open now, for as many days as each one gives from today.
+  await tx
+    .update(schema.orderDownload)
+    .set({
+      expiresAt: sql`case when ${schema.orderDownload.downloadDays} is null then null else ${now}::timestamptz + make_interval(days => ${schema.orderDownload.downloadDays}) end`,
+    })
+    .where(eq(schema.orderDownload.orderId, found.id));
+  const downloads = await newDownloadsLink(tx, found);
+  // Costa Rica: the order's invoice or ticket goes to Hacienda's queue, if the store issues
+  // them on payment. Paid without it all the same if something stops it.
+  await queueOrderEinvoice(tx, {
+    organizationId: ctx.organizationId,
+    orderId: found.id,
+    onlyAuto: true,
+  }).catch((error: unknown) => {
+    if (!(error instanceof DomainError)) throw error;
+  });
+  if (found.customerId) {
+    await tx
+      .update(schema.customer)
+      .set({
+        ordersCount: sql`${schema.customer.ordersCount} + 1`,
+        totalSpent: sql`${schema.customer.totalSpent} + ${found.total}`,
+      })
+      .where(eq(schema.customer.id, found.customerId));
+  }
+  return downloads;
+}
+
+const isOpen = (status: OrderStatus) =>
+  status === "pending_payment" || status === "payment_submitted";
+
+/**
  * The store saw the money: the order is paid, and the customer's orders and spend go up. Works
- * from "waiting" too, for a payment the shopper never reported.
+ * from "waiting" too, for a payment the shopper never reported. `notice` tells the shopper of an
+ * order that ships (a download gets its downloads email instead), unless it was already delivered.
  */
 export async function markOrderPaid(
   ctx: TenantContext,
   number: number,
   now = new Date(),
-): Promise<{ downloads: DownloadsLink | null }> {
-  return ctx.db.transaction(async (tx) => {
-    const [updated] = await tx
-      .update(schema.order)
-      .set({ status: "paid", paidAt: now })
-      .where(
-        and(
-          eq(schema.order.organizationId, ctx.organizationId),
-          eq(schema.order.number, number),
-          inArray(schema.order.status, ["pending_payment", "payment_submitted"]),
-        ),
-      )
-      .returning({
-        id: schema.order.id,
-        customerId: schema.order.customerId,
-        total: schema.order.total,
-        number: schema.order.number,
-        email: schema.order.email,
-        name: schema.order.name,
-        locale: schema.order.locale,
-      });
-    if (!updated) throw new DomainError("order_closed", "Only an open order can be paid");
-    // Digital products open now, for as many days as each one gives from today.
-    await tx
-      .update(schema.orderDownload)
-      .set({
-        expiresAt: sql`case when ${schema.orderDownload.downloadDays} is null then null else ${now}::timestamptz + make_interval(days => ${schema.orderDownload.downloadDays}) end`,
-      })
-      .where(eq(schema.orderDownload.orderId, updated.id));
-    const downloads = await newDownloadsLink(tx as unknown as Database, updated);
-    // Costa Rica: the order's invoice or ticket goes to Hacienda's queue, if the store issues
-    // them on payment. Paid without it all the same if something stops it.
-    await queueOrderEinvoice(tx, {
-      organizationId: ctx.organizationId,
-      orderId: updated.id,
-      onlyAuto: true,
-    }).catch((error: unknown) => {
-      if (!(error instanceof DomainError)) throw error;
-    });
-    if (updated.customerId) {
-      await tx
-        .update(schema.customer)
-        .set({
-          ordersCount: sql`${schema.customer.ordersCount} + 1`,
-          totalSpent: sql`${schema.customer.totalSpent} + ${updated.total}`,
-        })
-        .where(eq(schema.customer.id, updated.customerId));
+): Promise<{ downloads: DownloadsLink | null; notice: OrderNotice | null }> {
+  return ctx.db.transaction(async (transaction) => {
+    const tx = transaction as unknown as Database;
+    const found = await lockOrder(tx, ctx, number);
+    if (!found || !isOpen(found.status)) {
+      throw new DomainError("order_closed", "Only an open order can be paid");
     }
-    return { downloads };
+    const downloads = await payOrder(tx, ctx, found, now);
+    const notice =
+      found.needsShipping && found.fulfillment !== "delivered"
+        ? await orderNotice(tx, { ...found, status: "paid" }, "paid")
+        : null;
+    return { downloads, notice };
   });
 }
 
-/** Cancels an unpaid order and puts its counted stock back. */
-export async function cancelOrder(ctx: TenantContext, number: number): Promise<void> {
-  await ctx.db.transaction(async (tx) => {
+/**
+ * The store sent the order (or it's ready to pick up at the store), with the courier's tracking
+ * number if there is one. Only a paid order, or one paid on delivery; typing it again on a sent
+ * order changes the tracking number without telling the shopper twice.
+ */
+export async function markOrderShipped(
+  ctx: TenantContext,
+  number: number,
+  { trackingNumber }: { trackingNumber?: string | null } = {},
+  now = new Date(),
+): Promise<{ notice: OrderNotice | null }> {
+  const tracking = trackingNumber?.trim().slice(0, 120) || null;
+  return ctx.db.transaction(async (transaction) => {
+    const tx = transaction as unknown as Database;
+    const found = await lockOrder(tx, ctx, number);
+    if (!found) throw new DomainError("not_found", "There is no order with that number");
+    if (!found.needsShipping)
+      throw new DomainError(
+        "nothing_to_ship",
+        "This order only has downloads: there is nothing to send",
+      );
+    if (found.status === "cancelled")
+      throw new DomainError("order_closed", "This order was cancelled");
+    if (found.status !== "paid" && found.paymentMethod !== "cash") {
+      throw new DomainError("not_paid", "Confirm the payment before sending it");
+    }
+    if (found.fulfillment === "delivered")
+      throw new DomainError("delivered", "This order was already delivered");
+    const first = found.fulfillment === "unfulfilled";
+    await tx
+      .update(schema.order)
+      .set({
+        fulfillment: "shipped",
+        trackingNumber: tracking,
+        shippedAt: first ? now : found.shippedAt,
+      })
+      .where(eq(schema.order.id, found.id));
+    return {
+      notice: first
+        ? await orderNotice(tx, { ...found, trackingNumber: tracking }, "shipped")
+        : null,
+    };
+  });
+}
+
+/**
+ * The shopper has it. Paid on delivery, this is also when the money came in: the order is paid
+ * with it (its invoice and the customer's spend), without a "payment confirmed" email.
+ */
+export async function markOrderDelivered(
+  ctx: TenantContext,
+  number: number,
+  now = new Date(),
+): Promise<void> {
+  await ctx.db.transaction(async (transaction) => {
+    const tx = transaction as unknown as Database;
+    const found = await lockOrder(tx, ctx, number);
+    if (!found) throw new DomainError("not_found", "There is no order with that number");
+    if (!found.needsShipping)
+      throw new DomainError(
+        "nothing_to_ship",
+        "This order only has downloads: there is nothing to send",
+      );
+    if (found.status === "cancelled")
+      throw new DomainError("order_closed", "This order was cancelled");
+    if (found.status !== "paid" && found.paymentMethod !== "cash") {
+      throw new DomainError("not_paid", "Confirm the payment before delivering it");
+    }
+    if (found.fulfillment === "delivered") return;
+    if (isOpen(found.status)) await payOrder(tx, ctx, found, now);
+    await tx
+      .update(schema.order)
+      .set({ fulfillment: "delivered", deliveredAt: now, shippedAt: found.shippedAt ?? now })
+      .where(eq(schema.order.id, found.id));
+  });
+}
+
+/** Cancels an unpaid order and puts its counted stock back; `notice` tells the shopper. */
+export async function cancelOrder(
+  ctx: TenantContext,
+  number: number,
+): Promise<{ notice: OrderNotice }> {
+  return ctx.db.transaction(async (tx) => {
     const [updated] = await tx
       .update(schema.order)
       .set({ status: "cancelled" })
@@ -232,9 +411,11 @@ export async function cancelOrder(ctx: TenantContext, number: number): Promise<v
           eq(schema.order.organizationId, ctx.organizationId),
           eq(schema.order.number, number),
           inArray(schema.order.status, ["pending_payment", "payment_submitted"]),
+          // Delivered, it can't come back to the shelf.
+          sql`${schema.order.fulfillment} <> 'delivered'`,
         ),
       )
-      .returning({ id: schema.order.id, couponId: schema.order.couponId });
+      .returning();
     if (!updated) throw new DomainError("order_closed", "Only an open order can be cancelled");
     // The coupon's use comes back too.
     if (updated.couponId) {
@@ -280,6 +461,7 @@ export async function cancelOrder(ctx: TenantContext, number: number): Promise<v
           );
       }
     }
+    return { notice: await orderNotice(tx as unknown as Database, updated, "cancelled") };
   });
 }
 

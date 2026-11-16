@@ -34,6 +34,34 @@ export const email = {
   orderDiscount: "Discount ({code})",
   orderShipping: "Shipping: {name}",
   orderShippingFree: "Free",
+  orderDelivery: "How it gets to you:",
+  storeOrderPhone: "Phone: {phone}",
+  storeOrderPayment: "Pays with: {payment}",
+  storeOrderNotes: "Their notes: {notes}",
+  storeOrderNoteCash:
+    "Paid on delivery: prepare it and send it, and mark it delivered in the order when the money comes in.",
+  orderUpdateHeading: "Hi, {name}",
+  orderUpdateNote:
+    "The button opens your order, with its status, at any time. Questions? Reply to this email.",
+  orderPaidSubject: "{store}: we confirmed your payment for order #{number}",
+  orderPaidBody:
+    "{store} got your payment of {total}. They're preparing your order and will email you when it's on its way.",
+  orderPaidBodyPickup:
+    "{store} got your payment of {total}. They're preparing your order and will email you when it's ready to pick up.",
+  orderShippedSubject: "{store}: your order #{number} is on its way",
+  orderShippedBody: "{store} sent your order #{number} with {method}.",
+  orderShippedBodyPlain: "{store} sent your order #{number}.",
+  orderReadySubject: "{store}: your order #{number} is ready to pick up",
+  orderReadyBody: "Your order #{number} is ready to pick up ({method}).",
+  orderTracking: "Tracking number: {tracking}",
+  orderPayOnDelivery: "Have {total} ready: you pay when it arrives.",
+  orderPayOnPickup: "You pay {total} when you pick it up.",
+  orderCancelledSubject: "{store}: your order #{number} was cancelled",
+  orderCancelledBody:
+    "{store} cancelled your order #{number}. If you already paid or think it's a mistake, reply to this email.",
+  payment_sinpe: "SINPE Móvil",
+  payment_transfer: "Bank transfer",
+  payment_cash: "Cash on delivery",
   orderTotal: "Total: {total}",
   orderPayHow:
     "To confirm it, pay {total} and send the reference from your order's page. The store prepares it once the payment arrives.",

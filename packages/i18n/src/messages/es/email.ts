@@ -39,6 +39,34 @@ export const email = {
   orderDiscount: "Descuento ({code})",
   orderShipping: "Envío: {name}",
   orderShippingFree: "Gratis",
+  orderDelivery: "Cómo te llega:",
+  storeOrderPhone: "Teléfono: {phone}",
+  storeOrderPayment: "Paga con: {payment}",
+  storeOrderNotes: "Sus notas: {notes}",
+  storeOrderNoteCash:
+    "Pago contra entrega: prepáralo y envíalo, y márcalo entregado en el pedido cuando recibas el dinero.",
+  orderUpdateHeading: "Hola, {name}",
+  orderUpdateNote:
+    "El botón abre tu pedido, con su estado, cuando quieras. ¿Dudas? Responde este correo.",
+  orderPaidSubject: "{store}: confirmamos tu pago del pedido #{number}",
+  orderPaidBody:
+    "{store} recibió tu pago de {total}. Ya preparan tu pedido y te avisan por correo cuando vaya en camino.",
+  orderPaidBodyPickup:
+    "{store} recibió tu pago de {total}. Ya preparan tu pedido y te avisan por correo cuando esté listo para recoger.",
+  orderShippedSubject: "{store}: tu pedido #{number} va en camino",
+  orderShippedBody: "{store} envió tu pedido #{number} por {method}.",
+  orderShippedBodyPlain: "{store} envió tu pedido #{number}.",
+  orderReadySubject: "{store}: tu pedido #{number} está listo para recoger",
+  orderReadyBody: "Tu pedido #{number} está listo para recoger ({method}).",
+  orderTracking: "Número de guía: {tracking}",
+  orderPayOnDelivery: "Ten listos {total}: pagas cuando te llegue.",
+  orderPayOnPickup: "Pagas {total} cuando lo recojas.",
+  orderCancelledSubject: "{store}: tu pedido #{number} fue cancelado",
+  orderCancelledBody:
+    "{store} canceló tu pedido #{number}. Si ya pagaste o crees que es un error, responde este correo.",
+  payment_sinpe: "SINPE Móvil",
+  payment_transfer: "Transferencia bancaria",
+  payment_cash: "Pago contra entrega",
   orderTotal: "Total: {total}",
   orderPayHow:
     "Para confirmarlo, paga {total} y manda el comprobante desde la página de tu pedido. La tienda lo prepara cuando llega el pago.",

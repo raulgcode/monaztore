@@ -32,6 +32,8 @@ export interface OrderPlacedEmailProps extends EmailBaseProps {
   /** The total, written with its currency. */
   total: string;
   payTo: OrderEmailPayTo;
+  /** How it reaches them, already written: the option, then the address (or the pickup). */
+  delivery?: string[];
   /** `/orders/:token` on the store's domain: their only way back to the order. */
   url: string;
 }
@@ -47,6 +49,7 @@ export function OrderPlacedEmail({
   lines,
   total,
   payTo,
+  delivery = [],
   url,
 }: OrderPlacedEmailProps) {
   const t = emailT(locale);
@@ -66,6 +69,17 @@ export function OrderPlacedEmail({
         </EmailText>
       ))}
       <EmailText>{t("email.orderTotal", { total })}</EmailText>
+      {delivery.length > 0 ? (
+        <EmailText>
+          {t("email.orderDelivery")}
+          {delivery.map((line) => (
+            <span key={line}>
+              <br />
+              {line}
+            </span>
+          ))}
+        </EmailText>
+      ) : null}
       {payTo.cash ? (
         <>
           <EmailText>{t("email.orderPayCash", { total })}</EmailText>
@@ -110,6 +124,13 @@ export interface StoreOrderEmailProps extends EmailBaseProps {
   total: string;
   /** The payment reference the shopper typed, for `reference`. */
   reference?: string | null;
+  /** What the store needs to send it: phone, how they pay, where it goes and their notes. */
+  phone?: string;
+  payment?: string;
+  delivery?: string[];
+  notes?: string;
+  /** Paid on delivery: the store sends it first and is paid when it arrives. */
+  payOnDelivery?: boolean;
   /** The order in the workspace. */
   url: string;
 }
@@ -135,6 +156,11 @@ export function StoreOrderEmail({
   lines,
   total,
   reference,
+  phone,
+  payment,
+  delivery = [],
+  notes,
+  payOnDelivery = false,
   url,
 }: StoreOrderEmailProps) {
   const t = emailT(locale);
@@ -156,11 +182,35 @@ export function StoreOrderEmail({
           • {line.label}: {line.total}
         </EmailText>
       ))}
+      {kind === "placed" ? (
+        <>
+          {phone ? <EmailText>{t("email.storeOrderPhone", { phone })}</EmailText> : null}
+          {payment ? <EmailText>{t("email.storeOrderPayment", { payment })}</EmailText> : null}
+          {delivery.length > 0 ? (
+            <EmailText>
+              {t("email.orderDelivery")}
+              {delivery.map((line) => (
+                <span key={line}>
+                  <br />
+                  {line}
+                </span>
+              ))}
+            </EmailText>
+          ) : null}
+          {notes ? <EmailText>{t("email.storeOrderNotes", { notes })}</EmailText> : null}
+        </>
+      ) : null}
       <EmailButton href={url} locale={locale}>
         {t("email.storeOrderButton")}
       </EmailButton>
       <EmailNote>
-        {t(kind === "placed" ? "email.storeOrderNote" : "email.storeReferenceNote")}
+        {t(
+          kind === "reference"
+            ? "email.storeReferenceNote"
+            : payOnDelivery
+              ? "email.storeOrderNoteCash"
+              : "email.storeOrderNote",
+        )}
       </EmailNote>
     </EmailLayout>
   );

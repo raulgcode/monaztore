@@ -35,6 +35,13 @@ export {
 } from "./templates/einvoice";
 export { MagicLinkEmail, type MagicLinkEmailProps, magicLinkSubject } from "./templates/magic-link";
 export {
+  OrderUpdateEmail,
+  type OrderUpdateEmailProps,
+  type OrderUpdateKind,
+  orderUpdateMessage,
+  orderUpdateSubject,
+} from "./templates/order-updates";
+export {
   type OrderEmailLine,
   type OrderEmailPayTo,
   OrderPlacedEmail,

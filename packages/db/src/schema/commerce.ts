@@ -136,9 +136,15 @@ export interface OrderShipping {
 
 /**
  * pending_payment → the shopper still has to pay; payment_submitted → they sent the reference and
- * the store checks it; paid; cancelled. Shipping states come later.
+ * the store checks it; paid; cancelled. Where the goods are goes apart, in `OrderFulfillment`.
  */
 export type OrderStatus = "pending_payment" | "payment_submitted" | "paid" | "cancelled";
+
+/**
+ * Where an order that ships is: unfulfilled → shipped (sent, or ready to pick up at the store)
+ * → delivered. Apart from the payment: an order paid on delivery ships before it's paid.
+ */
+export type OrderFulfillment = "unfulfilled" | "shipped" | "delivered";
 
 /** Whom the shopper wants the invoice made out to, in Costa Rica (Hacienda's ID types). */
 export interface OrderTaxId {
@@ -162,6 +168,11 @@ export const order = pgTable(
     organizationId: organizationId(),
     number: integer().notNull(),
     tokenHash: text().notNull(),
+    /**
+     * More links to the same page, one per email that follows the order (payment confirmed,
+     * shipped…): only their SHA-256, the last few. The first link keeps working too.
+     */
+    followTokenHashes: text().array().notNull().default([]),
     status: text().$type<OrderStatus>().notNull().default("pending_payment"),
     paymentMethod: text().$type<PaymentMethod>().notNull(),
     /** What the shopper says identifies their payment (SINPE or transfer reference). */
@@ -194,6 +205,11 @@ export const order = pgTable(
     shippingMethod: jsonb().$type<OrderShipping>(),
     /** What the shipping costs (minor units); `total` = `subtotal` − `discount` + this. */
     shippingFee: bigint({ mode: "number" }).notNull().default(0),
+    fulfillment: text().$type<OrderFulfillment>().notNull().default("unfulfilled"),
+    /** The courier's tracking number or a note on the delivery, as the store typed it. */
+    trackingNumber: text(),
+    shippedAt: timestamp({ withTimezone: true }),
+    deliveredAt: timestamp({ withTimezone: true }),
     total: bigint({ mode: "number" }).notNull(),
     locale: text().notNull().default("en"),
     ...timestamps,

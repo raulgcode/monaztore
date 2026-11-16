@@ -10,9 +10,10 @@ import {
   type ShippingOption,
   shippingOptions,
 } from "@monaztore/contracts";
-import { and, asc, type Database, eq, inArray, schema, sql } from "@monaztore/db";
+import { and, asc, type Database, eq, inArray, or, schema, sql } from "@monaztore/db";
 import type {
   EinvoiceKind,
+  OrderFulfillment,
   OrderShipping,
   OrderStatus,
   OrderTaxId,
@@ -754,6 +755,7 @@ export interface ShopperOrder {
   paymentReference: string | null;
   name: string;
   email: string;
+  phone: string;
   currency: string;
   subtotal: number;
   /** What a coupon took off, and its code. */
@@ -767,6 +769,11 @@ export interface ShopperOrder {
   /** The shipping option chosen (picked up = no address), and what it costs. */
   shippingMethod: OrderShipping | null;
   shippingFee: number;
+  /** Where the goods are: sent (or ready to pick up) and delivered, with the tracking number. */
+  fulfillment: OrderFulfillment;
+  trackingNumber: string | null;
+  shippedAt: Date | null;
+  deliveredAt: Date | null;
   /** The files it delivers, once paid. */
   downloads: ShopperDownload[];
   lines: {
@@ -830,7 +837,10 @@ async function orderByToken(ctx: StorefrontContext, token: string) {
     .where(
       and(
         eq(schema.order.organizationId, ctx.store.organizationId),
-        eq(schema.order.tokenHash, hashToken(token)),
+        or(
+          eq(schema.order.tokenHash, hashToken(token)),
+          sql`${hashToken(token)} = any(${schema.order.followTokenHashes})`,
+        ),
       ),
     );
   return found;
@@ -867,6 +877,7 @@ export async function getOrderByToken(
     paymentReference: found.paymentReference,
     name: found.name,
     email: found.email,
+    phone: found.phone,
     currency: found.currency,
     subtotal: found.subtotal,
     discount: found.discount,
@@ -877,6 +888,10 @@ export async function getOrderByToken(
     needsShipping: found.needsShipping,
     shippingMethod: found.shippingMethod,
     shippingFee: found.shippingFee,
+    fulfillment: found.fulfillment,
+    trackingNumber: found.trackingNumber,
+    shippedAt: found.shippedAt,
+    deliveredAt: found.deliveredAt,
     downloads,
     lines,
     payTo: options[method] ? { [method]: options[method] } : {},

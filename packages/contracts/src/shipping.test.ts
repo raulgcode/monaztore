@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  freeShippingNote,
   pickShippingOption,
   shippingFromForm,
   shippingOptions,
@@ -46,5 +47,32 @@ describe("the shipping form", () => {
     expect(shippingToForm({ methods: [correos] })).toEqual({
       methods: [{ id: "c", name: "Correos", price: "2500", freeFrom: "20000", pickup: "" }],
     });
+  });
+});
+
+describe("freeShippingNote", () => {
+  const methods = [
+    { id: "courier", name: "Courier", price: 250_000, freeFrom: 3_000_000, pickup: false },
+    { id: "pickup", name: "Pickup", price: 0, freeFrom: null, pickup: true },
+  ];
+
+  it("says how much is left to the courier's free shipping", () => {
+    expect(freeShippingNote(shippingOptions(methods, 1_000_000), 1_000_000)).toEqual({
+      kind: "left",
+      name: "Courier",
+      left: 2_000_000,
+    });
+  });
+
+  it("says it ships free once the cart reaches it", () => {
+    expect(freeShippingNote(shippingOptions(methods, 3_000_000), 3_000_000)).toEqual({
+      kind: "free",
+      name: "Courier",
+    });
+  });
+
+  it("says nothing when no option is ever free", () => {
+    const paid = [{ ...methods[0], freeFrom: null }] as typeof methods;
+    expect(freeShippingNote(shippingOptions(paid, 1_000_000), 1_000_000)).toBeNull();
   });
 });

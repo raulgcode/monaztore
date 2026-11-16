@@ -4,6 +4,7 @@ import {
   listStoreDomains,
   type TenantContext,
   updateStorePayments,
+  updateStoreShipping,
 } from "@monaztore/core";
 import { and, type Database, eq, schema } from "@monaztore/db";
 import { project } from "@monaztore/env/project";
@@ -90,6 +91,20 @@ export async function seedSandbox(db: Database, options: SandboxOptions = sandbo
       iban: "CR05015202001026284066",
       holder: `${options.name} S.A.`,
     },
+    cash: { enabled: true, note: "Cash or SINPE Móvil to the courier." },
+  });
+  // The usual way a shop in Costa Rica delivers: a courier, free from an amount, or pickup.
+  await updateStoreShipping(owner, {
+    methods: [
+      {
+        id: "courier",
+        name: "Correos de Costa Rica",
+        price: 250_000,
+        freeFrom: 3_000_000,
+        pickup: false,
+      },
+      { id: "pickup", name: "Pick up at the store", price: 0, freeFrom: null, pickup: true },
+    ],
   });
   const domains = await listStoreDomains(owner);
   if (!domains.some((domain) => domain.hostname === options.hostname)) {

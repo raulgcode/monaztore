@@ -359,14 +359,17 @@ describe("buying a digital product", () => {
     });
   });
 
-  it("an order of things to ship sends no downloads email", async () => {
+  it("an order of things to ship sends no downloads email, only its paid notice", async () => {
     const { owner, store, mugId } = await shop();
     const placed = await placeOrder(store, {
       cart: [{ productId: mugId, variantId: null, quantity: 1 }],
       checkout: { ...contact, line1: "100 m norte", city: "Heredia", province: "Heredia" },
       locale: "es",
     });
-    expect(await markOrderPaid(owner, placed.number)).toEqual({ downloads: null });
+    expect(await markOrderPaid(owner, placed.number)).toMatchObject({
+      downloads: null,
+      notice: { kind: "paid" },
+    });
     expect(await getOrderByToken(store, placed.token)).toMatchObject({
       needsShipping: true,
       downloads: [],

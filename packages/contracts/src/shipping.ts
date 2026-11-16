@@ -130,3 +130,21 @@ export function shippingToForm(shipping: StoreShipping) {
     })),
   };
 }
+
+/**
+ * What the cart says about free shipping: how much is left to reach the nearest "free from" of a
+ * delivery the store charges for, or that it already ships free. Null when no option is ever free.
+ */
+export function freeShippingNote(
+  options: readonly ShippingOption[],
+  amount: number,
+): { kind: "free"; name: string } | { kind: "left"; name: string; left: number } | null {
+  const delivered = options.filter((option) => !option.pickup && option.freeFrom !== null);
+  const free = delivered.find((option) => option.free);
+  if (free) return { kind: "free", name: free.name };
+  const nearest = delivered
+    .filter((option) => option.price > 0)
+    .sort((a, b) => (a.freeFrom ?? 0) - (b.freeFrom ?? 0))[0];
+  if (!nearest || nearest.freeFrom === null) return null;
+  return { kind: "left", name: nearest.name, left: Math.max(nearest.freeFrom - amount, 0) };
+}

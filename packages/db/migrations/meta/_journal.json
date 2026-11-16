@@ -92,6 +92,13 @@
       "when": 1794773261636,
       "tag": "0012_brown_tombstone",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794797478562,
+      "tag": "0013_freezing_scarlet_witch",
+      "breakpoints": true
     }
   ]
 }

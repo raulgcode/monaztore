@@ -1,7 +1,6 @@
 import { listOrders } from "@monaztore/core";
-import type { OrderStatus } from "@monaztore/db/schema";
 import { href, Link, useLocation } from "react-router";
-import { OrderStatusBadge } from "~/components/orders/order-status";
+import { FulfillmentBadge, OrderStatusBadge } from "~/components/orders/order-status";
 import { PageHeader } from "~/components/page-header";
 import { buttonVariants } from "~/components/ui/button";
 import { ScrollShadow } from "~/components/ui/scroll-shadow";
@@ -13,7 +12,14 @@ import { pageParam } from "~/lib/storefront.server";
 import { cn } from "~/lib/utils";
 import type { Route } from "./+types/orders";
 
-const filters = ["all", "payment_submitted", "pending_payment", "paid", "cancelled"] as const;
+const filters = [
+  "all",
+  "payment_submitted",
+  "to_ship",
+  "pending_payment",
+  "paid",
+  "cancelled",
+] as const;
 type Filter = (typeof filters)[number];
 
 export function meta({ matches }: Route.MetaArgs) {
@@ -25,7 +31,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const asked = url.searchParams.get("status");
   const filter: Filter = filters.includes(asked as Filter) ? (asked as Filter) : "all";
   const result = await listOrders(context.get(tenantContext), {
-    status: filter === "all" ? undefined : (filter as OrderStatus),
+    status: filter === "all" ? undefined : filter,
     page: pageParam(url),
   });
   return { ...result, filter, i18n: translations(context, "orders") };
@@ -82,8 +88,11 @@ export default function Orders({ loaderData, params }: Route.ComponentProps) {
                 <span className="text-sm text-muted-foreground">
                   {date.format(new Date(order.createdAt))}
                 </span>
-                <span className="text-right">
+                <span className="flex flex-wrap justify-end gap-1">
                   <OrderStatusBadge status={order.status} />
+                  {order.needsShipping && order.status !== "cancelled" ? (
+                    <FulfillmentBadge fulfillment={order.fulfillment} />
+                  ) : null}
                 </span>
               </Link>
             </li>

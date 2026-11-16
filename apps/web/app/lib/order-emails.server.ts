@@ -1,13 +1,17 @@
 import {
   getOrderByToken,
+  type OrderNotice,
   type ShopperOrder,
   type StorefrontContext,
+  storeIdentity,
   storeOwnerContacts,
+  type TenantContext,
 } from "@monaztore/core";
 import {
   emailT,
   type OrderEmailLine,
   orderPlacedMessage,
+  orderUpdateMessage,
   storeOrderMessage,
 } from "@monaztore/email";
 import { defaultLocale, type Locale, parseLocale } from "@monaztore/i18n";
@@ -41,6 +45,15 @@ function orderLines(order: ShopperOrder, locale: Locale): OrderEmailLine[] {
   return lines;
 }
 
+/** How it reaches them: the option chosen, then where (nothing more for a pickup). */
+function deliveryLines(order: ShopperOrder): string[] {
+  if (!order.needsShipping) return [];
+  const method = order.shippingMethod ? [order.shippingMethod.name] : [];
+  if (order.shippingMethod?.pickup) return method;
+  const { line1, city, province } = order.shippingAddress;
+  return [...method, line1, [city, province].filter(Boolean).join(", ")].filter(Boolean);
+}
+
 /** The order in the workspace, on APP_URL: where the owner confirms the payment. */
 function workspaceOrderUrl(store: StorefrontContext, number: number) {
   return `${env.APP_URL}${href("/app/:workspace/orders/:number", {
@@ -72,6 +85,11 @@ async function tellOwners(
             lines: orderLines(order, lang),
             total: formatPrice(order.total, order.currency, lang),
             reference: order.paymentReference,
+            phone: order.phone,
+            payment: emailT(lang)(`email.payment_${order.paymentMethod}`),
+            delivery: deliveryLines(order),
+            notes: order.shippingAddress.notes,
+            payOnDelivery: order.paymentMethod === "cash",
             url: workspaceOrderUrl(store, order.number),
           }),
         });
@@ -108,6 +126,7 @@ export async function sendOrderPlacedEmails(
           lines: orderLines(order, shopperLocale),
           total: formatPrice(order.total, order.currency, shopperLocale),
           payTo: order.payTo,
+          delivery: deliveryLines(order),
           url,
         }),
       })
@@ -126,4 +145,52 @@ export async function sendPaymentReferenceEmails(
   const order = await getOrderByToken(store, token);
   if (order?.status !== "payment_submitted") return;
   await tellOwners(store, order, "reference");
+}
+
+/**
+ * Tells the shopper their order moved (payment confirmed, sent or ready to pick up, cancelled),
+ * with a new link to its page; replies go to the store's first owner. False when it couldn't go
+ * out: the order changed all the same.
+ */
+export async function sendOrderUpdate(
+  tenant: TenantContext,
+  notice: OrderNotice,
+  requestUrl: string,
+): Promise<boolean> {
+  const store = await storeIdentity(tenant);
+  if (!store.hostname) return false;
+  const [owner] = await storeOwnerContacts({
+    db: tenant.db,
+    store: {
+      organizationId: tenant.organizationId,
+      name: store.name,
+      slug: "",
+      hostname: store.hostname,
+    },
+  });
+  const locale = parseLocale(notice.locale) ?? defaultLocale;
+  const url = `${storeOrigin(store.hostname, requestUrl)}${href("/orders/:token", { token: notice.token })}`;
+  try {
+    await mailer.send({
+      to: notice.email,
+      replyTo: owner?.email,
+      ...orderUpdateMessage({
+        locale,
+        kind: notice.kind,
+        storeName: store.name,
+        orderNumber: notice.number,
+        name: notice.name,
+        total: formatPrice(notice.total, notice.currency, locale),
+        shippingName: notice.shippingMethod?.name ?? null,
+        pickup: notice.shippingMethod?.pickup ?? false,
+        trackingNumber: notice.trackingNumber,
+        payOnDelivery: notice.payOnDelivery,
+        url,
+      }),
+    });
+    return true;
+  } catch (error) {
+    console.error(`The ${notice.kind} email of order #${notice.number} didn't go out`, error);
+    return false;
+  }
 }

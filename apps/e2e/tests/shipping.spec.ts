@@ -42,7 +42,9 @@ test.describe("Feature: shipping options", () => {
     await test.step("Then the courier comes chosen and the total is the mug plus ₡2,500", async () => {
       await expect(page.getByRole("radio", { name: /Correos de Costa Rica/ })).toBeChecked();
       await expect(page.getByText("Shipping: Correos de Costa Rica")).toBeVisible();
-      await expect(page.getByText("₡8,490")).toBeVisible();
+      await expect(
+        page.getByRole("region", { name: "What you ordered" }).getByText("₡8,490"),
+      ).toBeVisible();
     });
 
     await test.step("When they pick it up at the store instead and order", async () => {

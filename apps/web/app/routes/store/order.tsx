@@ -72,6 +72,20 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
     onValidate: ({ formData }) => parseWithZod(formData, { schema: paymentReferenceSchema }),
   });
   const number = String(order.number);
+  const pickup = order.shippingMethod?.pickup ?? false;
+  // Where the goods are says more than the payment once they move; cash is "confirmed" until then.
+  const statusKey =
+    order.status === "cancelled"
+      ? "cancelled"
+      : order.fulfillment === "delivered"
+        ? "delivered"
+        : order.fulfillment === "shipped"
+          ? pickup
+            ? "ready"
+            : "shipped"
+          : cash && order.status === "pending_payment"
+            ? "confirmed"
+            : order.status;
 
   return (
     <div className="mx-auto grid max-w-xl gap-6">
@@ -81,11 +95,16 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
         </h1>
         <p>{t("storefront.orderThanks", { name: order.name })}</p>
         <p role="status" className="font-medium">
-          {t(`storefront.orderStatus_${order.status}`)}
+          {t(`storefront.orderStatus_${statusKey}`)}
         </p>
+        {order.trackingNumber ? (
+          <p className="text-sm">
+            {t("storefront.orderTracking", { tracking: order.trackingNumber })}
+          </p>
+        ) : null}
       </div>
 
-      {order.status === "pending_payment" && cash ? (
+      {order.status === "pending_payment" && cash && order.fulfillment !== "delivered" ? (
         <section aria-labelledby="pay" className="grid gap-2 rounded-md border border-primary p-4">
           <h2 id="pay" className="text-lg font-semibold">
             {t(

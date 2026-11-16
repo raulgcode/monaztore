@@ -6,6 +6,7 @@
     ".": "./src/index.ts",
     "./catalog-query": "./src/catalog-query.ts",
     "./color": "./src/color.ts",
+    "./price-format": "./src/price-format.ts",
     "./store-theme-ids": "./src/store-theme-ids.ts"
   },
   "scripts": {

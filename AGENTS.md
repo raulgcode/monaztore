@@ -288,6 +288,17 @@ by state in `?status=`) confirms a payment (`markOrderPaid`, which adds to the c
 and spend) or cancels an unpaid order (`cancelOrder`, which puts counted stock back); Store
 (`/app/:workspace/store`) connects domains (one main domain: a new main one takes over) and sets
 the manual payments, owners only.
+Sending (`order.fulfillment`: `unfulfilled` → `shipped` → `delivered`, apart from the payment's
+`status`): a paid order to deliver, or a cash one before it's paid, waits in "To send"
+(`?status=to_ship`, counted with the payments to check); `markOrderShipped` keeps the tracking
+number (or says a pickup is ready) and `markOrderDelivered` closes it, paying a cash order on the
+way. The shopper is emailed when the payment is confirmed, when it goes out (or is ready to pick
+up) and when it's cancelled (`OrderNotice` → `sendOrderUpdate`, `OrderUpdateEmail`, replies to
+the first owner; the MCP sends the same). Only the link token's hash is kept, so each of those
+emails mints its own link (`order.followTokenHashes`, the last 5), which opens the same order
+page with its progress and tracking number. The owner's new-order email carries the phone, the
+payment, the delivery and the notes, and the order page links the shopper's WhatsApp
+(`whatsappLink`). The cart says how much is left for free shipping (`freeShippingNote`).
 
 Products (`core/src/products.ts`, `contracts/src/products.ts`): the workspace's Products
 (`/app/:workspace/products`, a bar item) lists the catalog with search, status, stock and

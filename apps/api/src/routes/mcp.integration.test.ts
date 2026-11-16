@@ -1,6 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { aiTokenPrefixes } from "@monaztore/contracts";
-import { hashOAuthToken, removeAiConnection } from "@monaztore/core";
+import {
+  hashOAuthToken,
+  importCatalog,
+  listImportedProducts,
+  placeOrder,
+  removeAiConnection,
+  resolveTenant,
+  type TenantContext,
+  updateStorePayments,
+} from "@monaztore/core";
 import { schema } from "@monaztore/db";
 import { createTestDatabase, createTestTenant, createTestUser } from "@monaztore/db/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -244,6 +253,95 @@ describe("the stores' tools", () => {
       sinpe,
       transfer,
     });
+    expect(refused.error).toBeTruthy();
+  });
+});
+
+/** A store with a mug that takes cash on delivery, and one order of it, #1001. */
+async function storeWithCashOrder() {
+  const tenant = await createTestTenant(db);
+  const owner = (await resolveTenant(db, tenant.userId, tenant.slug)) as TenantContext;
+  await importCatalog(owner, {
+    source: "woocommerce",
+    sourceUrl: "https://shop.example",
+    currency: "CRC",
+    categories: [],
+    products: [
+      {
+        externalId: "mug",
+        slug: "mug",
+        name: "Mug",
+        description: "",
+        shortDescription: "",
+        status: "active",
+        sku: null,
+        price: 500_000,
+        compareAtPrice: null,
+        stockQuantity: 3,
+        inStock: true,
+        weightGrams: null,
+        seoTitle: null,
+        seoDescription: null,
+        categoryExternalIds: [],
+        images: [],
+        options: [],
+        variants: [],
+        oldPath: null,
+      },
+    ],
+    customers: [],
+    warnings: [],
+  });
+  await updateStorePayments(owner, { cash: { enabled: true, note: "" } });
+  const [mug] = await listImportedProducts(owner, "woocommerce");
+  await placeOrder(
+    {
+      db,
+      store: { organizationId: tenant.organizationId, name: "T", slug: tenant.slug, hostname: "t" },
+    },
+    {
+      cart: [{ productId: mug?.id as string, variantId: null, quantity: 1 }],
+      checkout: {
+        email: "ana@example.com",
+        name: "Ana Mora",
+        phone: "8888-0000",
+        line1: "Del parque 100 m norte",
+        city: "Heredia",
+        province: "Heredia",
+        notes: "",
+        paymentMethod: "cash",
+        shippingMethod: "",
+      },
+      locale: "es",
+    },
+  );
+  return tenant;
+}
+
+describe("the orders' tools", () => {
+  it("lists what's left to send, sends it with its tracking number and delivers it paid", async () => {
+    const tenant = await storeWithCashOrder();
+    const other = await createTestTenant(db);
+    const { token } = await connectAssistant(tenant.userId);
+
+    const toShip = await call(token, "list_orders", { store: tenant.slug, status: "to_ship" });
+    expect(toShip.data.orders).toEqual([expect.objectContaining({ number: 1001 })]);
+
+    const shipped = await call(token, "mark_order_shipped", {
+      store: tenant.slug,
+      number: 1001,
+      trackingNumber: "RR123CR",
+    });
+    expect(shipped.data.shipped).toBe(true);
+    await call(token, "mark_order_delivered", { store: tenant.slug, number: 1001 });
+
+    const { data } = await call(token, "get_order", { store: tenant.slug, number: 1001 });
+    expect(data.order).toMatchObject({
+      status: "paid",
+      fulfillment: "delivered",
+      trackingNumber: "RR123CR",
+    });
+    const refused = await call(token, "mark_order_shipped", { store: other.slug, number: 1001 });
     expect(refused.error).toBeTruthy();
   });
 });

@@ -1,4 +1,4 @@
-import type { OrderStatus } from "@monaztore/db/schema";
+import type { OrderFulfillment, OrderStatus } from "@monaztore/db/schema";
 import { useT } from "~/lib/i18n";
 import { cn } from "~/lib/utils";
 
@@ -14,6 +14,21 @@ export function OrderStatusBadge({ status }: { status: OrderStatus }) {
       )}
     >
       {t(`orders.status_${status}`)}
+    </span>
+  );
+}
+
+/** Where the goods are: still to send, on the way, delivered. */
+export function FulfillmentBadge({ fulfillment }: { fulfillment: OrderFulfillment }) {
+  const t = useT();
+  return (
+    <span
+      className={cn(
+        "inline-flex rounded-full border px-2 py-0.5 text-xs font-medium",
+        fulfillment === "delivered" && "text-muted-foreground",
+      )}
+    >
+      {t(`orders.badge_${fulfillment}`)}
     </span>
   );
 }

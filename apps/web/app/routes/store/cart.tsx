@@ -4,6 +4,7 @@ import {
   addToCartSchema,
   applyCouponSchema,
   CART_LINE_MAX,
+  freeShippingNote,
   normalizeCouponCode,
   setCartQuantity,
 } from "@monaztore/contracts";
@@ -49,7 +50,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   if (changed) headers.append("Set-Cookie", await cartCookieHeader(kept));
   if (gone) headers.append("Set-Cookie", await couponCookieHeader(null));
   return data(
-    { cart: priced, couponCode: gone ? null : couponCode, couponGone: gone },
+    {
+      cart: priced,
+      couponCode: gone ? null : couponCode,
+      couponGone: gone,
+      freeShipping: freeShippingNote(priced.shippingOptions, priced.subtotal - priced.discount),
+    },
     { headers },
   );
 }
@@ -135,7 +141,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 export default function Cart({ loaderData, actionData }: Route.ComponentProps) {
   const t = useT();
   const locale = useLocale();
-  const { cart, couponCode, couponGone } = loaderData;
+  const { cart, couponCode, couponGone, freeShipping } = loaderData;
   const money = (minor: number) => formatPrice(minor, cart.currency, locale);
 
   return (
@@ -273,6 +279,16 @@ export default function Cart({ loaderData, actionData }: Route.ComponentProps) {
               <span>{cart.discount > 0 ? t("storefront.total") : t("storefront.subtotal")}</span>
               <span>{money(cart.total)}</span>
             </p>
+            {freeShipping ? (
+              <p role="status" className="rounded-md bg-muted px-3 py-2 text-sm">
+                {freeShipping.kind === "free"
+                  ? t("storefront.freeShippingReached", { method: freeShipping.name })
+                  : t("storefront.freeShippingLeft", {
+                      amount: money(freeShipping.left),
+                      method: freeShipping.name,
+                    })}
+              </p>
+            ) : null}
             <Link to={href("/checkout")} className={buttonVariants({ size: "lg" })}>
               {t("storefront.checkout")}
             </Link>

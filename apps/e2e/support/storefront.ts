@@ -205,16 +205,23 @@ export function requestStore(
 }
 
 /**
- * An order a shopper placed in the workspace's store: one Pura Vida mug, paid with SINPE Móvil,
- * and, with `reference`, the payment's reference already sent. Returns its number.
+ * An order a shopper placed in the workspace's store: one Pura Vida mug, paid with SINPE Móvil
+ * (or cash on delivery), and, with `reference`, the payment's reference already sent. Returns its
+ * number.
  */
 export async function placeSampleOrder(
   workspace: Workspace,
-  { name, reference }: { name: string; reference?: string },
+  {
+    name,
+    reference,
+    email = "shopper@example.com",
+    paymentMethod = "sinpe",
+  }: { name: string; reference?: string; email?: string; paymentMethod?: "sinpe" | "cash" },
 ): Promise<number> {
   await importCatalog(workspace.tenant, sampleCatalog);
   await updateStorePayments(workspace.tenant, {
     sinpe: { enabled: true, phone: "8888-1234", holder: "My company S.A." },
+    ...(paymentMethod === "cash" ? { cash: { enabled: true, note: "" } } : {}),
   });
   const mug = (await listImportedProducts(workspace.tenant, "woocommerce")).find(
     (product) => product.slug === "pura-vida-mug",
@@ -232,14 +239,14 @@ export async function placeSampleOrder(
   const placed = await placeOrder(store, {
     cart: [{ productId: mug.id, variantId: null, quantity: 1 }],
     checkout: {
-      email: "shopper@example.com",
+      email,
       name,
       phone: "8888-0000",
       line1: "100 m norte del parque",
       city: "Heredia",
       province: "Heredia",
       notes: "",
-      paymentMethod: "sinpe",
+      paymentMethod,
     },
     locale: "en",
   });

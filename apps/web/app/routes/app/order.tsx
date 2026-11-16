@@ -1,5 +1,11 @@
+import { getFormProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
-import { invoiceToSchema, taxIdFromForm } from "@monaztore/contracts";
+import {
+  invoiceToSchema,
+  orderShippedSchema,
+  taxIdFromForm,
+  whatsappLink,
+} from "@monaztore/contracts";
 import {
   cancelOrder,
   DomainError,
@@ -7,7 +13,9 @@ import {
   getOrder,
   getOrderEinvoices,
   issueOrderEinvoice,
+  markOrderDelivered,
   markOrderPaid,
+  markOrderShipped,
   renewDownloadsLink,
   retryEinvoice,
 } from "@monaztore/core";
@@ -15,12 +23,14 @@ import { data, Form, href, Link, useNavigation } from "react-router";
 import { OrderEinvoice } from "~/components/einvoicing/order-einvoice";
 import { OrderStatusBadge } from "~/components/orders/order-status";
 import { PageHeader } from "~/components/page-header";
+import { FieldErrors, TextField } from "~/components/text-field";
 import { Button } from "~/components/ui/button";
 import { tenantContext } from "~/context";
 import { sendDownloadsEmail } from "~/lib/downloads.server";
 import { metaT, useLocale, useT } from "~/lib/i18n";
 import { translations } from "~/lib/locale.server";
 import { formatPrice } from "~/lib/money";
+import { sendOrderUpdate } from "~/lib/order-emails.server";
 import { withinRateLimits } from "~/lib/rate-limit.server";
 import type { Route } from "./+types/order";
 
@@ -47,7 +57,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     einvoicing: showEinvoices ? { enabled: einvoicing.enabled, einvoices } : null,
     i18n: showEinvoices
       ? translations(context, "orders", "einvoicing", "forms")
-      : translations(context, "orders"),
+      : translations(context, "orders", "forms"),
   };
 }
 
@@ -95,7 +105,9 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   }
   try {
     if (intent === "paid") {
-      const { downloads } = await markOrderPaid(tenant, number);
+      const { downloads, notice } = await markOrderPaid(tenant, number);
+      // The shopper hears of it: an order that ships by email, never awaited past the answer.
+      if (notice) void sendOrderUpdate(tenant, notice, request.url);
       // A digital order: the buyer gets the link by email. Paid all the same if it fails;
       // "Email the download link again" sends it later.
       if (downloads && !(await sendDownloadsEmail(tenant, downloads, request.url))) {
@@ -103,14 +115,31 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       }
       return { done: downloads ? ("paidSent" as const) : ("paid" as const), result: undefined };
     }
+    if (intent === "shipped") {
+      const submission = parseWithZod(formData, { schema: orderShippedSchema });
+      if (submission.status !== "success") {
+        return data({ done: null, result: submission.reply() }, { status: 400 });
+      }
+      const { notice } = await markOrderShipped(tenant, number, submission.value);
+      if (notice) void sendOrderUpdate(tenant, notice, request.url);
+      return { done: "shipped" as const, result: submission.reply({ resetForm: true }) };
+    }
+    if (intent === "delivered") {
+      await markOrderDelivered(tenant, number);
+      return { done: "delivered" as const, result: undefined };
+    }
     if (intent === "cancel") {
-      await cancelOrder(tenant, number);
+      const { notice } = await cancelOrder(tenant, number);
+      void sendOrderUpdate(tenant, notice, request.url);
       return { done: "cancelled" as const, result: undefined };
     }
     throw data("Unknown intent", { status: 400 });
   } catch (error) {
-    if (error instanceof DomainError && error.code === "order_closed") {
+    if (error instanceof DomainError && ["order_closed", "delivered"].includes(error.code)) {
       return data({ done: "closed" as const, result: undefined }, { status: 409 });
+    }
+    if (error instanceof DomainError && error.code === "not_paid") {
+      return data({ done: "notPaid" as const, result: undefined }, { status: 409 });
     }
     throw error;
   }
@@ -131,6 +160,9 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
     downloadsSent: t("orders.downloadsSent", { email: order.email }),
     downloadsNotSent: t("orders.downloadsNotSent"),
     cancelled: t("orders.cancelledDone"),
+    shipped: t(order.shippingMethod?.pickup ? "orders.readyDone" : "orders.shippedDone"),
+    delivered: t("orders.deliveredDone"),
+    notPaid: t("orders.notPaid"),
     closed: t("orders.closed"),
     einvoiceIssued: loaderData.einvoicing ? t("einvoicing.issued") : "",
     einvoiceRetried: loaderData.einvoicing ? t("einvoicing.retried") : "",
@@ -139,12 +171,14 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
   };
   const alerts = new Set([
     "closed",
+    "notPaid",
     "einvoiceExists",
     "einvoiceOff",
     "paidNotSent",
     "downloadsNotSent",
   ]);
   const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
+  const whatsapp = whatsappLink(order.phone);
 
   return (
     <>
@@ -181,7 +215,9 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
           <p className="text-sm">
             {order.paymentReference
               ? t("orders.reference", { reference: order.paymentReference })
-              : t("orders.noReference")}
+              : order.paymentMethod === "cash"
+                ? t("orders.payOnDelivery")
+                : t("orders.noReference")}
           </p>
           {open ? (
             <div className="mt-2 grid gap-3">
@@ -189,7 +225,13 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
                 <Button type="submit" name="intent" value="paid" disabled={busy}>
                   {t("orders.markPaid")}
                 </Button>
-                <p className="text-sm text-muted-foreground">{t("orders.markPaidHint")}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t(
+                    order.paymentMethod === "cash"
+                      ? "orders.markPaidHintCash"
+                      : "orders.markPaidHint",
+                  )}
+                </p>
               </Form>
               <Form method="post" className="grid gap-1">
                 <Button
@@ -206,6 +248,9 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
             </div>
           ) : null}
         </section>
+        {order.needsShipping && order.status !== "cancelled" ? (
+          <Fulfillment order={order} busy={busy} actionData={actionData} />
+        ) : null}
         <section
           aria-labelledby="customer"
           className="grid content-start gap-1 rounded-md border p-4"
@@ -219,10 +264,20 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
               {order.email}
             </a>
           </p>
-          <p className="text-sm">
+          <p className="flex flex-wrap gap-x-4 text-sm">
             <a href={`tel:${order.phone}`} className="underline underline-offset-4">
               {order.phone}
             </a>
+            {whatsapp ? (
+              <a
+                href={whatsapp}
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-4"
+              >
+                {t("orders.whatsapp")}
+              </a>
+            ) : null}
           </p>
           <h2 className="mt-3 mb-1 font-medium">{t("orders.delivery")}</h2>
           {order.shippingMethod ? (
@@ -354,5 +409,94 @@ export default function Order({ loaderData, actionData, params }: Route.Componen
         ) : null}
       </div>
     </>
+  );
+}
+
+/**
+ * Where the goods are: send it (with the tracking number) or say it's ready to pick up, then mark
+ * it delivered. Paid on delivery, it can go before it's paid, and delivered also means paid.
+ */
+function Fulfillment({
+  order,
+  busy,
+  actionData,
+}: {
+  order: Route.ComponentProps["loaderData"]["order"];
+  busy: boolean;
+  actionData: Route.ComponentProps["actionData"];
+}) {
+  const t = useT();
+  const locale = useLocale();
+  const pickup = order.shippingMethod?.pickup ?? false;
+  const cash = order.paymentMethod === "cash";
+  const canSend = order.status === "paid" || cash;
+  const [form, fields] = useForm({
+    id: "order-shipped",
+    lastResult: actionData?.result,
+    shouldValidate: "onBlur",
+    onValidate: ({ formData }) => parseWithZod(formData, { schema: orderShippedSchema }),
+  });
+  const when = (date: Date | string | null) =>
+    date
+      ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(
+          new Date(date),
+        )
+      : "";
+  return (
+    <section
+      aria-labelledby="fulfillment"
+      className="grid content-start gap-2 rounded-md border p-4"
+    >
+      <h2 id="fulfillment" className="font-medium">
+        {t("orders.fulfillment")}
+      </h2>
+      <p className="text-sm font-medium">
+        {order.fulfillment === "delivered"
+          ? t("orders.fulfillment_delivered", { date: when(order.deliveredAt) })
+          : order.fulfillment === "shipped"
+            ? t(pickup ? "orders.fulfillment_ready" : "orders.fulfillment_shipped", {
+                date: when(order.shippedAt),
+              })
+            : t("orders.fulfillment_unfulfilled")}
+      </p>
+      {order.trackingNumber ? (
+        <p className="text-sm">{t("orders.tracking", { tracking: order.trackingNumber })}</p>
+      ) : null}
+      {!canSend ? (
+        <p className="text-sm text-muted-foreground">{t("orders.sendAfterPaid")}</p>
+      ) : null}
+      {canSend && order.fulfillment === "unfulfilled" ? (
+        <Form method="post" className="grid gap-3" {...getFormProps(form)}>
+          {pickup ? null : (
+            <TextField
+              field={fields.trackingNumber}
+              label={t("orders.trackingLabel")}
+              description={t("orders.trackingHint")}
+              autoComplete="off"
+            />
+          )}
+          <FieldErrors id={form.errorId} errors={form.errors} />
+          <Button type="submit" name="intent" value="shipped" disabled={busy}>
+            {t(pickup ? "orders.markReady" : "orders.markShipped")}
+          </Button>
+          <p className="text-sm text-muted-foreground">{t("orders.markShippedHint")}</p>
+        </Form>
+      ) : null}
+      {canSend && order.fulfillment !== "delivered" ? (
+        <Form method="post" className="grid gap-1">
+          <Button
+            type="submit"
+            name="intent"
+            value="delivered"
+            variant={order.fulfillment === "shipped" ? "default" : "outline"}
+            disabled={busy}
+          >
+            {t(
+              cash && order.status !== "paid" ? "orders.markDeliveredPaid" : "orders.markDelivered",
+            )}
+          </Button>
+        </Form>
+      ) : null}
+    </section>
   );
 }

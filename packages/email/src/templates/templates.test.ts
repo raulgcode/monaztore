@@ -6,6 +6,7 @@ import { AccountEmail, accountEmailSubject } from "./account";
 import { DownloadsEmail, downloadsMessage } from "./downloads";
 import { einvoiceMessage } from "./einvoice";
 import { MagicLinkEmail, magicLinkSubject } from "./magic-link";
+import { orderUpdateMessage } from "./order-updates";
 import { orderPlacedMessage, storeOrderMessage } from "./orders";
 
 const url = "https://app.monaztore.com/api/auth/verify?token=abc&x=1";
@@ -191,5 +192,82 @@ describe("an order's emails", () => {
     const { text } = await renderEmail(message.react);
     expect(message.subject).toBe("Super Chiva: el pedido #1001 dice que ya pagó");
     expect(text).toContain("Ana Mora mandó el pago de ₡15 000 con el comprobante 123456.");
+  });
+
+  it("tells the store how to reach the shopper and that a cash order is paid on delivery", async () => {
+    const message = storeOrderMessage({
+      locale: "es",
+      kind: "placed",
+      storeName: "Super Chiva",
+      orderNumber: 1003,
+      customerName: "Ana Mora",
+      customerEmail: "ana@example.com",
+      phone: "8888-0000",
+      payment: "Pago contra entrega",
+      delivery: ["Correos de Costa Rica", "Del parque 100 m norte, Heredia"],
+      notes: "Llamar antes",
+      payOnDelivery: true,
+      lines,
+      total: "₡15 000",
+      url: "https://app.monaztore.com/app/superchiva/orders/1003",
+    });
+    const { text } = await renderEmail(message.react);
+    expect(text).toContain("Teléfono: 8888-0000");
+    expect(text).toContain("Paga con: Pago contra entrega");
+    expect(text).toContain("Del parque 100 m norte, Heredia");
+    expect(text).toContain("Sus notas: Llamar antes");
+  });
+});
+
+describe("an order's updates to the shopper", () => {
+  const base = {
+    storeName: "Super Chiva",
+    orderNumber: 1001,
+    name: "Ana",
+    total: "₡15 000",
+    shippingName: "Correos de Costa Rica",
+    pickup: false,
+    trackingNumber: null,
+    payOnDelivery: false,
+    url: "https://superchivacr.com/orders/xyz",
+  };
+
+  it("says the payment came in, with the order's link", async () => {
+    const message = orderUpdateMessage({ ...base, locale: "es", kind: "paid" });
+    const { text } = await renderEmail(message.react);
+    expect(message.subject).toBe("Super Chiva: confirmamos tu pago del pedido #1001");
+    expect(text).toContain("Hola, Ana");
+    expect(text).toContain("https://superchivacr.com/orders/xyz");
+  });
+
+  it("says it's on its way with the courier and the tracking number", async () => {
+    const message = orderUpdateMessage({
+      ...base,
+      locale: "es",
+      kind: "shipped",
+      trackingNumber: "RR123CR",
+      payOnDelivery: true,
+    });
+    const { text } = await renderEmail(message.react);
+    expect(message.subject).toBe("Super Chiva: tu pedido #1001 va en camino");
+    expect(text).toContain("Super Chiva envió tu pedido #1001 por Correos de Costa Rica.");
+    expect(text).toContain("Número de guía: RR123CR");
+    expect(text).toContain("Ten listos ₡15 000: pagas cuando te llegue.");
+  });
+
+  it("says a pickup order is ready, in English", async () => {
+    const message = orderUpdateMessage({
+      ...base,
+      locale: "en",
+      kind: "shipped",
+      pickup: true,
+      shippingName: "Pick up at the store",
+    });
+    expect(message.subject).toContain("ready to pick up");
+  });
+
+  it("says it was cancelled", async () => {
+    const message = orderUpdateMessage({ ...base, locale: "es", kind: "cancelled" });
+    expect(message.subject).toBe("Super Chiva: tu pedido #1001 fue cancelado");
   });
 });
