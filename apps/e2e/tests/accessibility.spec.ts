@@ -1,5 +1,5 @@
 import { storeThemeIds, storeThemeSchema } from "@monaztore/contracts";
-import { markOrderPaid, promoteSuperAdmins, updateStoreTheme } from "@monaztore/core";
+import { createPage, markOrderPaid, promoteSuperAdmins, updateStoreTheme } from "@monaztore/core";
 import {
   adminSignInThroughEmail,
   expect,
@@ -28,6 +28,7 @@ const workspaceSections = [
   "/coupons",
   "/coupons/new",
   "/pages",
+  "/inquiries",
   "/store",
   "/downloads",
   "/downloads/new",
@@ -107,7 +108,57 @@ test.describe("Feature: accessibility (axe, WCAG 2.2 AA)", () => {
             baseURL,
             await catalogWithCopiedPhoto(workspace, 3),
           );
-          for (const path of storePages) {
+          // A landing page: cover, steps, WhatsApp and the request form.
+          const landing = `socks-${Date.now()}`;
+          await createPage(workspace.tenant, {
+            title: "Photo socks",
+            slug: landing,
+            seoTitle: "",
+            seoDescription: "",
+            status: "published",
+            blocks: [
+              {
+                type: "hero",
+                id: "cover",
+                eyebrow: "Made for you",
+                title: "Socks with your pet's face",
+                text: "Send us a photo and we make them.",
+                image: "",
+                illustration: "socks",
+                buttonLabel: "Ask for yours",
+                buttonHref: "#request",
+              },
+              { type: "highlights", id: "promises", items: ["Fast", "Soft", "Yours"] },
+              {
+                type: "steps",
+                id: "steps",
+                title: "How it works",
+                intro: "",
+                items: [
+                  { illustration: "photo", title: "Send a photo", text: "By WhatsApp." },
+                  { illustration: "deliver", title: "It reaches you", text: "At your door." },
+                ],
+              },
+              {
+                type: "whatsapp",
+                id: "whatsapp",
+                title: "Rather talk?",
+                text: "",
+                label: "Order by WhatsApp",
+                phone: "8888 1234",
+                message: "Hi!",
+              },
+              {
+                type: "form",
+                id: "request",
+                title: "Ask for yours",
+                text: "",
+                messageLabel: "",
+                buttonLabel: "",
+              },
+            ],
+          });
+          for (const path of [...storePages, `/${landing}`]) {
             await page.goto(`${store}${path}`);
             await expectAccessible(page);
           }

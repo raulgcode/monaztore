@@ -7,6 +7,7 @@ import {
   placeOrder,
   removeAiConnection,
   resolveTenant,
+  submitInquiry,
   type TenantContext,
   updateStorePayments,
 } from "@monaztore/core";
@@ -343,5 +344,123 @@ describe("the orders' tools", () => {
     });
     const refused = await call(token, "mark_order_shipped", { store: other.slug, number: 1001 });
     expect(refused.error).toBeTruthy();
+  });
+});
+
+describe("the front page, menus and requests' tools", () => {
+  it("builds a landing with a form, makes it the front page and answers its requests", async () => {
+    const tenant = await createTestTenant(db);
+    const other = await createTestTenant(db);
+    const { token } = await connectAssistant(tenant.userId);
+
+    const saved = await call(token, "save_page", {
+      store: tenant.slug,
+      title: "Medias personalizadas",
+      slug: "medias",
+      published: true,
+      blocks: [
+        {
+          type: "hero",
+          id: "cover",
+          eyebrow: "",
+          title: "Tu foto en medias",
+          text: "",
+          image: "",
+          illustration: "socks",
+          buttonLabel: "Pídelas",
+          buttonHref: "#request",
+        },
+        {
+          type: "whatsapp",
+          id: "chat",
+          title: "",
+          text: "",
+          label: "",
+          phone: "8888 0000",
+          message: "",
+        },
+        { type: "form", id: "request", title: "", text: "", messageLabel: "", buttonLabel: "" },
+      ],
+    });
+    expect(saved.data.page.blocks.map((block: { type: string }) => block.type)).toEqual([
+      "hero",
+      "whatsapp",
+      "form",
+    ]);
+    const pageId = saved.data.page.id;
+
+    const front = await call(token, "set_front_page", { store: tenant.slug, pageId });
+    expect(front.data.pages).toEqual([expect.objectContaining({ id: pageId, isHome: true })]);
+
+    const store = {
+      db,
+      store: { organizationId: tenant.organizationId, name: "", slug: tenant.slug, hostname: "x" },
+    };
+    await submitInquiry(store, "medias", {
+      blockId: "request",
+      name: "Ana",
+      email: "ana@example.com",
+      phone: "",
+      message: "Con mi perro",
+    });
+    const listed = await call(token, "list_requests", { store: tenant.slug });
+    expect(listed.data.waiting).toBe(1);
+    const [request] = listed.data.inquiries;
+    expect(request).toMatchObject({ name: "Ana", message: "Con mi perro" });
+
+    const theirs = await call(token, "list_requests", { store: other.slug });
+    expect(theirs.error).toContain(`No store "${other.slug}"`);
+
+    await call(token, "set_request_status", {
+      store: tenant.slug,
+      requestId: request.id,
+      status: "done",
+    });
+    expect((await call(token, "list_requests", { store: tenant.slug })).data.waiting).toBe(0);
+    await call(token, "delete_request", { store: tenant.slug, requestId: request.id });
+    expect(
+      (await call(token, "list_requests", { store: tenant.slug, status: "all" })).data.total,
+    ).toBe(0);
+  });
+
+  it("sets the top menu with a submenu, hides the cover and keeps the rest of the design", async () => {
+    const tenant = await createTestTenant(db);
+    const { token } = await connectAssistant(tenant.userId);
+    await call(token, "update_store_design", { store: tenant.slug, heroTitle: "Chiva" });
+    const { data } = await call(token, "update_store_design", {
+      store: tenant.slug,
+      showHero: false,
+      showCategoriesMenu: false,
+      menu: [
+        {
+          label: "Medias",
+          href: "/collections/medias",
+          children: [{ label: "Con foto", href: "/medias" }],
+        },
+        { label: "Tazas", href: "/collections/tazas" },
+      ],
+      footerMenu: [{ label: "Preguntas", href: "/preguntas" }],
+    });
+    expect(data.design).toMatchObject({
+      heroTitle: "Chiva",
+      hideHero: true,
+      hideCategoriesMenu: true,
+      menu: [
+        {
+          label: "Medias",
+          href: "/collections/medias",
+          children: [{ label: "Con foto", href: "/medias" }],
+        },
+        { label: "Tazas", href: "/collections/tazas", children: [] },
+      ],
+      footerMenu: [{ label: "Preguntas", href: "/preguntas" }],
+    });
+
+    const again = await call(token, "update_store_design", {
+      store: tenant.slug,
+      heroTitle: "Hola",
+    });
+    expect(again.data.design).toMatchObject({ hideHero: true, menu: expect.any(Array) });
+    expect(again.data.design.menu).toHaveLength(2);
   });
 });

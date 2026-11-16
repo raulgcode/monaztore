@@ -19,10 +19,10 @@ function pageSlugOfPath(path: string): string | null {
  * old address of the shop it migrated from (`/producto/taza/`), which moves for good to its new
  * one; everything else is a 404.
  */
-export async function loader({ request, context }: Route.LoaderArgs) {
+export async function loader({ request, url, context }: Route.LoaderArgs) {
   const store = context.get(storeContext);
   if (!store) throw data("Not found", { status: 404 });
-  const url = new URL(request.url);
+  // `url` is the page's address even when the browser asks for its data (`/<slug>.data`).
   let path: string;
   try {
     path = decodeURIComponent(url.pathname);
@@ -60,10 +60,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 }
 
 /** A request sent from one of the page's form blocks. */
-export async function action({ request, context }: Route.ActionArgs) {
+export async function action({ request, url, context }: Route.ActionArgs) {
   const store = context.get(storeContext);
   if (!store) throw data("Not found", { status: 404 });
-  const slug = pageSlugOfPath(new URL(request.url).pathname);
+  // `url`, not `request.url`: a fetcher's post goes to `/<slug>.data`.
+  const slug = pageSlugOfPath(url.pathname);
   const formData = await request.formData();
   if (!slug || formData.get("intent") !== "inquiry") throw data("Not found", { status: 404 });
   return inquiryAction(request, store, slug, formData);

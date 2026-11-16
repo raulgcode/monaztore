@@ -1,5 +1,6 @@
 import type { ProductCard, ThemeLayout } from "@monaztore/core";
 import { ChevronLeftIcon, ChevronRightIcon, ImageIcon } from "lucide-react";
+import type * as React from "react";
 import { useRef } from "react";
 import { href, Link } from "react-router";
 import { ScrollShadow } from "~/components/ui/scroll-shadow";
@@ -25,12 +26,15 @@ export function ProductCarousel({
   currency,
   variant = "square",
   label,
+  heading,
 }: {
   products: ProductCard[];
   currency: string;
   variant?: Variant;
   /** The row's name, for the arrows: "New in". */
   label: string;
+  /** The row's title, shown beside the arrows. */
+  heading?: React.ReactNode;
 }) {
   const t = useT();
   const scroller = useRef<HTMLUListElement>(null);
@@ -44,23 +48,26 @@ export function ProductCarousel({
     "inline-flex size-11 items-center justify-center rounded-full border bg-background outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50";
   return (
     <div className="grid gap-3">
-      <div className="flex justify-end gap-2">
-        <button
-          type="button"
-          className={arrow}
-          aria-label={t("storefront.carouselPrevious", { name: label })}
-          onClick={() => slide(-1)}
-        >
-          <ChevronLeftIcon aria-hidden className="size-5" />
-        </button>
-        <button
-          type="button"
-          className={arrow}
-          aria-label={t("storefront.carouselNext", { name: label })}
-          onClick={() => slide(1)}
-        >
-          <ChevronRightIcon aria-hidden className="size-5" />
-        </button>
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0">{heading}</div>
+        <div className="flex shrink-0 gap-2">
+          <button
+            type="button"
+            className={arrow}
+            aria-label={t("storefront.carouselPrevious", { name: label })}
+            onClick={() => slide(-1)}
+          >
+            <ChevronLeftIcon aria-hidden className="size-5" />
+          </button>
+          <button
+            type="button"
+            className={arrow}
+            aria-label={t("storefront.carouselNext", { name: label })}
+            onClick={() => slide(1)}
+          >
+            <ChevronRightIcon aria-hidden className="size-5" />
+          </button>
+        </div>
       </div>
       <ScrollShadow>
         <ul

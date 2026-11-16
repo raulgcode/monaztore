@@ -22,3 +22,58 @@ describe("storeThemeSchema", () => {
     ]);
   });
 });
+
+describe("store menus", () => {
+  const parse = (fields: Record<string, string>) =>
+    storeThemeSchema.safeParse({ theme: "essential", ...fields });
+
+  it("reads the top menu with its submenus and drops rows left empty", () => {
+    const result = parse({
+      menu: JSON.stringify([
+        {
+          label: "Medias",
+          href: "/collections/medias",
+          children: [
+            { label: "Con foto", href: "/personalizado" },
+            { label: "", href: "" },
+          ],
+        },
+        { label: "", href: "" },
+        { label: "Preguntas", href: "/preguntas" },
+      ]),
+    });
+    expect(result.success && result.data.menu).toEqual([
+      {
+        label: "Medias",
+        href: "/collections/medias",
+        children: [{ label: "Con foto", href: "/personalizado" }],
+      },
+      { label: "Preguntas", href: "/preguntas", children: [] },
+    ]);
+  });
+
+  it("reads the footer's links", () => {
+    const result = parse({ footerMenu: JSON.stringify([{ label: "FAQ", href: "/faq" }]) });
+    expect(result.success && result.data.footerMenu).toEqual([{ label: "FAQ", href: "/faq" }]);
+  });
+
+  it("refuses a link without text, a bad address or JSON that isn't a list", () => {
+    expect(parse({ menu: JSON.stringify([{ label: "", href: "/x" }]) }).success).toBe(false);
+    expect(parse({ menu: JSON.stringify([{ label: "X", href: "javascript:1" }]) }).success).toBe(
+      false,
+    );
+    expect(parse({ footerMenu: "{nope" }).success).toBe(false);
+  });
+
+  it("keeps the cover, the promises and the categories menu unless told to hide them", () => {
+    const result = parse({});
+    expect(result.success && result.data).toMatchObject({
+      hideHero: false,
+      hideHighlights: false,
+      hideCategoriesMenu: false,
+      categoryChips: false,
+      menu: [],
+      footerMenu: [],
+    });
+  });
+});

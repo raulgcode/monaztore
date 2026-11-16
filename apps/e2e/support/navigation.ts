@@ -7,13 +7,14 @@ import { expect, type Page } from "@playwright/test";
 export async function openSection(page: Page, name: string): Promise<void> {
   const menu = page.getByRole("navigation", { name: "Main menu" });
   const link = menu.getByRole("link", { name });
-  if (name === "Pages" && (await link.count()) === 0) {
-    // The phone's bar fits six sections: Pages opens from Store.
+  const fromStore: Record<string, RegExp> = {
+    Pages: /^Pages/,
+    Requests: /^Requests from your pages/,
+  };
+  if (fromStore[name] && (await link.count()) === 0) {
+    // The phone's bar fits six sections: Pages and Requests open from Store.
     await menu.getByRole("link", { name: "Store" }).click();
-    await page
-      .getByRole("main")
-      .getByRole("link", { name: /^Pages/ })
-      .click();
+    await page.getByRole("main").getByRole("link", { name: fromStore[name] }).click();
   } else {
     await link.click();
   }

@@ -90,7 +90,8 @@ description and errors with `aria-*`). Schema errors are i18n keys
 `routes/app/onboarding.tsx`.
 The one exception is a form with nothing to type, on a page that must stay light: the storefront's
 "Add to cart" (hidden ids and a list) validates only in the cart's `action`, so the product page
-doesn't load zod.
+doesn't load zod. The same goes for a page's request form (`components/pages/inquiry-form.tsx`): plain inputs
+checked by `inquirySchema` only in the `action`, so a landing page stays light.
 
 ### MCP: everything the backend does, an AI assistant can do
 
@@ -360,6 +361,37 @@ Slugs that are the storefront's own routes are refused (`reservedPageSlugs`); ch
 published page's address leaves a 301 from the old one. `pnpm import:woocommerce` brings the
 shop's WordPress pages (`wp/v2/pages`, `wordPressPageBlocks`: Flatsome accordions become
 questions; forms are left out and noted) with a 301 from their old address.
+More blocks make a page a landing: cover (`hero`: title as the h1, a photo or a built-in
+drawing from `contracts/src/illustrations.ts`, its button), steps with drawings, promises,
+categories, a WhatsApp button (`whatsappChatUrl`) and a request form; products show as a grid or
+a carousel (`ProductCarousel`), newest, of a category or on offer. A page that starts with a
+cover is drawn full width (`isLandingPage`). Blocks are dragged by their handle (pointer, so a
+finger works too) or moved with the arrows and the keyboard. Blocks use container queries
+(`@container`, `@2xl:`…), so the editor's narrow preview looks like the store. "Start from a
+template" (`lib/page-templates.server.ts`) makes a front page (from Design's cover and promises)
+or a personalized product's landing (steps, WhatsApp, form, questions). Any page can be the
+store's front page (`store_settings.home_page_id`, `setHomePage`, `getStoreHomePage`): `/`
+shows it once published, otherwise the theme's; it isn't listed again in the sitemap.
+
+Requests (`core/src/inquiries.ts`, `contracts/src/inquiries.ts`, `/app/:workspace/inquiries`;
+on the phone it opens from Store and from a card on the home): what shoppers send from a
+page's form block, kept in `store_inquiry` with the page it came from, emailed to the owners
+(`storeInquiryMessage`, Reply-To the shopper) and answered by WhatsApp or email, then marked answered.
+`submitInquiry` is another public entry: only a published page of the Host's store with that
+form block takes it. The form is guarded without bothering people: a honeypot field, a signed
+time stamp (`FORM_MIN_FILL_MS`), rate limits per IP and per email, at most a few links, and
+Cloudflare Turnstile only with `TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` (its origin is then
+added to the CSP). A bot gets the same thanks and nothing is kept.
+
+Menus (`store_settings.theme.menu`, `footerMenu`, in Design): the top menu has up to
+`STORE_MENU_MAX` links, each with up to `STORE_SUBMENU_MAX` under it (a panel that opens on a
+tap from 768 px, an indented list in the phone's drawer), and the footer up to
+`FOOTER_MENU_MAX` (empty = the published pages). Each link is typed or picked (a page, a
+category, the catalog). "Categories" in the menu and the category buttons under the search box
+can be turned off (`hideCategoriesMenu`, `categoryChips`), and so can the cover and the
+promises (`hideHero`, `hideHighlights`). The MCP does all of it: `update_store_design` (menus,
+cover, promises), `save_page` with every block, `set_front_page`, and `list_requests`,
+`set_request_status`, `delete_request`.
 
 Electronic invoicing (`core/src/einvoicing.ts`, `core/src/einvoice-delivery.ts`,
 `@monaztore/hacienda`, `contracts/src/einvoicing.ts`): only for stores in Costa Rica

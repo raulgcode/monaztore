@@ -364,4 +364,60 @@ test.describe("Feature: the store's design", () => {
       await expect(page.getByRole("main").getByRole("status").first()).toHaveText("2 products");
     });
   });
+
+  test("Scenario: the owner builds a menu with a link that opens another under it, hides the cover and the store shows it", async ({
+    page,
+    baseURL,
+    isMobile,
+    signInWithWorkspace,
+    workspaceOf,
+  }) => {
+    const store =
+      await test.step("Given an owner with a store that has mugs and a questions page", async () => {
+        await signInWithWorkspace(page, "Menu Mugs");
+        return openStore(await workspaceOf(page), baseURL);
+      });
+
+    await test.step("When they add “Mugs” to the menu with “Questions” under it, hide the cover and save", async () => {
+      await openSection(page, "Design");
+      const menu = page.getByRole("region", { name: "Menu", exact: true });
+      await menu.getByRole("button", { name: "Add a link", exact: true }).click();
+      await menu.getByLabel("Link 1: text", { exact: true }).fill("Mugs");
+      await menu.getByLabel("Link 1: where it goes", { exact: true }).fill("/collections/kitchen");
+      await menu.getByRole("button", { name: "Add a link under it" }).click();
+      await menu.getByLabel("Sub-link 1: text", { exact: true }).fill("Questions");
+      await menu.getByLabel("Sub-link 1: where it goes", { exact: true }).fill("/questions");
+      await page.getByLabel("Show the cover").uncheck();
+      await page.getByRole("button", { name: "Save design" }).click();
+      await expect(page.getByRole("main").getByRole("status")).toHaveText(
+        "Saved. Your store already looks like this.",
+      );
+    });
+
+    await test.step("Then the store's front page starts without its cover and its “Shop now” button", async () => {
+      await page.goto(store);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText("Menu Mugs");
+      await expect(page.getByRole("link", { name: "Shop now" })).toHaveCount(0);
+    });
+
+    await test.step("And its menu opens “Mugs” with “Questions” under it, which goes to the page", async () => {
+      if (isMobile) {
+        await page.getByLabel("Open the menu").click();
+      } else {
+        await page
+          .getByRole("navigation", { name: "Store sections" })
+          .getByText("Mugs", { exact: true })
+          .click();
+      }
+      const nav = page
+        .getByRole("navigation", { name: "Store sections" })
+        .filter({ visible: true });
+      await expect(
+        nav.getByRole("link", { name: "Mugs" }).or(nav.getByRole("link", { name: "All of Mugs" })),
+      ).toBeVisible();
+      await nav.getByRole("link", { name: "Questions" }).click();
+      await expect(page).toHaveURL(/\/questions$/);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText("Questions");
+    });
+  });
 });

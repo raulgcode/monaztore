@@ -100,11 +100,11 @@ export function HeroPanel({
       />
     </div>
   ) : illustration ? (
-    <Illustration id={illustration} className="mx-auto max-w-[17rem] md:max-w-md" />
+    <Illustration id={illustration} className="mx-auto max-w-[17rem] @3xl:max-w-md" />
   ) : null;
 
   return (
-    <section className="relative isolate overflow-hidden rounded-3xl border bg-card text-card-foreground">
+    <section className="@container relative isolate overflow-hidden rounded-3xl border bg-card text-card-foreground">
       <div
         aria-hidden
         className="absolute -top-32 -right-32 -z-10 size-96 rounded-full bg-accent opacity-70 blur-3xl"
@@ -115,11 +115,11 @@ export function HeroPanel({
       />
       <div
         className={cn(
-          "grid items-center gap-8 px-5 py-8 sm:px-10 sm:py-12 md:gap-12 md:px-14 md:py-16",
-          media && "md:grid-cols-[1.1fr_1fr]",
+          "grid items-center gap-8 px-5 py-8 @2xl:px-10 @2xl:py-12 @3xl:gap-12 @3xl:px-14 @3xl:py-16",
+          media && "@3xl:grid-cols-[1.1fr_1fr]",
         )}
       >
-        {media ? <div className="md:order-last">{media}</div> : null}
+        {media ? <div className="@3xl:order-last">{media}</div> : null}
         <div className={cn("grid justify-items-start gap-5", !media && "max-w-3xl")}>
           {eyebrow ? (
             <p className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-semibold tracking-wide text-accent-foreground uppercase">
@@ -127,7 +127,7 @@ export function HeroPanel({
               {eyebrow}
             </p>
           ) : null}
-          <Heading className="font-heading text-4xl leading-[1.05] font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
+          <Heading className="font-heading text-4xl leading-[1.05] font-bold tracking-tight text-balance @2xl:text-5xl @5xl:text-6xl">
             {title}
           </Heading>
           {text ? (
@@ -136,7 +136,7 @@ export function HeroPanel({
             </p>
           ) : null}
           {action || secondary ? (
-            <div className="mt-1 grid w-full gap-3 sm:flex sm:w-auto sm:flex-wrap">
+            <div className="mt-1 grid w-full gap-3 @2xl:flex @2xl:w-auto @2xl:flex-wrap">
               {action ? (
                 <SmartLink href={action.href} className={heroButton.primary}>
                   {action.label}

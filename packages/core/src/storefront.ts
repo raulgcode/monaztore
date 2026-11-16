@@ -715,6 +715,8 @@ export async function sitemapEntries(ctx: StorefrontContext): Promise<SitemapEnt
         and(
           eq(schema.page.organizationId, ctx.store.organizationId),
           eq(schema.page.status, "published"),
+          // The front page is "/", which the sitemap's caller lists already.
+          sql`${schema.page.id} is distinct from (select ${schema.storeSettings.homePageId} from ${schema.storeSettings} where ${schema.storeSettings.organizationId} = ${ctx.store.organizationId})`,
         ),
       )
       .orderBy(asc(schema.page.slug)),

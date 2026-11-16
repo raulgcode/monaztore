@@ -5,11 +5,13 @@ import {
   createPage,
   deletePage,
   getPage,
+  getStoreHomePage,
   getStorePage,
   importPages,
   listPages,
   listStorePages,
   type PageInput,
+  setHomePage,
   updatePage,
 } from "./pages";
 import { findRedirect, type StorefrontContext, sitemapEntries } from "./storefront";
@@ -132,5 +134,42 @@ describe("pages", () => {
       { ...page, externalId: "42", slug: "cart", oldPath: "/cart/" },
     ]);
     expect(await findRedirect(store, "/cart/")).toBe("/cart-page");
+  });
+});
+
+describe("the front page", () => {
+  it("opens the store with a published page, out of the footer and the sitemap", async () => {
+    const { ctx, store } = await owner();
+    const { id } = await createPage(
+      ctx,
+      input({ title: "Inicio", slug: "inicio", status: "draft" }),
+    );
+    await createPage(ctx, input());
+    await setHomePage(ctx, id);
+
+    // A draft front page doesn't show yet: the store keeps the design's.
+    expect(await getStoreHomePage(store)).toBeNull();
+    expect((await listPages(ctx))[0]).toMatchObject({ id, isHome: true });
+
+    await updatePage(ctx, id, input({ title: "Inicio", slug: "inicio" }));
+    expect((await getStoreHomePage(store))?.title).toBe("Inicio");
+    expect((await listStorePages(store)).map((page) => page.slug)).toEqual(["faqs"]);
+    expect((await sitemapEntries(store)).map((entry) => entry.path)).toEqual(["/faqs"]);
+
+    await setHomePage(ctx, null);
+    expect(await getStoreHomePage(store)).toBeNull();
+    expect((await listStorePages(store)).map((page) => page.slug)).toEqual(["inicio", "faqs"]);
+  });
+
+  it("can't be another store's page, and deleting it gives the store back its design", async () => {
+    const mine = await owner();
+    const theirs = await owner();
+    const { id } = await createPage(theirs.ctx, input());
+    await expect(setHomePage(mine.ctx, id)).rejects.toMatchObject({ name: "NotFoundError" });
+
+    const own = await createPage(mine.ctx, input());
+    await setHomePage(mine.ctx, own.id);
+    await deletePage(mine.ctx, own.id);
+    expect(await getStoreHomePage(mine.store)).toBeNull();
   });
 });

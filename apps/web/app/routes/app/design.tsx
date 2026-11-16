@@ -427,10 +427,10 @@ export default function Design({ loaderData, actionData, params }: Route.Compone
                 </fieldset>
               </CardContent>
             </Card>
-            <Card>
+            <Card role="region" aria-labelledby="menu-heading">
               <CardHeader>
                 <CardTitle>
-                  <h2>{t("design.menuHeading")}</h2>
+                  <h2 id="menu-heading">{t("design.menuHeading")}</h2>
                 </CardTitle>
                 <CardDescription>{t("design.menuIntro")}</CardDescription>
               </CardHeader>
@@ -459,10 +459,10 @@ export default function Design({ loaderData, actionData, params }: Route.Compone
                 />
               </CardContent>
             </Card>
-            <Card>
+            <Card role="region" aria-labelledby="footer-heading">
               <CardHeader>
                 <CardTitle>
-                  <h2>{t("design.footerHeading")}</h2>
+                  <h2 id="footer-heading">{t("design.footerHeading")}</h2>
                 </CardTitle>
                 <CardDescription>{t("design.footerIntro")}</CardDescription>
               </CardHeader>

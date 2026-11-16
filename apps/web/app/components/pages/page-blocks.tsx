@@ -46,7 +46,7 @@ export function PageBlocks({
   const card = shell?.theme.layout.productCard ?? "square";
   const chat = firstWhatsapp(blocks);
   return (
-    <div className={cn("grid", landing ? "gap-14 md:gap-20" : "gap-6")}>
+    <div className={cn("@container grid", landing ? "gap-14 md:gap-20" : "gap-6")}>
       {blocks.map((block, index) => (
         <div
           key={block.id}
@@ -162,7 +162,7 @@ function Block({
       if (!block.title.trim()) return <Empty hint={emptyHint} />;
       return (
         <HeroPanel
-          as={first ? "h1" : "h2"}
+          as={first && !preview ? "h1" : "h2"}
           eyebrow={block.eyebrow}
           title={block.title}
           text={block.text}
@@ -185,16 +185,16 @@ function Block({
       if (items.length === 0) return <Empty hint={emptyHint} />;
       const columns =
         items.length >= 5
-          ? "lg:grid-cols-5"
+          ? "@5xl:grid-cols-5"
           : items.length === 4
-            ? "lg:grid-cols-4"
-            : "lg:grid-cols-3";
+            ? "@5xl:grid-cols-4"
+            : "@5xl:grid-cols-3";
       return (
         <section className="grid gap-8">
           {block.title || block.intro ? (
             <div className="mx-auto grid max-w-2xl gap-3 text-center">
               {block.title ? (
-                <h2 className="font-heading text-3xl font-bold tracking-tight text-balance md:text-4xl">
+                <h2 className="font-heading text-3xl font-bold tracking-tight text-balance @3xl:text-4xl">
                   {block.title}
                 </h2>
               ) : null}
@@ -203,13 +203,13 @@ function Block({
               ) : null}
             </div>
           ) : null}
-          <ol className={cn("grid gap-4 sm:grid-cols-2", columns)}>
+          <ol className={cn("grid gap-4 @2xl:grid-cols-2", columns)}>
             {items.map((item, index) => (
               <li
                 key={`${index}-${item.title}`}
-                className="grid grid-cols-[6.5rem_1fr] items-center gap-4 rounded-2xl border bg-card p-4 sm:grid-cols-1 sm:content-start sm:items-start sm:p-5"
+                className="grid grid-cols-[6.5rem_1fr] items-center gap-4 rounded-2xl border bg-card p-4 @2xl:grid-cols-1 @2xl:content-start @2xl:items-start @2xl:p-5"
               >
-                <Illustration id={item.illustration} className="sm:mx-auto sm:max-w-[11rem]" />
+                <Illustration id={item.illustration} className="@2xl:mx-auto @2xl:max-w-[11rem]" />
                 <div className="grid gap-2">
                   <p className="flex items-center gap-3">
                     <span
@@ -237,7 +237,7 @@ function Block({
       const url = whatsappChatUrl(block.phone, block.message);
       if (!url) return <Empty hint={emptyHint} />;
       return (
-        <section className="relative isolate grid justify-items-center gap-4 overflow-hidden rounded-3xl border bg-card px-5 py-10 text-center sm:px-10 md:py-14">
+        <section className="relative isolate grid justify-items-center gap-4 overflow-hidden rounded-3xl border bg-card px-5 py-10 text-center @2xl:px-10 @3xl:py-14">
           <div
             aria-hidden
             className="absolute -top-24 left-1/2 -z-10 size-72 -translate-x-1/2 rounded-full bg-accent opacity-70 blur-3xl"
@@ -246,7 +246,7 @@ function Block({
             <MessageCircleIcon aria-hidden className="size-8" />
           </span>
           {block.title ? (
-            <h2 className="font-heading text-3xl font-bold tracking-tight text-balance md:text-4xl">
+            <h2 className="font-heading text-3xl font-bold tracking-tight text-balance @3xl:text-4xl">
               {block.title}
             </h2>
           ) : null}
@@ -257,7 +257,7 @@ function Block({
             href={url}
             rel="noopener"
             target="_blank"
-            className={cn(heroButton.whatsapp, "mt-2 min-h-14 w-full px-8 text-lg sm:w-auto")}
+            className={cn(heroButton.whatsapp, "mt-2 min-h-14 w-full px-8 text-lg @2xl:w-auto")}
           >
             <MessageCircleIcon aria-hidden className="size-6" />
             {block.label || t("storefront.whatsappChat")}
@@ -267,15 +267,15 @@ function Block({
     }
     case "form":
       return (
-        <section className="grid gap-8 rounded-3xl border bg-card p-5 sm:p-10 md:grid-cols-[1fr_1.4fr] md:items-start">
+        <section className="grid gap-8 rounded-3xl border bg-card p-5 @2xl:p-10 @3xl:grid-cols-[1fr_1.4fr] @3xl:items-start">
           <div className="grid content-start gap-3">
-            <h2 className="font-heading text-3xl font-bold tracking-tight text-balance md:text-4xl">
+            <h2 className="font-heading text-3xl font-bold tracking-tight text-balance @3xl:text-4xl">
               {block.title || t("storefront.formSubmitDefault")}
             </h2>
             {block.text ? (
               <p className="text-lg text-pretty text-muted-foreground">{block.text}</p>
             ) : null}
-            <Illustration id="chat" className="hidden max-w-[16rem] md:block" />
+            <Illustration id="chat" className="hidden max-w-[16rem] @3xl:block" />
           </div>
           <InquiryForm block={block} context={form} preview={preview} />
         </section>
@@ -287,7 +287,7 @@ function Block({
         <Tag
           className={cn(
             "font-semibold tracking-tight",
-            block.level === 3 ? "text-lg" : "text-xl sm:text-2xl",
+            block.level === 3 ? "text-lg" : "text-xl @2xl:text-2xl",
           )}
         >
           {block.text}
@@ -328,7 +328,7 @@ function Block({
           <a
             href={block.href}
             {...(ownPath(block.href) ? {} : { rel: "noopener", target: "_blank" })}
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-6 font-medium text-primary-foreground outline-none hover:bg-primary/90 focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:w-auto"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-6 font-medium text-primary-foreground outline-none hover:bg-primary/90 focus-visible:ring-[3px] focus-visible:ring-ring/50 @2xl:w-auto"
           >
             {block.label}
           </a>
@@ -354,27 +354,32 @@ function Block({
         </div>
       );
     }
-    case "products":
+    case "products": {
       if (products.length === 0) return <Empty hint={emptyHint} />;
+      const title = block.title ? (
+        <h2 className="font-heading text-xl font-semibold tracking-tight @3xl:text-2xl">
+          {block.title}
+        </h2>
+      ) : null;
       return (
         <section className="grid gap-4">
-          {block.title ? (
-            <h2 className="font-heading text-xl font-semibold tracking-tight md:text-2xl">
-              {block.title}
-            </h2>
-          ) : null}
           {block.layout === "carousel" ? (
             <ProductCarousel
               products={products}
               currency={currency}
               variant={card}
               label={block.title || t("storefront.featured")}
+              heading={title}
             />
           ) : (
-            <ProductGrid products={products} currency={currency} variant={card} />
+            <>
+              {title}
+              <ProductGrid products={products} currency={currency} variant={card} />
+            </>
           )}
         </section>
       );
+    }
   }
 }
 
